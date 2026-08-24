@@ -4,12 +4,258 @@
 # Numbers are allocated FROM HERE and MUST NOT restart per document, per component, or per release.
 # The sequence is global to one product.
 
-goals: []
+goals:
+  - id: BG-1
+    title: "Core value: Provide a free, open-source, cross-platform system cleaner that reclaims disk space and optimizes performance"
+  - id: BG-2
+    title: "Integrate malware scanning with signature matching and heuristic analysis"
+  - id: BG-3
+    title: "Give users granular control over 30+ Windows privacy settings"
+  - id: BG-4
+    title: "Support 30+ languages for global accessibility"
+  - id: BG-5
+    title: "Enable scriptable CLI mode for automation and headless operation"
 
-capabilities: []
+capabilities:
+  - id: CAP-1
+    title: "System Cleaning Engine"
+    description: "Cross-platform cleaner for temp files, logs, caches, crash dumps, and registry"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-2
+    title: "Browser Cleaning"
+    description: "Cache, history, cookie cleaning across all major browsers"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-3
+    title: "Application Cleaning"
+    description: "Leftover app data cleaning for installed applications"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-4
+    title: "Gaming Cleaner"
+    description: "Game launcher and shader cache cleaning"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-5
+    title: "Registry Cleaner"
+    description: "Broken/orphaned registry entry detection and removal (Windows)"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-6
+    title: "Startup Manager"
+    description: "Boot impact analysis and startup program management"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-7
+    title: "Disk Analyzer"
+    description: "Interactive treemap visualization of disk usage"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-8
+    title: "Debloater"
+    description: "Windows bloatware removal"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-9
+    title: "Driver Cleanup"
+    description: "Stale driver package removal"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-10
+    title: "Program Uninstaller"
+    description: "Uninstall with leftover cleanup"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-11
+    title: "Service Manager"
+    description: "Windows service optimization"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-12
+    title: "Software Updater"
+    description: "Bulk update across winget, Chocolatey, Scoop, npm"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-13
+    title: "Malware Scanner"
+    description: "YARA signature matching and heuristic analysis"
+    target_release: "v1.0"
+    serves: [BG-2]
+  - id: CAP-14
+    title: "Privacy Shield"
+    description: "Control 30+ Windows telemetry, ad ID, Cortana, tracking settings"
+    target_release: "v1.0"
+    serves: [BG-3]
+  - id: CAP-15
+    title: "Secure Delete"
+    description: "Overwrite files with random data before deletion"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-16
+    title: "Performance Monitor"
+    description: "Real-time CPU, memory, disk, network, per-core stats, S.M.A.R.T."
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-17
+    title: "System Restore Points"
+    description: "Create restore points before cleaning operations"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-18
+    title: "Cleaning History"
+    description: "Track past sessions and space recovered"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-19
+    title: "Scheduled Scans"
+    description: "Daily, weekly, or monthly automated scans"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-20
+    title: "One-Click Clean"
+    description: "Scan and clean everything in one click"
+    target_release: "v1.0"
+    serves: [BG-1]
+  - id: CAP-21
+    title: "CLI Mode"
+    description: "Scriptable, headless operation without GUI"
+    target_release: "v1.0"
+    serves: [BG-5]
+  - id: CAP-22
+    title: "Multi-language Support"
+    description: "30+ languages via i18next"
+    target_release: "v1.0"
+    serves: [BG-4]
+  - id: CAP-23
+    title: "Auto-Updater"
+    description: "Electron-based automatic updates"
+    target_release: "v1.0"
+    serves: [BG-1]
 
-functional: []
+functional:
+  - id: FR-1
+    title: "Scan and clean system temp files and caches"
+    capability: CAP-1
+    proof_of_done: "User selects System Cleaner, runs scan, sees categorized file list with reclaimable size, clicks clean, and verified files are removed."
+  - id: FR-2
+    title: "Scan and clean browser caches and cookies"
+    capability: CAP-2
+    proof_of_done: "User selects Browser Cleaner for Chrome/Firefox/Safari/Edge, runs scan, sees itemized cache sizes, clicks clean, and browser caches are purged."
+  - id: FR-3
+    title: "Scan and clean application leftover data"
+    capability: CAP-3
+    proof_of_done: "User selects App Cleaner, runs scan, sees detected third-party app caches/logs, clicks clean, and target files are removed."
+  - id: FR-4
+    title: "Scan and clean game launcher and shader caches"
+    capability: CAP-4
+    proof_of_done: "User selects Gaming Cleaner, scans Steam/Epic/DirectX shader caches, sees reclaimable space, clicks clean, and shader caches are deleted."
+  - id: FR-5
+    title: "Scan and fix broken Windows registry entries"
+    capability: CAP-5
+    proof_of_done: "User selects Registry Cleaner on Windows, scans for orphaned entries, sees itemized list with issue descriptions, clicks fix, and invalid entries are removed."
+  - id: FR-6
+    title: "Analyze and manage startup applications"
+    capability: CAP-6
+    proof_of_done: "User opens Startup Manager, views all autostart programs with measured boot impact ratings, toggles any program on/off, and state persists."
+  - id: FR-7
+    title: "Visualize disk space usage with interactive treemap"
+    capability: CAP-7
+    proof_of_done: "User opens Disk Analyzer, selects a drive, views hierarchical treemap of space usage, clicks into folders to zoom, and can open items in file explorer."
+  - id: FR-8
+    title: "Remove pre-installed Windows bloatware"
+    capability: CAP-8
+    proof_of_done: "User selects Debloater on Windows, sees list of pre-installed UWP/system apps with safe-to-remove tags, selects items, and uninstalls them in batch."
+  - id: FR-9
+    title: "Clean stale and orphaned driver packages"
+    capability: CAP-9
+    proof_of_done: "User selects Driver Manager, scans for outdated driver packages in DriverStore, selects stale packages, and removes them."
+  - id: FR-10
+    title: "Uninstall programs and clean leftover files and registry keys"
+    capability: CAP-10
+    proof_of_done: "User selects Program Uninstaller, chooses an installed app, runs uninstall, and app automatically scans for and removes leftover files/keys."
+  - id: FR-11
+    title: "Configure and optimize Windows services"
+    capability: CAP-11
+    proof_of_done: "User opens Service Manager, views services with recommendations (safe to disable / manual / automatic), and applies recommended optimizations."
+  - id: FR-12
+    title: "Bulk-update installed software across package managers"
+    capability: CAP-12
+    proof_of_done: "User opens Software Updater, sees list of outdated packages across winget/Chocolatey/Scoop/npm, clicks update all, and packages are updated."
+  - id: FR-13
+    title: "Scan filesystem for malware using YARA rules and heuristics"
+    capability: CAP-13
+    proof_of_done: "User initiates Malware Scan (quick or full), scanner evaluates files against YARA rules and heuristic signatures, and displays detected threats with quarantine/delete options."
+  - id: FR-14
+    title: "Toggle Windows telemetry, advertising ID, and tracking settings"
+    capability: CAP-14
+    proof_of_done: "User opens Privacy Shield, views 30+ privacy settings organized by category with descriptions, toggles settings, and system policies are updated accordingly."
+  - id: FR-15
+    title: "Securely overwrite files before deletion"
+    capability: CAP-15
+    proof_of_done: "User drags files to Secure Delete or enables secure deletion mode, files are overwritten with random passes before filesystem unlinking, and space is unrecoverable."
+  - id: FR-16
+    title: "Display real-time system performance metrics and hardware health"
+    capability: CAP-16
+    proof_of_done: "User opens Performance Monitor, sees live CPU/memory/disk/network utilization graphs, per-core metrics, and disk S.M.A.R.T. health status."
+  - id: FR-17
+    title: "Create system restore points before cleaning operations"
+    capability: CAP-17
+    proof_of_done: "System automatically creates a Windows Restore Point before executing destructive cleaning operations when enabled, or user manually triggers one."
+  - id: FR-18
+    title: "Log and review cleaning history and reclaimed space"
+    capability: CAP-18
+    proof_of_done: "User navigates to History tab, views paginated list of past cleaning sessions with timestamps, categories cleaned, and total bytes reclaimed."
+  - id: FR-19
+    title: "Configure and execute scheduled automated scans"
+    capability: CAP-19
+    proof_of_done: "User sets a cleaning schedule (daily/weekly/monthly) with selected categories, and system performs automated scans at designated intervals."
+  - id: FR-20
+    title: "Execute one-click scan and clean across all enabled categories"
+    capability: CAP-20
+    proof_of_done: "User clicks One-Click Clean from dashboard, app scans all default-safe categories, displays summary of found items, and cleans upon confirmation."
+  - id: FR-21
+    title: "Execute cleaning, scanning, and monitoring via command-line interface"
+    capability: CAP-21
+    proof_of_done: "User runs `kudu clean --all` or `kudu scan` from terminal, CLI outputs structured progress and summary, and returns exit code 0 on success."
+  - id: FR-22
+    title: "Switch UI language across 30 supported locales"
+    capability: CAP-22
+    proof_of_done: "User selects language from settings dropdown, entire UI re-renders in chosen language immediately without app restart."
+  - id: FR-23
+    title: "Check for, download, and apply application updates automatically"
+    capability: CAP-23
+    proof_of_done: "App checks for new GitHub releases on launch, notifies user when update is available, downloads in background, and prompts to restart and apply."
 
-nonfunctional: []
+nonfunctional:
+  - id: NFR-1
+    title: "Quick scan completes within 30 seconds on SSD systems"
+    goal: BG-1
+    enforced_by: "Performance benchmarking test suite running against standard 10GB test corpus"
+  - id: NFR-2
+    title: "UI thread remains responsive (>= 30 fps) during background scans"
+    goal: BG-1
+    enforced_by: "Electron IPC worker thread architecture separating UI from scan engine"
+  - id: NFR-3
+    title: "Zero telemetry collected or transmitted without explicit opt-in"
+    goal: BG-3
+    enforced_by: "Network request audit in CI blocking unauthorized outbound connections"
+  - id: NFR-4
+    title: "Memory footprint under 150MB during idle monitoring"
+    goal: BG-1
+    enforced_by: "Memory budget assertions in automated performance tests"
+  - id: NFR-5
+    title: "All cleaning rules validated against JSON schema in CI"
+    goal: BG-1
+    enforced_by: "npm run validate:rules script blocking PR merge on schema violations"
 
-journeys: []
+journeys:
+  - id: UJ-1
+    title: "Alex frees up 15GB of disk space before a large game download"
+    narrative: "Alex (software developer and gamer) is running out of disk space on their gaming PC. They open Kudu, click 'One-Click Clean', review the scan results showing 12GB in temp/shader caches and 3GB in browser data, click 'Clean Now', and watch the space counter increment to 15.2GB freed in 45 seconds."
+  - id: UJ-2
+    title: "Maria checks for malware after downloading an untrusted file"
+    narrative: "Maria (privacy-conscious user) downloaded an installer from a third-party site and wants to verify system safety. She opens Kudu, navigates to Security, selects 'Quick Malware Scan', Kudu evaluates running processes and common persistence locations against YARA rules in 20 seconds, and reports 'No threats detected'."
+  - id: UJ-3
+    title: "DevOps engineer automates weekly server cleanup via CLI"
+    narrative: "A DevOps engineer adds `kudu clean --system --temp --quiet` to a weekly cron job on a Linux build server. The command executes headlessly, purges build artifacts and temp files, and logs reclaimed space to syslog."
