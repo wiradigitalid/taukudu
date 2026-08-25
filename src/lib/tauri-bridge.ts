@@ -130,6 +130,31 @@ export interface BloatwareApp {
   is_installed: boolean
 }
 
+export interface MalwareThreat {
+  id: string
+  path: string
+  file_name: string
+  size: number
+  detection_name: string
+  severity: string
+  source: string
+  details: string
+  selected: boolean
+}
+
+export interface MalwareScanResult {
+  threats: MalwareThreat[]
+  files_scanned: number
+  duration_ms: number
+  scan_type: string
+}
+
+export interface MalwareActionResult {
+  success_count: number
+  failure_count: number
+  details: string[]
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -172,5 +197,14 @@ export const tauriApi = {
   },
   removeBloatware: async (package_names: string[]): Promise<string[]> => {
     return await invoke('remove_bloatware', { packageNames: package_names })
+  },
+  scanMalware: async (scan_type: string = 'quick', custom_path?: string): Promise<MalwareScanResult> => {
+    return await invoke('scan_malware', { scanType: scan_type, customPath: custom_path })
+  },
+  quarantineThreats: async (file_paths: string[]): Promise<MalwareActionResult> => {
+    return await invoke('quarantine_threats', { filePaths: file_paths })
+  },
+  deleteThreats: async (file_paths: string[]): Promise<MalwareActionResult> => {
+    return await invoke('delete_threats', { filePaths: file_paths })
   },
 }

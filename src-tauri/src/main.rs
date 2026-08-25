@@ -6,8 +6,9 @@ use tauri::Manager;
 use taukudu_lib::{
     BloatwareApp, CleanExecutionResult, CleanerEngine, DeduplicationEngine, DiskAnalysisResult,
     DiskAnalyzerEngine, DiskDriveInfo, DuplicateScanOptions, DuplicateScanResult,
-    EmptyFolderScanResult, LargeFileScanResult, PrivacyApplyResult, PrivacyShieldEngine,
-    PrivacyShieldState, ScanResult, StartupDebloatEngine, StartupItem,
+    EmptyFolderScanResult, LargeFileScanResult, MalwareActionResult, MalwareScanResult,
+    MalwareScannerEngine, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, ScanResult,
+    StartupDebloatEngine, StartupItem,
 };
 
 #[tauri::command]
@@ -113,6 +114,21 @@ fn remove_bloatware(package_names: Vec<String>) -> Vec<String> {
     StartupDebloatEngine::remove_bloatware_packages(&package_names)
 }
 
+#[tauri::command]
+fn scan_malware(scan_type: String, custom_path: Option<String>) -> MalwareScanResult {
+    MalwareScannerEngine::scan(&scan_type, custom_path.as_deref())
+}
+
+#[tauri::command]
+fn quarantine_threats(file_paths: Vec<String>) -> MalwareActionResult {
+    MalwareScannerEngine::quarantine_files(&file_paths)
+}
+
+#[tauri::command]
+fn delete_threats(file_paths: Vec<String>) -> MalwareActionResult {
+    MalwareScannerEngine::delete_threat_files(&file_paths)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -132,7 +148,10 @@ fn main() {
             get_startup_items,
             toggle_startup_item,
             get_bloatware_list,
-            remove_bloatware
+            remove_bloatware,
+            scan_malware,
+            quarantine_threats,
+            delete_threats
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

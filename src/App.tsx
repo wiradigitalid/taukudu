@@ -9,6 +9,7 @@ import {
   DiskAnalysisResult,
   StartupItem,
   BloatwareApp,
+  MalwareScanResult,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -27,11 +28,13 @@ import {
   FileCode,
   Zap,
   PackageMinus,
-  Check,
+  Bug,
+  ShieldAlert,
+  Archive,
 } from 'lucide-react'
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -65,6 +68,12 @@ export function App() {
   const [selectedBloat, setSelectedBloat] = useState<Set<string>>(new Set())
   const [removingBloat, setRemovingBloat] = useState(false)
   const [bloatFeedback, setBloatFeedback] = useState<string | null>(null)
+
+  // Malware Scanner state
+  const [malwareScanning, setMalwareScanning] = useState(false)
+  const [malwareResult, setMalwareResult] = useState<MalwareScanResult | null>(null)
+  const [selectedThreatPaths, setSelectedThreatPaths] = useState<Set<string>>(new Set())
+  const [malwareStatus, setMalwareStatus] = useState<string | null>(null)
 
   // Privacy Shield state
   const [privacyState, setPrivacyState] = useState<PrivacyShieldState | null>(null)
@@ -219,6 +228,45 @@ export function App() {
     }
   }
 
+  const handleRunMalwareScan = async (type: string = 'quick') => {
+    setMalwareScanning(true)
+    setMalwareStatus(null)
+    setSelectedThreatPaths(new Set())
+    try {
+      const res = await tauriApi.scanMalware(type)
+      setMalwareResult(res)
+      const paths = new Set(res.threats.map((t) => t.path))
+      setSelectedThreatPaths(paths)
+    } catch (err) {
+      console.error('Malware scan error:', err)
+      setMalwareStatus('Scan error: ' + String(err))
+    } finally {
+      setMalwareScanning(false)
+    }
+  }
+
+  const handleQuarantineThreats = async () => {
+    if (selectedThreatPaths.size === 0) return
+    try {
+      const res = await tauriApi.quarantineThreats(Array.from(selectedThreatPaths))
+      setMalwareStatus(`Quarantined ${res.success_count} threats successfully.`)
+      await handleRunMalwareScan('quick')
+    } catch (err) {
+      setMalwareStatus('Quarantine failed: ' + String(err))
+    }
+  }
+
+  const handleDeleteThreats = async () => {
+    if (selectedThreatPaths.size === 0) return
+    try {
+      const res = await tauriApi.deleteThreats(Array.from(selectedThreatPaths))
+      setMalwareStatus(`Deleted ${res.success_count} threat files permanently.`)
+      await handleRunMalwareScan('quick')
+    } catch (err) {
+      setMalwareStatus('Delete threats failed: ' + String(err))
+    }
+  }
+
   const fetchPrivacySettings = async () => {
     setLoadingPrivacy(true)
     try {
@@ -252,7 +300,8 @@ export function App() {
       setPrivacyFeedback('All privacy shields successfully applied!')
       await fetchPrivacySettings()
     } catch (err) {
-      setPrivacyFeedback(`Error: ${String(err)}`)
+      console.error('Batch protect failed:', err)
+      setPrivacyFeedback(`Error applying all: ${String(err)}`)
     }
   }
 
@@ -341,6 +390,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('malware')
+                if (!malwareResult && !malwareScanning) handleRunMalwareScan('quick')
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'malware'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Bug className="w-4 h-4" />
+              Malware Scanner
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('startup')
                 if (startupItems.length === 0 && !loadingStartup) fetchStartupItems()
               }}
@@ -402,6 +465,8 @@ export function App() {
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'disk'
               ? 'Disk Space & Treemap Analyzer'
+              : activeTab === 'malware'
+              ? 'YARA & Heuristic Malware Scanner'
               : activeTab === 'startup'
               ? 'Windows Startup Programs'
               : activeTab === 'debloat'
@@ -444,6 +509,15 @@ export function App() {
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${analyzingDisk ? 'animate-spin' : ''}`} />
                 Analyze Drive
+              </button>
+            ) : activeTab === 'malware' ? (
+              <button
+                onClick={() => handleRunMalwareScan('quick')}
+                disabled={malwareScanning}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${malwareScanning ? 'animate-spin' : ''}`} />
+                Quick Scan
               </button>
             ) : activeTab === 'startup' ? (
               <button
@@ -846,6 +920,115 @@ export function App() {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        ) : activeTab === 'malware' ? (
+          /* Malware Scanner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    {malwareScanning
+                      ? 'Scanning filesystem with heuristic YARA-X engine...'
+                      : malwareResult
+                      ? `Found ${malwareResult.threats.length} potential security threats`
+                      : 'Malware & Threat Scanner Ready'}
+                  </h2>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {malwareStatus ||
+                    `Scanned ${malwareResult?.files_scanned || 0} files across persistence and user paths in ${
+                      malwareResult?.duration_ms || 0
+                    }ms`}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleRunMalwareScan('quick')}
+                  disabled={malwareScanning}
+                  className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-200 text-xs font-medium transition cursor-pointer"
+                >
+                  Quick Scan
+                </button>
+                <button
+                  onClick={handleQuarantineThreats}
+                  disabled={malwareScanning || selectedThreatPaths.size === 0}
+                  className="px-4 py-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 text-xs font-semibold transition flex items-center gap-2 cursor-pointer"
+                >
+                  <Archive className="w-4 h-4" />
+                  Quarantine ({selectedThreatPaths.size})
+                </button>
+                <button
+                  onClick={handleDeleteThreats}
+                  disabled={malwareScanning || selectedThreatPaths.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 text-xs font-semibold transition flex items-center gap-2 cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Threats
+                </button>
+              </div>
+            </div>
+
+            {/* Threat list breakdown */}
+            <div className="space-y-3">
+              {malwareResult && malwareResult.threats.length > 0 ? (
+                malwareResult.threats.map((threat) => {
+                  const isSelected = selectedThreatPaths.has(threat.path)
+                  return (
+                    <div
+                      key={threat.id}
+                      className={`p-4 rounded-xl border transition flex items-start justify-between ${
+                        isSelected
+                          ? 'bg-red-500/10 border-red-500/30'
+                          : 'bg-[#16161a] border-[#2a2a36]'
+                      }`}
+                    >
+                      <label className="flex items-start gap-3 cursor-pointer mr-4">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const next = new Set(selectedThreatPaths)
+                            if (e.target.checked) next.add(threat.path)
+                            else next.delete(threat.path)
+                            setSelectedThreatPaths(next)
+                          }}
+                          className="mt-1 rounded border-zinc-700 text-red-500 focus:ring-0 cursor-pointer"
+                        />
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-white">{threat.detection_name}</span>
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                                threat.severity === 'critical'
+                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                              }`}
+                            >
+                              {threat.severity}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 font-mono">
+                              {threat.source}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-300 font-mono">{threat.path}</p>
+                          <p className="text-xs text-zinc-500">{threat.details}</p>
+                        </div>
+                      </label>
+                      <span className="text-xs font-mono text-zinc-400 shrink-0">
+                        {formatBytes(threat.size)}
+                      </span>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="p-12 rounded-xl bg-[#16161a] border border-[#2a2a36] flex flex-col items-center justify-center text-zinc-500">
+                  <ShieldAlert className="w-8 h-8 mb-2 text-emerald-500" />
+                  <p className="text-sm font-semibold text-zinc-300">No threats detected</p>
+                  <p className="text-xs text-zinc-500 mt-1">Your persistence and user directories appear clean.</p>
+                </div>
+              )}
             </div>
           </div>
         ) : activeTab === 'startup' ? (
