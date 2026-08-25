@@ -274,6 +274,21 @@ export interface GameOptimizationItem {
   is_applied: boolean
 }
 
+export interface TrimDriveStatus {
+  drive_letter: string
+  media_type: string
+  trim_enabled: boolean
+  last_status: string
+}
+
+export interface DiskRepairOutput {
+  tool: string
+  success: boolean
+  exit_code: number
+  output: string
+  summary: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -388,5 +403,20 @@ export const tauriApi = {
   },
   getGameOptimizations: async (): Promise<GameOptimizationItem[]> => {
     return await invoke('get_game_optimizations')
+  },
+  getTrimInfo: async (): Promise<TrimDriveStatus[]> => {
+    return await invoke('get_trim_info')
+  },
+  runDiskTrim: async (drive_letter: string): Promise<string> => {
+    return await invoke('run_disk_trim', { driveLetter: drive_letter })
+  },
+  runSfcScan: async (): Promise<DiskRepairOutput> => {
+    return await invoke('run_sfc_scan')
+  },
+  runDismScan: async (): Promise<DiskRepairOutput> => {
+    return await invoke('run_dism_scan')
+  },
+  runChkdskScan: async (drive_letter: string): Promise<DiskRepairOutput> => {
+    return await invoke('run_chkdsk_scan', { driveLetter: drive_letter })
   },
 }

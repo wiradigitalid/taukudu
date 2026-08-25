@@ -8,13 +8,14 @@ use tauri::Manager;
 use taukudu_lib::{
     handle_cli_mode, ActiveConnectionInfo, BloatwareApp, CleanExecutionResult, CleanerEngine,
     CliArgs, DeduplicationEngine, DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo,
-    DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult, EmptyFolderScanResult,
-    GameModeEngine, GameModeStatus, GameOptimizationItem, HistoryRecord, InstalledProgramInfo,
-    LargeFileScanResult, MalwareActionResult, MalwareScanResult, MalwareScannerEngine,
-    NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot,
-    PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RegistryCleanerEngine,
-    RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult, ServiceDriverEngine,
-    ServiceItemInfo, ShredderResult, StartupDebloatEngine, StartupItem, UninstallerShredderEngine,
+    DiskMaintenanceEngine, DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions,
+    DuplicateScanResult, EmptyFolderScanResult, GameModeEngine, GameModeStatus,
+    GameOptimizationItem, HistoryRecord, InstalledProgramInfo, LargeFileScanResult,
+    MalwareActionResult, MalwareScanResult, MalwareScannerEngine, NetworkItemInfo,
+    NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot, PrivacyApplyResult,
+    PrivacyShieldEngine, PrivacyShieldState, RegistryCleanerEngine, RegistryFixResult,
+    RegistryIssue, RegistryScanResult, ScanResult, ServiceDriverEngine, ServiceItemInfo,
+    ShredderResult, StartupDebloatEngine, StartupItem, TrimDriveStatus, UninstallerShredderEngine,
     GLOBAL_HISTORY,
 };
 
@@ -269,6 +270,31 @@ fn get_game_optimizations() -> Vec<GameOptimizationItem> {
     GameModeEngine::get_optimizations()
 }
 
+#[tauri::command]
+fn get_trim_info() -> Vec<TrimDriveStatus> {
+    DiskMaintenanceEngine::get_trim_status()
+}
+
+#[tauri::command]
+fn run_disk_trim(drive_letter: String) -> Result<String, String> {
+    DiskMaintenanceEngine::execute_trim(&drive_letter)
+}
+
+#[tauri::command]
+fn run_sfc_scan() -> Result<DiskRepairOutput, String> {
+    DiskMaintenanceEngine::run_sfc()
+}
+
+#[tauri::command]
+fn run_dism_scan() -> Result<DiskRepairOutput, String> {
+    DiskMaintenanceEngine::run_dism()
+}
+
+#[tauri::command]
+fn run_chkdsk_scan(drive_letter: String) -> Result<DiskRepairOutput, String> {
+    DiskMaintenanceEngine::run_chkdsk(&drive_letter)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -321,7 +347,12 @@ fn main() {
             fix_registry_targets,
             get_game_mode_status,
             toggle_game_mode,
-            get_game_optimizations
+            get_game_optimizations,
+            get_trim_info,
+            run_disk_trim,
+            run_sfc_scan,
+            run_dism_scan,
+            run_chkdsk_scan
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

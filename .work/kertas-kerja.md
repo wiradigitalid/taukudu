@@ -25,18 +25,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-14** | **Network & Socket Optimizer** | DNS cache flush, ARP table purge, Winsock reset, Netstat monitoring | Native Win32 CLI / Netstat, `NetworkPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-15** | **Windows Registry Orphan Fixer**| Shared DLLs, App Paths, MUI Cache scanning & repair | `winreg`, `RegistryCleanerPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-16** | **Game Mode & Latency Optimizer**| Power plan switching, GameDVR toggle, Search indexer pause | `winreg`, powercfg, net service, `GameModePage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-17** | **Disk Maintenance & Repair** | SSD Storage ReTrim, SFC file checker, DISM repair, CHKDSK | fsutil, PowerShell ReTrim, sfc, dism, `DiskRepairPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
 
-### Area 16 — Game Mode & Latency Optimizer (Selesai: 2026-08-26)
+### Area 17 — Disk Maintenance & System File Repair (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **Game Mode Engine (`src-tauri/src/game_mode.rs`):**
-     - Pengaktifan profil daya performa tinggi (`powercfg /setactive ...`).
-     - Penonaktifan GameDVR & background capture recording (`GameDVR_Enabled` & `AppCaptureEnabled` di `HKCU`).
-     - Jeda layanan Windows Search indexer (`net stop WSearch`) saat bermain game untuk mengeliminasi disk I/O lag.
-     - Pengembalian konfigurasi default saat mode dinonaktifkan.
-  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_game_mode_status`, `toggle_game_mode`, dan `get_game_optimizations`.
-  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Game Mode* dengan tombol aktivasi, status indikator, dan kartu daftar optimasi aktif.
+  1. **Disk Maintenance Engine (`src-tauri/src/disk_maintenance.rs`):**
+     - Pemeriksaan status aktivasi TRIM SSD via `fsutil` dan eksekusi `Optimize-Volume -ReTrim` pada partisi SSD/NVMe.
+     - Eksekusi System File Checker (`sfc /verifyonly`) untuk verifikasi integritas berkas sistem yang dilindungi Windows.
+     - Eksekusi Deployment Image Servicing and Management (`dism /online /cleanup-image /checkhealth`) untuk status komponen store Windows.
+     - Eksekusi volume filesystem check (`chkdsk /scan`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_trim_info`, `run_disk_trim`, `run_sfc_scan`, `run_dism_scan`, dan `run_chkdsk_scan`.
+  3. **Frontend UI (`src/App.tsx`):** Menambahkan halaman *Disk Maintenance* lengkap dengan tombol ReTrim instan dan panel diagnostik perbaikan sistem (SFC, DISM, CHKDSK).
   4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

@@ -20,6 +20,8 @@ import {
   RegistryIssue,
   GameModeStatus,
   GameOptimizationItem,
+  TrimDriveStatus,
+  DiskRepairOutput,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -55,13 +57,15 @@ import {
   Wifi,
   Database,
   Gamepad2,
+  ShieldCheck,
+  Hammer,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'game' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'game' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -89,6 +93,12 @@ export function App() {
   const [selectedDrivePath, setSelectedDrivePath] = useState<string>('D:\\')
   const [analyzingDisk, setAnalyzingDisk] = useState(false)
   const [diskAnalysis, setDiskAnalysis] = useState<DiskAnalysisResult | null>(null)
+
+  // Disk Maintenance & Repair state
+  const [trimDrives, setTrimDrives] = useState<TrimDriveStatus[]>([])
+  const [trimFeedback, setTrimFeedback] = useState<string | null>(null)
+  const [runningRepair, setRunningRepair] = useState<string | null>(null)
+  const [repairResults, setRepairResults] = useState<Record<string, DiskRepairOutput>>({})
 
   // Game Mode state
   const [gameStatus, setGameStatus] = useState<GameModeStatus | null>(null)
@@ -260,6 +270,61 @@ export function App() {
     }
   }
 
+  const fetchTrimInfo = async () => {
+    try {
+      const data = await tauriApi.getTrimInfo()
+      setTrimDrives(data)
+    } catch (err) {
+      console.error('TRIM error:', err)
+    }
+  }
+
+  const handleRunTrim = async (driveLetter: string) => {
+    try {
+      const res = await tauriApi.runDiskTrim(driveLetter)
+      setTrimFeedback(res)
+      await fetchTrimInfo()
+    } catch (err) {
+      setTrimFeedback(`TRIM error: ${String(err)}`)
+    }
+  }
+
+  const handleRunSfc = async () => {
+    setRunningRepair('sfc')
+    try {
+      const res = await tauriApi.runSfcScan()
+      setRepairResults((prev) => ({ ...prev, sfc: res }))
+    } catch (err) {
+      console.error('SFC error:', err)
+    } finally {
+      setRunningRepair(null)
+    }
+  }
+
+  const handleRunDism = async () => {
+    setRunningRepair('dism')
+    try {
+      const res = await tauriApi.runDismScan()
+      setRepairResults((prev) => ({ ...prev, dism: res }))
+    } catch (err) {
+      console.error('DISM error:', err)
+    } finally {
+      setRunningRepair(null)
+    }
+  }
+
+  const handleRunChkdsk = async (letter: string = 'C') => {
+    setRunningRepair('chkdsk')
+    try {
+      const res = await tauriApi.runChkdskScan(letter)
+      setRepairResults((prev) => ({ ...prev, chkdsk: res }))
+    } catch (err) {
+      console.error('CHKDSK error:', err)
+    } finally {
+      setRunningRepair(null)
+    }
+  }
+
   const fetchGameMode = async () => {
     try {
       const st = await tauriApi.getGameModeStatus()
@@ -277,7 +342,7 @@ export function App() {
       const next = !gameStatus.is_active
       const res = await tauriApi.toggleGameMode(next)
       setGameStatus(res)
-      setGameFeedback(next ? 'Ultimate Game Mode Activated! (High Performance Power Plan + Indexing Paused)' : 'Game Mode Deactivated.')
+      setGameFeedback(next ? 'Ultimate Game Mode Activated!' : 'Game Mode Deactivated.')
       await fetchGameMode()
     } catch (err) {
       setGameFeedback(`Game mode error: ${String(err)}`)
@@ -705,6 +770,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('repair')
+                if (trimDrives.length === 0) fetchTrimInfo()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'repair'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Hammer className="w-4 h-4" />
+              Disk Maintenance
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('game')
                 if (!gameStatus) fetchGameMode()
               }}
@@ -914,6 +993,8 @@ export function App() {
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'disk'
               ? 'Disk Space & Treemap Analyzer'
+              : activeTab === 'repair'
+              ? 'SSD TRIM & Filesystem Integrity Repair'
               : activeTab === 'game'
               ? 'Game Mode Latency & Power Optimization'
               : activeTab === 'registry'
@@ -943,13 +1024,13 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'game' ? (
+            {activeTab === 'repair' ? (
               <button
-                onClick={fetchGameMode}
+                onClick={fetchTrimInfo}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                Refresh State
+                Refresh Disks
               </button>
             ) : (
               <button
@@ -1029,70 +1110,95 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'game' ? (
-          /* Game Mode Page */
+        ) : activeTab === 'repair' ? (
+          /* Disk Maintenance & Repair Page */
           <div className="p-8 max-w-6xl space-y-6">
+            {/* TRIM Section */}
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-bold text-white">
-                    Game Mode: {gameStatus?.is_active ? 'Active' : 'Inactive'}
-                  </h2>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                      gameStatus?.is_active
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : 'bg-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    {gameStatus?.is_active ? 'Max FPS & Min Latency' : 'Standard Desktop State'}
-                  </span>
-                </div>
+                <h2 className="text-lg font-bold text-white">SSD Storage TRIM Optimization</h2>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {gameFeedback || 'Automatically optimize power plans, pause background indexing, and disable GameDVR capture latency.'}
+                  {trimFeedback || 'Send ReTrim command to SSDs and NVMe drives to reclaim erased flash blocks.'}
                 </p>
               </div>
-
               <button
-                onClick={handleToggleGameMode}
-                className={`px-6 py-2.5 rounded-xl font-semibold text-xs transition flex items-center gap-2 cursor-pointer ${
-                  gameStatus?.is_active
-                    ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                    : 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/20'
-                }`}
+                onClick={() => handleRunTrim('C')}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition cursor-pointer"
               >
-                <Gamepad2 className="w-4 h-4" />
-                {gameStatus?.is_active ? 'Deactivate Game Mode' : 'Activate Game Mode'}
+                TRIM System Drive (C:)
               </button>
             </div>
 
-            {/* Optimization list */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {gameOpts.map((opt) => (
-                <div
-                  key={opt.id}
-                  className={`p-4 rounded-xl border flex justify-between items-start transition ${
-                    opt.is_applied ? 'bg-[#16161a] border-emerald-500/30' : 'bg-[#16161a] border-[#2a2a36]'
-                  }`}
-                >
-                  <div className="space-y-1 mr-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-white">{opt.title}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] font-mono text-zinc-400 uppercase">
-                        {opt.category}
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-400 leading-relaxed">{opt.description}</p>
+            {/* System File & Disk Integrity Tools */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* SFC Tool */}
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3 flex flex-col justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm font-semibold text-white">System File Checker (SFC)</span>
                   </div>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
-                      opt.is_applied ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    {opt.is_applied ? 'Applied' : 'Pending'}
-                  </span>
+                  <p className="text-xs text-zinc-400">Verifies integrity of protected Windows OS system binaries.</p>
                 </div>
-              ))}
+                {repairResults.sfc && (
+                  <div className="text-[11px] p-2 rounded bg-black/30 text-zinc-300 font-mono">
+                    {repairResults.sfc.summary}
+                  </div>
+                )}
+                <button
+                  onClick={handleRunSfc}
+                  disabled={runningRepair === 'sfc'}
+                  className="w-full py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-white transition cursor-pointer"
+                >
+                  {runningRepair === 'sfc' ? 'Verifying Files...' : 'Run SFC Check'}
+                </button>
+              </div>
+
+              {/* DISM Tool */}
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3 flex flex-col justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm font-semibold text-white">DISM Component Store</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">Checks Windows component store health and repairability.</p>
+                </div>
+                {repairResults.dism && (
+                  <div className="text-[11px] p-2 rounded bg-black/30 text-zinc-300 font-mono">
+                    {repairResults.dism.summary}
+                  </div>
+                )}
+                <button
+                  onClick={handleRunDism}
+                  disabled={runningRepair === 'dism'}
+                  className="w-full py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-white transition cursor-pointer"
+                >
+                  {runningRepair === 'dism' ? 'Checking Store...' : 'Run DISM Health Check'}
+                </button>
+              </div>
+
+              {/* CHKDSK Tool */}
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3 flex flex-col justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <HardDrive className="w-4 h-4 text-emerald-400" />
+                    <span className="text-sm font-semibold text-white">CHKDSK Volume Scan</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">Scans volume filesystem metadata for corrupt sectors.</p>
+                </div>
+                {repairResults.chkdsk && (
+                  <div className="text-[11px] p-2 rounded bg-black/30 text-zinc-300 font-mono">
+                    {repairResults.chkdsk.summary}
+                  </div>
+                )}
+                <button
+                  onClick={() => handleRunChkdsk('C')}
+                  disabled={runningRepair === 'chkdsk'}
+                  className="w-full py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-white transition cursor-pointer"
+                >
+                  {runningRepair === 'chkdsk' ? 'Scanning Volume...' : 'Run CHKDSK Scan'}
+                </button>
+              </div>
             </div>
           </div>
         ) : (
