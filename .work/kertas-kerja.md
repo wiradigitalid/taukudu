@@ -21,7 +21,7 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-10** | **Performance Monitor** | Live CPU, RAM, Disk I/O, Network, Process Manager + Page | `sysinfo`, Performance Monitor UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-11** | **History & SQLite Store** | Audit trail & history logging + HistoryPage | `rusqlite` (SQLite 3), `HistoryPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-12** | **Settings, i18n & Updates** | 30+ Bahasa (i18next), Theme Dark/Light, Auto-updater | `i18next`, Dark/Light switch, Settings UI | ✅ COMPLETED | 2026-08-26 |
-| **AREA-13** | **CLI Mode & Headless** | Scriptable command-line interface (`taukudu clean --all`) | `clap` | ⏳ NEXT UP | — |
+| **AREA-13** | **CLI Mode & Headless** | Scriptable command-line interface (`taukudu clean --all`) | `clap`, subcommands `clean`, `duplicates`, `malware`, `privacy` | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
@@ -61,9 +61,11 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 - SQLite history store via `rusqlite`, automated session logging, dan History UI.
 
 ### Area 12 — App Settings & Multi-Language i18n (Selesai: 2026-08-26)
+- i18next engine dengan 30 bahasa, toggle Dark/Light theme, dan Settings UI.
+
+### Area 13 — Scriptable Headless CLI Interface (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **i18n Multi-Language Localization (`src/i18n.ts`):** Mengintegrasikan `i18next` + `react-i18next` dengan dukungan switch instan untuk 30 bahasa resmi (Bahasa Indonesia, English, Spanish, French, German, Japanese, Chinese, Russian, Arabic, dll.).
-  2. **Appearance & Theming:** Opsi pemilih tema Dark / Light yang reaktif terhadap class DOM `dark`/`light`.
-  3. **Zero Telemetry Transparency:** Kartu komitmen privasi 100% offline.
-  4. **Frontend Settings Page (`src/App.tsx`):** Halaman Settings terpadu untuk pengaturan bahasa dan tema.
-  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
+  1. **CLI Engine (`src-tauri/src/cli.rs`):** Menggunakan `clap` (derive parser) untuk mendukung eksekusi headless via terminal tanpa membuka GUI window.
+  2. **Subcommands & Flags:** Mendukung `clean` (`--all`, `--clean`, `--json`), `duplicates` (`--directory`, `--json`), `malware` (`--scan-type`, `--json`), dan `privacy` (`--enforce-all`, `--json`).
+  3. **Tauri CLI Bridge (`src-tauri/src/main.rs`):** Deteksi argumen CLI di main entrypoint sebelum GUI builder diinisialisasi.
+  4. **Verifikasi:** Eksekusi `taukudu.exe --help` dan `taukudu.exe privacy` PASS dengan output terminal terstruktur.

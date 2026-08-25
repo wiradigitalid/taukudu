@@ -1,4 +1,5 @@
 pub mod cleaner;
+pub mod cli;
 pub mod deduplication;
 pub mod disk_analyzer;
 pub mod history_store;
@@ -11,6 +12,7 @@ pub mod startup_debloat;
 pub mod uninstaller_shredder;
 
 pub use cleaner::{CleanExecutionResult, CleanerEngine, ScanResult};
+pub use cli::{handle_cli_mode, CliArgs, Commands};
 pub use deduplication::{
     DeduplicationEngine, DuplicateFile, DuplicateGroup, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, LargeFileScanResult,

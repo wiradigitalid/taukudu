@@ -1,16 +1,18 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use clap::Parser;
+use std::env;
 use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
-    BloatwareApp, CleanExecutionResult, CleanerEngine, DeduplicationEngine, DiskAnalysisResult,
-    DiskAnalyzerEngine, DiskDriveInfo, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
-    EmptyFolderScanResult, HistoryRecord, InstalledProgramInfo, LargeFileScanResult,
-    MalwareActionResult, MalwareScanResult, MalwareScannerEngine, PerfMonitorEngine,
-    PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, ScanResult,
-    ServiceDriverEngine, ServiceItemInfo, ShredderResult, StartupDebloatEngine, StartupItem,
-    UninstallerShredderEngine, GLOBAL_HISTORY,
+    handle_cli_mode, BloatwareApp, CleanExecutionResult, CleanerEngine, CliArgs,
+    DeduplicationEngine, DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DriverPackageInfo,
+    DuplicateScanOptions, DuplicateScanResult, EmptyFolderScanResult, HistoryRecord,
+    InstalledProgramInfo, LargeFileScanResult, MalwareActionResult, MalwareScanResult,
+    MalwareScannerEngine, PerfMonitorEngine, PerformanceSnapshot, PrivacyApplyResult,
+    PrivacyShieldEngine, PrivacyShieldState, ScanResult, ServiceDriverEngine, ServiceItemInfo,
+    ShredderResult, StartupDebloatEngine, StartupItem, UninstallerShredderEngine, GLOBAL_HISTORY,
 };
 
 #[tauri::command]
@@ -211,6 +213,15 @@ fn clear_history_records() -> Result<(), String> {
 }
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    // Check if invoked via CLI mode arguments
+    if args.len() > 1 && (args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) || args.contains(&"--version".to_string()) || args.contains(&"-v".to_string()) || args.contains(&"--cli".to_string()) || args.contains(&"--clean".to_string()) || args.contains(&"--all".to_string()) || args[1] == "clean" || args[1] == "duplicates" || args[1] == "malware" || args[1] == "privacy") {
+        let parsed = CliArgs::parse();
+        handle_cli_mode(&parsed);
+        return;
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
