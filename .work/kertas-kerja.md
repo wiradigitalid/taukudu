@@ -46,10 +46,16 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-35** | **Window State & Geometry Manager** | Frameless window bounds persistence, display reachability sanitization | `WindowStateEngine`, Tauri IPC window restore | ✅ COMPLETED | 2026-08-26 |
 | **AREA-36** | **Security Posture & Compliance Collector** | Antivirus WMI detection, BitLocker encryption, Hotfix audit & admin elevation | `SecurityPostureEngine`, Dashboard security card UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-37** | **Threat Intelligence Blacklist Store** | Persistent JSON store for C2 CIDRs, Tor exit nodes, and malicious domains | `ThreatBlacklistStore`, Threat Monitor tab UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-38** | **About & Open Source Identity** | App metadata, architectural concepts, zero-telemetry guarantee, license & repo links | `AboutPage` view in `App.tsx` | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 38 — About TauKudu & Open-Source Identity (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Frontend About UI (`src/App.tsx`):** Menambahkan tab *About TauKudu* lengkap dengan metadata versi rilis, ringkasan arsitektur inti (Rust Core, BleachBit CleanerML parser, Czkawka 3-stage deduplication, ripgrep parallel traversal, SQLite/JSONL audit ledger), jaminan privasi 100% offline (Zero-telemetry guarantee), lisensi open-source MIT, dan tautan repositori GitHub resmi.
+  2. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 37 — Threat Intelligence Blacklist Store (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

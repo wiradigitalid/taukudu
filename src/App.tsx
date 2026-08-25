@@ -107,13 +107,15 @@ import {
   Radio,
   Compass,
   BarChart3,
+  Info,
+  ExternalLink,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -1742,6 +1744,17 @@ export function App() {
               <Settings className="w-4 h-4" />
               Settings & i18n
             </button>
+            <button
+              onClick={() => setActiveTab('about')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'about'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Info className="w-4 h-4" />
+              About TauKudu
+            </button>
           </nav>
         </div>
 
@@ -1813,6 +1826,8 @@ export function App() {
               ? 'Prometheus OpenMetrics Telemetry Exporter'
               : activeTab === 'settings'
               ? 'Application Settings & Internationalization'
+              : activeTab === 'about'
+              ? 'About TauKudu & Open-Source Integrity'
               : activeTab === 'malware'
               ? 'YARA & Heuristic Malware Scanner'
               : 'OS Privacy & Telemetry Shield'}
@@ -3089,6 +3104,70 @@ export function App() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        ) : activeTab === 'about' ? (
+          /* About Page */
+          <div className="p-8 max-w-5xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-500 font-extrabold text-2xl">
+                  T
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">TauKudu v0.1.0</h2>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    High-Performance Native System Optimizer, Security Suite, and Deep Cleaner.
+                  </p>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+                Pure Rust + Tauri v2
+              </span>
+            </div>
+
+            {/* Architecture Stack & Concepts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  Engine Architecture
+                </h3>
+                <ul className="text-xs text-zinc-400 space-y-1.5 list-disc list-inside">
+                  <li><strong className="text-zinc-200">Rust Core:</strong> Native Win32 syscalls via windows-rs & winreg</li>
+                  <li><strong className="text-zinc-200">BleachBit Rules:</strong> 100+ XML CleanerML parser & pattern matcher</li>
+                  <li><strong className="text-zinc-200">Czkawka Concept:</strong> 3-stage Blake3 deduplication engine</li>
+                  <li><strong className="text-zinc-200">ripgrep Traversal:</strong> Parallel multi-core Rayon directory walk</li>
+                  <li><strong className="text-zinc-200">Local Ledger:</strong> SQLite audit trail + append-only JSONL</li>
+                </ul>
+              </div>
+
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-blue-400" />
+                  Privacy & Telemetry Guarantee
+                </h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  TauKudu guarantees 100% offline local execution. Zero telemetry, zero analytics tracking, and zero data uploads by default. All scanning, registry fixes, and audit trails remain strictly on your local machine.
+                </p>
+              </div>
+            </div>
+
+            {/* Open Source Links */}
+            <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div className="space-y-0.5">
+                <span className="text-sm font-semibold text-white">Open Source Community</span>
+                <p className="text-xs text-zinc-500">Released under the MIT License • Built for precision and performance.</p>
+              </div>
+              <a
+                href="https://github.com/wiradigitalid/taukudu"
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 text-xs font-semibold flex items-center gap-2 transition cursor-pointer"
+              >
+                <span>GitHub Repository</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
             </div>
           </div>
         ) : (
