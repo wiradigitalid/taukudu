@@ -496,6 +496,28 @@ export interface RecycleBinCleanResult {
   errors: string[]
 }
 
+export interface FlaggedConnection {
+  id: string
+  protocol: string
+  local_addr: string
+  remote_addr: string
+  remote_ip: string
+  remote_port: number
+  pid: number
+  process_name: string
+  threat_category: string
+  risk_reason: string
+  timestamp: string
+}
+
+export interface ThreatMonitorSummary {
+  total_connections_scanned: number
+  flagged_threats_count: number
+  flagged_connections: FlaggedConnection[]
+  monitored_blacklist_entries: number
+  is_monitoring_active: boolean
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -700,5 +722,14 @@ export const tauriApi = {
   },
   emptyRecycleBinFast: async (): Promise<RecycleBinCleanResult> => {
     return await invoke('empty_recycle_bin_fast')
+  },
+  auditActiveThreats: async (): Promise<ThreatMonitorSummary> => {
+    return await invoke('audit_active_threats')
+  },
+  addThreatBlacklistCidr: async (cidr: string, category: string, reason: string): Promise<number> => {
+    return await invoke('add_threat_blacklist_cidr', { cidr, category, reason })
+  },
+  terminateThreatProcess: async (pid: number): Promise<void> => {
+    return await invoke('terminate_threat_process', { pid })
   },
 }

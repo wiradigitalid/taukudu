@@ -36,10 +36,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-25** | **System Restore Points Manager** | Windows System Protection status & snapshot checkpoint creation | `RestorePointEngine`, `RestorePointPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-26** | **Fast Recycle Bin Turbo Cleaner** | Multi-drive $Recycle.Bin turbo direct unlink & Shell sync | `RecycleBinEngine`, `RecycleBinPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-27** | **Cleaner Process Blockers Detector** | Real-time file lock & blocking browser/process detector & closer | `CleanerBlockersEngine`, Cleaner blocker alert UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-28** | **Live Outbound Threat Monitor** | Network socket C2 & malicious CIDR blacklist auditor and process killer | `ThreatMonitorEngine`, `ThreatMonitorPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 28 — Live C2 & Malicious Outbound Threat Monitor (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Threat Engine (`src-tauri/src/threat_monitor.rs`):** Inspeksi soket jaringan aktif (TCP/UDP) secara real-time dan pencocokan terhadap daftar CIDR blacklist intelijen ancaman (Tor Exit Nodes, C2 relay, cryptominer pool, brute-force scanner). Mendukung penambahan CIDR kustom dan terminasi instan proses yang teridentifikasi jahat (`terminate_threat_process`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `audit_active_threats`, `add_threat_blacklist_cidr`, dan `terminate_threat_process`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `FlaggedConnection`, `ThreatMonitorSummary`, serta method `tauriApi.auditActiveThreats`, `tauriApi.addThreatBlacklistCidr`, dan `tauriApi.terminateThreatProcess`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan tab *Live Threat Monitor* lengkap dengan card status pemantauan koneksi, form penambahan CIDR blacklist baru, dan daftar koneksi mencurigakan dengan tombol aksi *Terminate Process*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 27 — Cleaner Process Blockers Detector & Closer (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

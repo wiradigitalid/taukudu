@@ -23,6 +23,7 @@ pub mod scheduler;
 pub mod service_driver;
 pub mod software_updater;
 pub mod startup_debloat;
+pub mod threat_monitor;
 pub mod uninstaller_shredder;
 
 pub use breach_monitor::{BreachIncident, BreachMonitorEngine, BreachMonitorSummary, MonitoredEmailStatus, GLOBAL_BREACH_MONITOR};
@@ -64,6 +65,9 @@ pub use scheduler::{ScheduleEngine, ScheduleItem, ScheduleSummary, GLOBAL_SCHEDU
 pub use service_driver::{DriverPackageInfo, ServiceDriverEngine, ServiceItemInfo};
 pub use software_updater::{SoftwareUpdateSummary, SoftwareUpdaterEngine, UpdatablePackage, UpdateExecutionResult};
 pub use startup_debloat::{BloatwareApp, StartupDebloatEngine, StartupItem};
+pub use threat_monitor::{
+    FlaggedConnection, ThreatMonitorEngine, ThreatMonitorSummary, GLOBAL_THREAT_MONITOR,
+};
 pub use uninstaller_shredder::{
     InstalledProgramInfo, ShredderResult, UninstallerShredderEngine,
 };

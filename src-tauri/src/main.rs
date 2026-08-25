@@ -21,9 +21,10 @@ use taukudu_lib::{
     RegistryFixResult, RegistryIssue, RegistryScanResult, RestorePointEngine,
     RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
     ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
-    SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, TrimDriveStatus,
-    UninstallerShredderEngine, UpdateExecutionResult, GLOBAL_BREACH_MONITOR, GLOBAL_GAME_MODE,
-    GLOBAL_HISTORY, GLOBAL_SCHEDULER,
+    SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatMonitorEngine,
+    ThreatMonitorSummary, TrimDriveStatus, UninstallerShredderEngine, UpdateExecutionResult,
+    GLOBAL_BREACH_MONITOR, GLOBAL_GAME_MODE, GLOBAL_HISTORY, GLOBAL_SCHEDULER,
+    GLOBAL_THREAT_MONITOR,
 };
 
 #[tauri::command]
@@ -442,6 +443,21 @@ fn empty_recycle_bin_fast() -> RecycleBinCleanResult {
     res
 }
 
+#[tauri::command]
+fn audit_active_threats() -> ThreatMonitorSummary {
+    GLOBAL_THREAT_MONITOR.audit_active_threats()
+}
+
+#[tauri::command]
+fn add_threat_blacklist_cidr(cidr: String, category: String, reason: String) -> Result<usize, String> {
+    GLOBAL_THREAT_MONITOR.add_blacklist_cidr(cidr, category, reason)
+}
+
+#[tauri::command]
+fn terminate_threat_process(pid: u32) -> Result<(), String> {
+    GLOBAL_THREAT_MONITOR.terminate_threat_process(pid)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -524,7 +540,10 @@ fn main() {
             get_restore_points,
             create_restore_point,
             get_recycle_bin_summary,
-            empty_recycle_bin_fast
+            empty_recycle_bin_fast,
+            audit_active_threats,
+            add_threat_blacklist_cidr,
+            terminate_threat_process
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

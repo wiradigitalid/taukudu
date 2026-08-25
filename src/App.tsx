@@ -36,6 +36,8 @@ import {
   RecycleBinCleanResult,
   BlockerSummary,
   ProcessBlockerInfo,
+  ThreatMonitorSummary,
+  FlaggedConnection,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -87,13 +89,14 @@ import {
   BookmarkCheck,
   AlertTriangle,
   PowerOff,
+  Radio,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'recyclebin' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'recyclebin' | 'threats' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -116,6 +119,13 @@ export function App() {
   const [loadingRecycle, setLoadingRecycle] = useState(false)
   const [emptyingRecycle, setEmptyingRecycle] = useState(false)
   const [recycleFeedback, setRecycleFeedback] = useState<string | null>(null)
+
+  // Threat Monitor state
+  const [threatSummary, setThreatSummary] = useState<ThreatMonitorSummary | null>(null)
+  const [loadingThreats, setLoadingThreats] = useState(false)
+  const [threatFeedback, setThreatFeedback] = useState<string | null>(null)
+  const [newBlacklistCidr, setNewBlacklistCidr] = useState('')
+  const [newBlacklistCat, setNewBlacklistCat] = useState('Suspicious Staging')
 
   // Duplicates state
   const [dupDir, setDupDir] = useState<string>('D:\\Developer\\wiradigital.id\\taukudu')
@@ -336,6 +346,40 @@ export function App() {
       setRecycleFeedback('Emptying failed: ' + String(err))
     } finally {
       setEmptyingRecycle(false)
+    }
+  }
+
+  const fetchThreats = async () => {
+    setLoadingThreats(true)
+    try {
+      const res = await tauriApi.auditActiveThreats()
+      setThreatSummary(res)
+    } catch (err) {
+      console.error('Audit threats error:', err)
+    } finally {
+      setLoadingThreats(false)
+    }
+  }
+
+  const handleAddBlacklistCidr = async () => {
+    if (!newBlacklistCidr) return
+    try {
+      const total = await tauriApi.addThreatBlacklistCidr(newBlacklistCidr, newBlacklistCat, 'Custom administrator blacklist rule')
+      setThreatFeedback(`Added ${newBlacklistCidr} to threat blacklist (${total} active rules).`)
+      setNewBlacklistCidr('')
+      await fetchThreats()
+    } catch (err) {
+      setThreatFeedback(`Add CIDR error: ${String(err)}`)
+    }
+  }
+
+  const handleTerminateThreat = async (pid: number, name: string) => {
+    try {
+      await tauriApi.terminateThreatProcess(pid)
+      setThreatFeedback(`Terminated malicious/compromised process ${name} (PID: ${pid})`)
+      await fetchThreats()
+    } catch (err) {
+      setThreatFeedback(`Terminate process error: ${String(err)}`)
     }
   }
 
@@ -1120,6 +1164,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('threats')
+                if (!threatSummary && !loadingThreats) fetchThreats()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'threats'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Radio className="w-4 h-4" />
+              Live Threat Monitor
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('duplicates')
                 if (!dupResult && !dupScanning) handleScanDuplicates()
               }}
@@ -1481,6 +1539,8 @@ export function App() {
               ? 'Deep System Cleaner (Rules-Engine)'
               : activeTab === 'recyclebin'
               ? 'Fast Recycle Bin Turbo Cleaner (Multi-Drive)'
+              : activeTab === 'threats'
+              ? 'Live C2 & Malicious Outbound Threat Monitor'
               : activeTab === 'duplicates'
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'leftovers'
@@ -1539,6 +1599,14 @@ export function App() {
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Refresh Bin
+              </button>
+            ) : activeTab === 'threats' ? (
+              <button
+                onClick={fetchThreats}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Rescan Threats
               </button>
             ) : activeTab === 'leftovers' ? (
               <button
@@ -1815,6 +1883,109 @@ export function App() {
                 </div>
               ))}
             </div>
+          </div>
+        ) : activeTab === 'threats' ? (
+          /* Live Outbound Threat Monitor Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Live Threat Monitor: {threatSummary?.flagged_threats_count || 0} Suspicious Outbound Sockets
+                  </h2>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                    (threatSummary?.flagged_threats_count || 0) > 0
+                      ? 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse'
+                      : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {(threatSummary?.flagged_threats_count || 0) > 0 ? 'Threat Detected' : 'All Sockets Clean'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {threatFeedback || `Audited ${threatSummary?.total_connections_scanned || 0} active TCP connections against ${threatSummary?.monitored_blacklist_entries || 0} C2, Tor, and Botnet CIDR ranges.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchThreats}
+                  disabled={loadingThreats}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingThreats ? 'animate-spin' : ''}`} />
+                  {loadingThreats ? 'Auditing...' : 'Rescan Sockets'}
+                </button>
+              </div>
+            </div>
+
+            {/* Add Blacklist CIDR Form */}
+            <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-red-400" />
+                Add Threat Intelligence Range (CIDR)
+              </h3>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={newBlacklistCidr}
+                  onChange={(e) => setNewBlacklistCidr(e.target.value)}
+                  placeholder="Enter IPv4 CIDR (e.g. 198.51.100.0/24)..."
+                  className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                />
+                <input
+                  type="text"
+                  value={newBlacklistCat}
+                  onChange={(e) => setNewBlacklistCat(e.target.value)}
+                  placeholder="Threat category..."
+                  className="w-48 px-3 py-2 rounded-lg bg-black/40 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                />
+                <button
+                  onClick={handleAddBlacklistCidr}
+                  className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Blacklist Rule
+                </button>
+              </div>
+            </div>
+
+            {/* Flagged Connections List */}
+            {threatSummary && threatSummary.flagged_connections.length > 0 ? (
+              <div className="space-y-3">
+                {threatSummary.flagged_connections.map((fc) => (
+                  <div
+                    key={fc.id}
+                    className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex justify-between items-center"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-sm font-bold text-red-400">{fc.process_name}</span>
+                        <span className="text-[10px] font-mono text-zinc-400">(PID: {fc.pid})</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-red-500/20 text-red-300">
+                          {fc.threat_category}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-300">
+                        Destination: <span className="font-mono text-amber-400">{fc.remote_addr}</span> — Reason: {fc.risk_reason}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleTerminateThreat(fc.pid, fc.process_name)}
+                      className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-lg shadow-red-600/20"
+                    >
+                      <PowerOff className="w-3.5 h-3.5" />
+                      Terminate Process
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingThreats ? 'Auditing active sockets against threat intelligence database...' : 'No suspicious C2 or malicious outbound network connections detected.'}
+                </p>
+              </div>
+            )}
           </div>
         ) : activeTab === 'leftovers' ? (
           /* Uninstall Leftovers Page */
