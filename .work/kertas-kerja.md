@@ -35,10 +35,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-24** | **Uninstall Leftovers Cleaner** | Deep orphan AppData/ProgramData leftover directory detector & cleaner | `LeftoversCleanerEngine`, `LeftoversPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-25** | **System Restore Points Manager** | Windows System Protection status & snapshot checkpoint creation | `RestorePointEngine`, `RestorePointPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-26** | **Fast Recycle Bin Turbo Cleaner** | Multi-drive $Recycle.Bin turbo direct unlink & Shell sync | `RecycleBinEngine`, `RecycleBinPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-27** | **Cleaner Process Blockers Detector** | Real-time file lock & blocking browser/process detector & closer | `CleanerBlockersEngine`, Cleaner blocker alert UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 27 — Cleaner Process Blockers Detector & Closer (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Blocker Engine (`src-tauri/src/cleaner_blockers.rs`):** Deteksi proses yang sedang aktif berjalan (Chrome, Edge, Brave, Firefox, Opera, Discord, Spotify, Steam, Epic Games) yang menahan file lock pada direktori target pembersihan cache dan temporary files. Mendukung penghentian proses pemblokir via PID (`close_blocker`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `check_cleaner_blockers` dan `close_cleaner_blocker`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `ProcessBlockerInfo`, `BlockerSummary`, serta method `tauriApi.checkCleanerBlockers` dan `tauriApi.closeCleanerBlocker`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan bar notifikasi peringatan proses pemblokir interaktif pada tab *System Cleaner* lengkap dengan nama aplikasi, PID, dan tombol aksi langsung *Close App*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 26 — Fast Recycle Bin Turbo Cleaner (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

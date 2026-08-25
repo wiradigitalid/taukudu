@@ -34,6 +34,8 @@ import {
   RestorePointItem,
   RecycleBinSummary,
   RecycleBinCleanResult,
+  BlockerSummary,
+  ProcessBlockerInfo,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -83,6 +85,8 @@ import {
   FolderSearch,
   RotateCcw,
   BookmarkCheck,
+  AlertTriangle,
+  PowerOff,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
@@ -104,6 +108,8 @@ export function App() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [cleanStatus, setCleanStatus] = useState<string | null>(null)
+  const [blockerSummary, setBlockerSummary] = useState<BlockerSummary | null>(null)
+  const [checkingBlockers, setCheckingBlockers] = useState(false)
 
   // Recycle Bin state
   const [recycleSummary, setRecycleSummary] = useState<RecycleBinSummary | null>(null)
@@ -264,11 +270,29 @@ export function App() {
       if (result.categories.length > 0) {
         setSelectedCategory(result.categories[0].category)
       }
+      // Check for process blockers
+      const allPaths = result.categories.flatMap((c) => c.items.map((i) => i.path))
+      const blockers = await tauriApi.checkCleanerBlockers(allPaths)
+      setBlockerSummary(blockers)
     } catch (err) {
       console.error('Scan failed:', err)
       setCleanStatus('Scan failed: ' + String(err))
     } finally {
       setScanning(false)
+    }
+  }
+
+  const handleCloseBlocker = async (pid: number, name: string) => {
+    try {
+      await tauriApi.closeCleanerBlocker(pid)
+      setCleanStatus(`Closed blocking process: ${name}`)
+      if (scanResult) {
+        const allPaths = scanResult.categories.flatMap((c) => c.items.map((i) => i.path))
+        const blockers = await tauriApi.checkCleanerBlockers(allPaths)
+        setBlockerSummary(blockers)
+      }
+    } catch (err) {
+      setCleanStatus(`Failed to close blocker: ${String(err)}`)
     }
   }
 
@@ -1633,6 +1657,104 @@ export function App() {
                 </div>
               </div>
             </div>
+          </div>
+        ) : activeTab === 'cleaner' ? (
+          /* System Cleaner Page with Blocker Alert */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    System Cleaner: {scanResult?.total_files || 0} Temporary Files Found
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    {formatBytes(scanResult?.total_bytes || 0)} Reclaimable
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {cleanStatus || 'Deep file cleaner powered by BleachBit CleanerML rules and ripgrep multi-threaded traversal.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleRunScan}
+                  disabled={scanning}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanning ? 'animate-spin' : ''}`} />
+                  {scanning ? 'Scanning...' : 'Rescan System'}
+                </button>
+                <button
+                  onClick={handleCleanNow}
+                  disabled={cleaning || !scanResult || scanResult.total_files === 0}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {cleaning ? 'Cleaning...' : 'Clean All Now'}
+                </button>
+              </div>
+            </div>
+
+            {/* Active Process Blocker Warning Bar */}
+            {blockerSummary && blockerSummary.has_blocking_processes && (
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Active Processes Holding Cleaner Locks ({blockerSummary.total_blockers})</span>
+                </div>
+                <p className="text-[11px] text-zinc-300">
+                  The following applications are currently open and may lock files from being cleaned. Close them to ensure a thorough cleaning:
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {blockerSummary.blockers.map((b) => (
+                    <div
+                      key={b.pid}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-amber-500/20 text-xs text-white"
+                    >
+                      <span className="font-semibold">{b.display_name}</span>
+                      <span className="text-[10px] text-zinc-500 font-mono">(PID: {b.pid})</span>
+                      <button
+                        onClick={() => handleCloseBlocker(b.pid, b.display_name)}
+                        className="ml-1 px-2 py-0.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 text-[10px] font-bold transition cursor-pointer flex items-center gap-1"
+                      >
+                        <PowerOff className="w-2.5 h-2.5" />
+                        Close App
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cleaner Categories Breakdown */}
+            {scanResult && scanResult.categories.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {scanResult.categories.map((cat) => (
+                  <div
+                    key={cat.category}
+                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-white capitalize">{cat.category}</span>
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        {formatBytes(cat.total_bytes)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-zinc-400">
+                      <span>{cat.total_files} junk files</span>
+                      <span className="text-[10px] text-zinc-500">{cat.items.length} sub-rules applied</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <Sparkles className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {scanning ? 'Running deep parallel scan across system locations...' : 'System is clean. No temporary files detected.'}
+                </p>
+              </div>
+            )}
           </div>
         ) : activeTab === 'recyclebin' ? (
           /* Fast Recycle Bin Page */

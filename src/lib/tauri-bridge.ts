@@ -37,6 +37,20 @@ export interface CleanExecutionResult {
   errors: string[]
 }
 
+export interface ProcessBlockerInfo {
+  pid: number
+  name: string
+  display_name: string
+  category: string
+  blocked_paths: string[]
+}
+
+export interface BlockerSummary {
+  blockers: ProcessBlockerInfo[]
+  total_blockers: number
+  has_blocking_processes: boolean
+}
+
 export interface DuplicateFile {
   path: string
   size: number
@@ -494,6 +508,12 @@ export const tauriApi = {
   },
   cleanTargets: async (paths: string[]): Promise<CleanExecutionResult> => {
     return await invoke('clean_targets', { paths })
+  },
+  checkCleanerBlockers: async (target_paths: string[] = []): Promise<BlockerSummary> => {
+    return await invoke('check_cleaner_blockers', { targetPaths: target_paths })
+  },
+  closeCleanerBlocker: async (pid: number): Promise<void> => {
+    return await invoke('close_cleaner_blocker', { pid })
   },
   scanDuplicates: async (options: DuplicateScanOptions): Promise<DuplicateScanResult> => {
     return await invoke('scan_duplicates', { options })

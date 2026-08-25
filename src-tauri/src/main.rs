@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
     handle_cli_mode, ActiveConnectionInfo, BloatwareApp, BreachMonitorSummary,
-    CleanExecutionResult, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
+    CleanExecutionResult, CleanerBlockersEngine, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
     ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DeduplicationEngine,
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
     DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
@@ -83,6 +83,16 @@ fn clean_targets(paths: Vec<String>) -> CleanExecutionResult {
     }
 
     res
+}
+
+#[tauri::command]
+fn check_cleaner_blockers(target_paths: Vec<String>) -> taukudu_lib::BlockerSummary {
+    CleanerBlockersEngine::check_blockers(&target_paths)
+}
+
+#[tauri::command]
+fn close_cleaner_blocker(pid: u32) -> Result<(), String> {
+    CleanerBlockersEngine::close_blocker(pid)
 }
 
 #[tauri::command]
@@ -449,6 +459,8 @@ fn main() {
             get_system_overview,
             scan_cleaners,
             clean_targets,
+            check_cleaner_blockers,
+            close_cleaner_blocker,
             scan_duplicates,
             scan_empty_folders,
             scan_large_files,
