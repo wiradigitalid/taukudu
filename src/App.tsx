@@ -32,6 +32,8 @@ import {
   LeftoverFolderItem,
   RestorePointSummary,
   RestorePointItem,
+  RecycleBinSummary,
+  RecycleBinCleanResult,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -87,7 +89,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'recyclebin' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -102,6 +104,12 @@ export function App() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [cleanStatus, setCleanStatus] = useState<string | null>(null)
+
+  // Recycle Bin state
+  const [recycleSummary, setRecycleSummary] = useState<RecycleBinSummary | null>(null)
+  const [loadingRecycle, setLoadingRecycle] = useState(false)
+  const [emptyingRecycle, setEmptyingRecycle] = useState(false)
+  const [recycleFeedback, setRecycleFeedback] = useState<string | null>(null)
 
   // Duplicates state
   const [dupDir, setDupDir] = useState<string>('D:\\Developer\\wiradigital.id\\taukudu')
@@ -275,6 +283,33 @@ export function App() {
       setCleanStatus('Cleaning failed: ' + String(err))
     } finally {
       setCleaning(false)
+    }
+  }
+
+  const fetchRecycleBin = async () => {
+    setLoadingRecycle(true)
+    try {
+      const res = await tauriApi.getRecycleBinSummary()
+      setRecycleSummary(res)
+    } catch (err) {
+      console.error('Recycle bin fetch error:', err)
+    } finally {
+      setLoadingRecycle(false)
+    }
+  }
+
+  const handleEmptyRecycleBin = async () => {
+    setEmptyingRecycle(true)
+    setRecycleFeedback(null)
+    try {
+      const res = await tauriApi.emptyRecycleBinFast()
+      setRecycleFeedback(`Emptied ${res.payloads_deleted} files, reclaimed ${formatBytes(res.bytes_freed)}.`)
+      await fetchRecycleBin()
+    } catch (err) {
+      console.error('Empty recycle bin error:', err)
+      setRecycleFeedback('Emptying failed: ' + String(err))
+    } finally {
+      setEmptyingRecycle(false)
     }
   }
 
@@ -1019,6 +1054,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('recyclebin')
+                if (!recycleSummary && !loadingRecycle) fetchRecycleBin()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'recyclebin'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Trash2 className="w-4 h-4" />
+              Fast Recycle Bin
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('duplicates')
                 if (!dupResult && !dupScanning) handleScanDuplicates()
               }}
@@ -1378,6 +1427,8 @@ export function App() {
               ? 'System Overview & Health'
               : activeTab === 'cleaner'
               ? 'Deep System Cleaner (Rules-Engine)'
+              : activeTab === 'recyclebin'
+              ? 'Fast Recycle Bin Turbo Cleaner (Multi-Drive)'
               : activeTab === 'duplicates'
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'leftovers'
@@ -1429,7 +1480,15 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'leftovers' ? (
+            {activeTab === 'recyclebin' ? (
+              <button
+                onClick={fetchRecycleBin}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Bin
+              </button>
+            ) : activeTab === 'leftovers' ? (
               <button
                 onClick={handleScanLeftovers}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
@@ -1537,6 +1596,66 @@ export function App() {
                   Usage: {overview ? Math.round((overview.used_memory_bytes / overview.total_memory_bytes) * 100) : 0}% Active
                 </div>
               </div>
+            </div>
+          </div>
+        ) : activeTab === 'recyclebin' ? (
+          /* Fast Recycle Bin Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Recycle Bin: {recycleSummary?.total_items || 0} Deleted Items ({formatBytes(recycleSummary?.total_bytes || 0)})
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {recycleSummary?.drives.length || 0} Drives Detected
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {recycleFeedback || 'Direct multi-drive $Recycle.Bin fast unlink without slow Explorer COM walk.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchRecycleBin}
+                  disabled={loadingRecycle}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingRecycle ? 'animate-spin' : ''}`} />
+                  {loadingRecycle ? 'Inspecting...' : 'Inspect Bin'}
+                </button>
+                <button
+                  onClick={handleEmptyRecycleBin}
+                  disabled={emptyingRecycle || (recycleSummary?.total_items === 0)}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {emptyingRecycle ? 'Emptying...' : 'Empty Recycle Bin Now'}
+                </button>
+              </div>
+            </div>
+
+            {/* Per-Drive Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {recycleSummary?.drives.map((d) => (
+                <div key={d.drive_letter} className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-white">Drive ({d.drive_letter}:)</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono ${d.is_accessible ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {d.is_accessible ? 'Ready' : 'Access Denied'}
+                    </span>
+                  </div>
+                  <div className="text-lg font-mono font-bold text-amber-400">
+                    {formatBytes(d.total_bytes)}
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    {d.items_count} deleted payload files
+                  </p>
+                  <p className="text-[10px] text-zinc-500 font-mono truncate">
+                    {d.path}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         ) : activeTab === 'leftovers' ? (

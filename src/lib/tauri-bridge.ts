@@ -456,6 +456,30 @@ export interface RestorePointResult {
   message: string
 }
 
+export interface RecycleBinDriveStat {
+  drive_letter: string
+  path: string
+  items_count: number
+  total_bytes: number
+  is_accessible: boolean
+}
+
+export interface RecycleBinSummary {
+  drives: RecycleBinDriveStat[]
+  total_items: number
+  total_bytes: number
+  scan_duration_ms: number
+}
+
+export interface RecycleBinCleanResult {
+  payloads_deleted: number
+  orphan_metadata_deleted: number
+  bytes_freed: number
+  failed_count: number
+  shell_sync_status: number
+  errors: string[]
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -639,5 +663,11 @@ export const tauriApi = {
   },
   createRestorePoint: async (description: string): Promise<RestorePointResult> => {
     return await invoke('create_restore_point', { description })
+  },
+  getRecycleBinSummary: async (): Promise<RecycleBinSummary> => {
+    return await invoke('get_recycle_bin_summary')
+  },
+  emptyRecycleBinFast: async (): Promise<RecycleBinCleanResult> => {
+    return await invoke('empty_recycle_bin_fast')
   },
 }

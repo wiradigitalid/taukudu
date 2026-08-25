@@ -16,7 +16,8 @@ use taukudu_lib::{
     LargeFileScanResult, LeftoversCleanerEngine, LeftoversCleanResult, LeftoversScanResult,
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine,
     NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot,
-    PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RegistryCleanerEngine,
+    PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RecycleBinCleanResult,
+    RecycleBinDriveStat, RecycleBinEngine, RecycleBinSummary, RegistryCleanerEngine,
     RegistryFixResult, RegistryIssue, RegistryScanResult, RestorePointEngine,
     RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
     ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
@@ -391,6 +392,31 @@ fn create_restore_point(description: String) -> RestorePointResult {
     RestorePointEngine::create_restore_point(&description)
 }
 
+#[tauri::command]
+fn get_recycle_bin_summary() -> RecycleBinSummary {
+    RecycleBinEngine::get_summary()
+}
+
+#[tauri::command]
+fn empty_recycle_bin_fast() -> RecycleBinCleanResult {
+    let res = RecycleBinEngine::empty_fast();
+
+    if res.payloads_deleted > 0 {
+        let rec = HistoryRecord {
+            id: format!("recycle-{}", chrono::Utc::now().timestamp_millis()),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            action_type: "recycle_bin".to_string(),
+            total_space_saved_bytes: res.bytes_freed,
+            total_items_cleaned: res.payloads_deleted,
+            duration_ms: 150,
+            details_summary: format!("Emptied {} Recycle Bin payload files", res.payloads_deleted),
+        };
+        let _ = GLOBAL_HISTORY.lock().unwrap().add_record(&rec);
+    }
+
+    res
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -466,7 +492,9 @@ fn main() {
             scan_uninstall_leftovers,
             delete_uninstall_leftovers,
             get_restore_points,
-            create_restore_point
+            create_restore_point,
+            get_recycle_bin_summary,
+            empty_recycle_bin_fast
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

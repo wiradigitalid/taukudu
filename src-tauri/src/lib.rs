@@ -14,6 +14,7 @@ pub mod malware_scanner;
 pub mod network_tools;
 pub mod perf_monitor;
 pub mod privacy;
+pub mod recycle_bin;
 pub mod registry_cleaner;
 pub mod restore_point;
 pub mod rules;
@@ -48,6 +49,9 @@ pub use malware_scanner::{
 pub use network_tools::{ActiveConnectionInfo, NetworkItemInfo, NetworkToolsEngine};
 pub use perf_monitor::{PerfMonitorEngine, PerformanceSnapshot, ProcessItem};
 pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};
+pub use recycle_bin::{
+    RecycleBinCleanResult, RecycleBinDriveStat, RecycleBinEngine, RecycleBinSummary,
+};
 pub use registry_cleaner::{RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult};
 pub use restore_point::{
     RestorePointEngine, RestorePointItem, RestorePointResult, RestorePointSummary,
