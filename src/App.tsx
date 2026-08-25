@@ -3848,6 +3848,946 @@ export function App() {
               </div>
             )}
           </div>
+        ) : activeTab === 'disk' ? (
+          /* Disk Analyzer Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Disk Treemap & Space Distribution</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Recursive sizing and file type distribution on drive {selectedDrivePath} ({formatBytes(diskAnalysis?.total_size_bytes || 0)} analyzed).
+                </p>
+              </div>
+              <button
+                onClick={() => fetchDrivesAndAnalyze(selectedDrivePath)}
+                disabled={analyzingDisk}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${analyzingDisk ? 'animate-spin' : ''}`} />
+                {analyzingDisk ? 'Analyzing...' : 'Rescan Drive'}
+              </button>
+            </div>
+
+            {/* Drives Selector Bar */}
+            <div className="flex gap-3">
+              {drives.map((d) => (
+                <button
+                  key={d.mount_point}
+                  onClick={() => fetchDrivesAndAnalyze(d.mount_point)}
+                  className={`flex-1 p-4 rounded-xl border text-left transition cursor-pointer ${
+                    selectedDrivePath === d.mount_point
+                      ? 'bg-[#16161a] border-amber-500/40 text-amber-400 shadow-lg shadow-amber-500/10'
+                      : 'bg-[#16161a] border-[#2a2a36] text-zinc-400 hover:border-zinc-700'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold text-sm text-white">{d.mount_point}</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">{d.file_system}</span>
+                  </div>
+                  <div className="text-xs font-mono font-semibold text-amber-400">
+                    {formatBytes(d.available_space_bytes)} free / {formatBytes(d.total_space_bytes)}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* File Type Breakdown */}
+            {diskAnalysis && diskAnalysis.file_types.length > 0 && (
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Storage by File Type</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {diskAnalysis.file_types.map((ft) => (
+                    <div key={ft.extension} className="p-3 rounded-lg bg-black/40 border border-zinc-800">
+                      <span className="text-xs font-mono font-bold text-amber-400 uppercase">.{ft.extension}</span>
+                      <div className="text-sm font-bold text-white mt-0.5">{formatBytes(ft.total_size_bytes)}</div>
+                      <p className="text-[10px] text-zinc-500">{ft.count} files</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'repair' ? (
+          /* Disk Maintenance & Repair Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">SSD TRIM & Filesystem Integrity Repair</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {trimFeedback || 'Run SSD ReTrim, SFC file checker, DISM component store repair, and volume CHKDSK.'}
+                </p>
+              </div>
+            </div>
+
+            {/* TRIM Action Cards */}
+            <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-400" />
+                SSD Solid State Drive ReTrim
+              </h3>
+              <div className="flex gap-4">
+                {trimDrives.map((td) => (
+                  <div key={td.drive_letter} className="flex-1 p-4 rounded-xl bg-black/30 border border-zinc-800 flex justify-between items-center">
+                    <div>
+                      <span className="text-sm font-bold text-white">Drive ({td.drive_letter})</span>
+                      <p className="text-xs text-zinc-400 mt-0.5">{td.last_status}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRunTrim(td.drive_letter)}
+                      className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition cursor-pointer"
+                    >
+                      ReTrim Drive
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* System Repair Tools */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                <h3 className="text-sm font-semibold text-white">SFC Integrity Check</h3>
+                <p className="text-xs text-zinc-400">Verifies Windows core system file integrity via System File Checker.</p>
+                <button
+                  onClick={handleRunSfc}
+                  disabled={runningRepair === 'sfc'}
+                  className="w-full py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${runningRepair === 'sfc' ? 'animate-spin' : ''}`} />
+                  {runningRepair === 'sfc' ? 'Running SFC...' : 'Verify System Files'}
+                </button>
+              </div>
+
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                <h3 className="text-sm font-semibold text-white">DISM Component Store</h3>
+                <p className="text-xs text-zinc-400">Checks Windows Component Store corruption using Deployment Image Servicing.</p>
+                <button
+                  onClick={handleRunDism}
+                  disabled={runningRepair === 'dism'}
+                  className="w-full py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${runningRepair === 'dism' ? 'animate-spin' : ''}`} />
+                  {runningRepair === 'dism' ? 'Checking DISM...' : 'Check Image Health'}
+                </button>
+              </div>
+
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                <h3 className="text-sm font-semibold text-white">CHKDSK Volume Scan</h3>
+                <p className="text-xs text-zinc-400">Performs live non-invasive read scan for NTFS volume anomalies.</p>
+                <button
+                  onClick={() => handleRunChkdsk('C')}
+                  disabled={runningRepair === 'chkdsk'}
+                  className="w-full py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${runningRepair === 'chkdsk' ? 'animate-spin' : ''}`} />
+                  {runningRepair === 'chkdsk' ? 'Scanning Volume...' : 'Scan C: Volume'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'firewall' ? (
+          /* Firewall Audit Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  Windows Firewall Audit: {firewallSummary?.rules.length || 0} Inbound Rules
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {firewallFeedback || `Detected ${firewallSummary?.high_risk_count || 0} potentially permissive rules & ${firewallSummary?.open_inbound_ports.length || 0} listening ports.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchFirewall}
+                disabled={loadingFirewall}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingFirewall ? 'animate-spin' : ''}`} />
+                {loadingFirewall ? 'Auditing...' : 'Re-Audit Firewall'}
+              </button>
+            </div>
+
+            {/* Rules List */}
+            {firewallSummary && firewallSummary.rules.length > 0 ? (
+              <div className="space-y-2">
+                {firewallSummary.rules.map((rule) => (
+                  <div
+                    key={rule.name}
+                    className={`p-3.5 rounded-xl border flex justify-between items-center ${
+                      rule.risk_level === 'High' ? 'bg-red-500/10 border-red-500/30' : 'bg-[#16161a] border-[#2a2a36]'
+                    }`}
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{rule.display_name}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 uppercase">
+                          {rule.protocol} {rule.local_port || 'Any'}
+                        </span>
+                        {rule.risk_level === 'High' && (
+                          <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] font-bold">
+                            High Risk: {rule.risk_reason}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-zinc-500 font-mono">{rule.program || 'System Wide'}</p>
+                    </div>
+                    <button
+                      onClick={() => handleToggleFirewallRule(rule)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                        rule.is_enabled
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-zinc-800 text-zinc-400'
+                      }`}
+                    >
+                      {rule.is_enabled ? 'Allowed' : 'Blocked'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <Flame className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">Loading Windows Firewall configuration rules...</p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'cve' ? (
+          /* CVE Scanner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">System Vulnerability & CVE Security Audit</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Evaluates installed runtime libraries and components against advisory memory-safety CVE listings.
+                </p>
+              </div>
+              <button
+                onClick={fetchCveScan}
+                disabled={loadingCve}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingCve ? 'animate-spin' : ''}`} />
+                {loadingCve ? 'Auditing CVEs...' : 'Scan CVEs'}
+              </button>
+            </div>
+
+            {/* CVE Items */}
+            {cveSummary && cveSummary.vulnerabilities.length > 0 ? (
+              <div className="space-y-3">
+                {cveSummary.vulnerabilities.map((cve) => (
+                  <div key={cve.cve_id} className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-amber-400">{cve.cve_id}</span>
+                        <span className="text-sm font-semibold text-white">({cve.package_name})</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/20 text-red-400 font-bold uppercase">
+                          {cve.severity}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-zinc-500 font-mono">Published: {cve.published_date}</span>
+                    </div>
+                    <p className="text-xs text-zinc-400 leading-relaxed">{cve.description}</p>
+                    <div className="text-[11px] text-zinc-500 font-mono pt-1">
+                      Installed: {cve.installed_version} • Fixed in: <span className="text-emerald-400">{cve.fixed_version}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingCve ? 'Evaluating system advisories...' : 'No unpatched CVE security vulnerabilities detected in runtime environment.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'updater' ? (
+          /* Software Updater Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  Bulk Software Updater ({updateSummary?.total_outdated || 0} Updates Available)
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {updateFeedback || `Package manager: ${updateSummary?.manager_name || 'winget'} (Available: ${updateSummary?.is_manager_available ? 'YES' : 'NO'})`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchSoftwareUpdates}
+                  disabled={loadingUpdates}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingUpdates ? 'animate-spin' : ''}`} />
+                  {loadingUpdates ? 'Checking...' : 'Check Updates'}
+                </button>
+                <button
+                  onClick={handleUpgradeAll}
+                  disabled={!updateSummary || updateSummary.total_outdated === 0}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <ArrowUpCircle className="w-3.5 h-3.5" />
+                  Upgrade All Packages
+                </button>
+              </div>
+            </div>
+
+            {/* Outdated Packages */}
+            {updateSummary && updateSummary.packages.length > 0 ? (
+              <div className="space-y-2">
+                {updateSummary.packages.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{pkg.name}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] font-mono text-zinc-400 uppercase">
+                          {pkg.source}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400 font-mono">
+                        {pkg.current_version} ➔ <span className="text-emerald-400 font-bold">{pkg.available_version}</span>
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleUpgradeSingle(pkg.id)}
+                      className="px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-xs font-semibold text-zinc-200 transition cursor-pointer"
+                    >
+                      Update
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingUpdates ? 'Inspecting package repositories...' : 'All desktop software packages are up-to-date.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'contextmenu' ? (
+          /* Context Menu Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Explorer Context Menu Manager</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {ctxFeedback || `Found ${ctxEntries.length} right-click context menu shell extensions in Windows Registry.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchContextMenu}
+                disabled={loadingCtx}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingCtx ? 'animate-spin' : ''}`} />
+                {loadingCtx ? 'Scanning...' : 'Rescan Entries'}
+              </button>
+            </div>
+
+            {/* Entries List */}
+            {ctxEntries.length > 0 ? (
+              <div className="space-y-2">
+                {ctxEntries.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{item.name}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                          {item.scope}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 font-mono truncate max-w-xl">{item.command || item.key_path}</p>
+                    </div>
+                    <button
+                      onClick={() => handleToggleContextMenu(item)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                        item.is_enabled
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-zinc-800 text-zinc-400'
+                      }`}
+                    >
+                      {item.is_enabled ? 'Active' : 'Disabled'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <MousePointerClick className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">Loading context menu shell handlers...</p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'registry' ? (
+          /* Registry Cleaner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Windows Registry Orphan Cleaner</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {registryFeedback || `Found ${registryIssues.length} orphaned shared DLLs, stale App Paths, and obsolete MUI keys.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanRegistry}
+                  disabled={scanningRegistry}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanningRegistry ? 'animate-spin' : ''}`} />
+                  {scanningRegistry ? 'Scanning...' : 'Scan Registry'}
+                </button>
+                <button
+                  onClick={handleFixSelectedRegistry}
+                  disabled={fixingRegistry || selectedRegistryIds.size === 0}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Fix Selected ({selectedRegistryIds.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Issues List */}
+            {registryIssues.length > 0 ? (
+              <div className="space-y-2">
+                {registryIssues.map((issue) => (
+                  <div
+                    key={issue.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedRegistryIds.has(issue.id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedRegistryIds)
+                          if (e.target.checked) next.add(issue.id)
+                          else next.delete(issue.id)
+                          setSelectedRegistryIds(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{issue.value_name}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-amber-400">
+                            {issue.category}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 font-mono">{issue.issue_description}</p>
+                        <p className="text-[10px] text-zinc-500 font-mono truncate max-w-xl">{issue.key_path}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {scanningRegistry ? 'Scanning registry hives...' : 'Windows Registry is clean. No orphan entries detected.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'network' ? (
+          /* Network Optimizer Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Network Cache & TCP/IP Stack Optimizer</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {networkFeedback || `Active sockets: ${activeConns.length} connections detected.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchNetwork}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Network
+              </button>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                <h3 className="text-sm font-semibold text-white">Flush DNS Resolver Cache</h3>
+                <p className="text-xs text-zinc-400">Purges local DNS query records to resolve connectivity issues.</p>
+                <button
+                  onClick={handleFlushDns}
+                  className="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold transition cursor-pointer"
+                >
+                  Flush DNS
+                </button>
+              </div>
+
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                <h3 className="text-sm font-semibold text-white">Purge ARP Protocol Table</h3>
+                <p className="text-xs text-zinc-400">Clears Address Resolution Protocol routing cache across adapters.</p>
+                <button
+                  onClick={handleFlushArp}
+                  className="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold transition cursor-pointer"
+                >
+                  Purge ARP Table
+                </button>
+              </div>
+
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                <h3 className="text-sm font-semibold text-white">Reset Winsock (TCP/IP Stack)</h3>
+                <p className="text-xs text-zinc-400">Resets Windows socket catalog to default clean configuration.</p>
+                <button
+                  onClick={handleResetWinsock}
+                  className="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold transition cursor-pointer"
+                >
+                  Reset TCP/IP
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'perf' ? (
+          /* Performance Monitor Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Real-Time Performance & Process Monitor</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {perfFeedback || `Active Processes: ${perfSnapshot?.process_count || 0} • Uptime: ${Math.round((perfSnapshot?.uptime_seconds || 0) / 3600)}h.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchPerformanceSnapshot}
+                disabled={loadingPerf}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingPerf ? 'animate-spin' : ''}`} />
+                {loadingPerf ? 'Sampling...' : 'Sample Stats'}
+              </button>
+            </div>
+
+            {/* Live Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <span className="text-xs text-zinc-400 font-medium">CPU Utilization</span>
+                <div className="text-2xl font-bold text-white font-mono mt-1">
+                  {perfSnapshot ? `${perfSnapshot.cpu_usage_percent.toFixed(1)}%` : 'Loading...'}
+                </div>
+              </div>
+
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <span className="text-xs text-zinc-400 font-medium">Physical Memory Usage</span>
+                <div className="text-2xl font-bold text-white font-mono mt-1">
+                  {perfSnapshot ? `${formatBytes(perfSnapshot.used_memory_bytes)} / ${formatBytes(perfSnapshot.total_memory_bytes)}` : 'Loading...'}
+                </div>
+              </div>
+            </div>
+
+            {/* Top Processes */}
+            {perfSnapshot && (
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Top Memory & CPU Consumers</h3>
+                <div className="space-y-1.5">
+                  {perfSnapshot.top_processes.map((proc) => (
+                    <div key={proc.pid} className="flex justify-between items-center p-2 rounded-lg bg-black/30 text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-semibold">{proc.name}</span>
+                        <span className="text-[10px] text-zinc-500">(PID: {proc.pid})</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-amber-400">{formatBytes(proc.memory_bytes)}</span>
+                        <button
+                          onClick={() => handleKillProcess(proc.pid, proc.name)}
+                          className="px-2 py-0.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 text-[10px] font-bold transition cursor-pointer"
+                        >
+                          Kill
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'startup' ? (
+          /* Startup Programs Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Windows Startup Programs</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {startupFeedback || `Configured startup entries: ${startupItems.length} items.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchStartupItems}
+                disabled={loadingStartup}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingStartup ? 'animate-spin' : ''}`} />
+                {loadingStartup ? 'Reading...' : 'Refresh Startup'}
+              </button>
+            </div>
+
+            {/* Items */}
+            {startupItems.length > 0 ? (
+              <div className="space-y-2">
+                {startupItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{item.name}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                          {item.impact_rating} Impact
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 font-mono truncate max-w-xl">{item.command}</p>
+                    </div>
+                    <button
+                      onClick={() => handleToggleStartup(item)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                        item.is_enabled
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-zinc-800 text-zinc-400'
+                      }`}
+                    >
+                      {item.is_enabled ? 'Enabled' : 'Disabled'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <Zap className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">Loading startup applications...</p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'debloat' ? (
+          /* Debloater Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Windows OEM & Bloatware Removal</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {bloatFeedback || `Identified ${bloatList.length} pre-installed UWP & promotional packages.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchBloatware}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Refresh List
+                </button>
+                <button
+                  onClick={handleRemoveSelectedBloat}
+                  disabled={removingBloat || selectedBloat.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Remove Selected ({selectedBloat.size})
+                </button>
+              </div>
+            </div>
+
+            {/* List */}
+            {bloatList.length > 0 ? (
+              <div className="space-y-2">
+                {bloatList.map((app) => (
+                  <div
+                    key={app.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedBloat.has(app.package_name)}
+                        onChange={(e) => {
+                          const next = new Set(selectedBloat)
+                          if (e.target.checked) next.add(app.package_name)
+                          else next.delete(app.package_name)
+                          setSelectedBloat(next)
+                        }}
+                        className="rounded border-zinc-700 text-red-500 focus:ring-red-500 cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-sm font-semibold text-white">{app.name}</span>
+                        <p className="text-xs text-zinc-400">{app.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">No known OEM bloatware packages detected on this workstation.</p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'services' ? (
+          /* Services Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Windows Background Services</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {servicesFeedback || `Managing ${servicesList.length} background Windows services.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchServices}
+                disabled={loadingServices}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingServices ? 'animate-spin' : ''}`} />
+                {loadingServices ? 'Querying...' : 'Refresh Services'}
+              </button>
+            </div>
+
+            {/* List */}
+            {servicesList.length > 0 ? (
+              <div className="space-y-2">
+                {servicesList.map((svc) => (
+                  <div
+                    key={svc.name}
+                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{svc.display_name}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                          {svc.start_type}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400">{svc.description || svc.recommendation}</p>
+                    </div>
+                    <button
+                      onClick={() => handleOptimizeService(svc)}
+                      className="px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-xs font-semibold text-zinc-200 transition cursor-pointer"
+                    >
+                      {svc.start_type === 'Disabled' ? 'Enable' : 'Disable'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <Server className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">Loading system services...</p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'drivers' ? (
+          /* Driver Cleaner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">DriverStore & Obsolete Driver Purge</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {driversFeedback || `Inspecting ${driversList.length} third-party driver packages installed in DriverStore.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchDrivers}
+                disabled={loadingDrivers}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingDrivers ? 'animate-spin' : ''}`} />
+                {loadingDrivers ? 'Reading Drivers...' : 'Scan Drivers'}
+              </button>
+            </div>
+
+            {/* List */}
+            {driversList.length > 0 ? (
+              <div className="space-y-2">
+                {driversList.map((drv) => (
+                  <div
+                    key={drv.published_name}
+                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{drv.original_name}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                          {drv.provider}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400 font-mono">
+                        Published: {drv.published_name} • Date: {drv.date} • Class: {drv.class_name}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteDriver(drv.published_name)}
+                      className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-semibold transition cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <Wrench className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">Loading installed third-party driver packages...</p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'uninstaller' ? (
+          /* Uninstaller Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Clean Software Uninstaller</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {uninstallerFeedback || `Found ${programsList.length} registered programs in Windows Registry.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchPrograms}
+                disabled={loadingPrograms}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingPrograms ? 'animate-spin' : ''}`} />
+                {loadingPrograms ? 'Reading Registry...' : 'Refresh Programs'}
+              </button>
+            </div>
+
+            {/* List */}
+            {programsList.length > 0 ? (
+              <div className="space-y-2">
+                {programsList.map((prog) => (
+                  <div
+                    key={prog.id}
+                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{prog.name}</span>
+                        <span className="text-xs text-zinc-500 font-mono">v{prog.version}</span>
+                      </div>
+                      <p className="text-xs text-zinc-400">{prog.publisher}</p>
+                    </div>
+                    <button
+                      onClick={() => handleUninstallProgram(prog)}
+                      className="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-semibold transition cursor-pointer shadow-lg shadow-red-500/20"
+                    >
+                      Uninstall
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <Package className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">Loading installed Windows programs...</p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'shredder' ? (
+          /* File Shredder Page */
+          <div className="p-8 max-w-5xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36]">
+              <h2 className="text-lg font-bold text-white">Cryptographic File Shredder (DoD 5220.22-M)</h2>
+              <p className="text-xs text-zinc-400 mt-1">
+                {shredFeedback || 'Permanently destroys files via 3-pass pseudo-random overwrite + zeroization prior to filesystem unlink.'}
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-4">
+              <h3 className="text-sm font-semibold text-white">Target File for Destruction</h3>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={shredPath}
+                  onChange={(e) => setShredPath(e.target.value)}
+                  placeholder="Enter full absolute file path to destroy (e.g. D:\sensitive.txt)..."
+                  className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-zinc-700 text-xs text-white focus:outline-none focus:border-red-500 font-mono"
+                />
+                <button
+                  onClick={handleShredTarget}
+                  disabled={shredding || !shredPath}
+                  className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition cursor-pointer flex items-center gap-2 shadow-lg shadow-red-600/20 disabled:opacity-50"
+                >
+                  <FileX2 className={`w-4 h-4 ${shredding ? 'animate-spin' : ''}`} />
+                  {shredding ? 'Shredding...' : 'Shred File Permanently'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'privacy' ? (
+          /* Privacy Shield Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Privacy Score: {privacyState?.score_percentage || 0}%
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {privacyState?.protected_count || 0} / {privacyState?.total_count || 0} Shields Active
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {privacyFeedback || 'Disable Windows telemetry, advertising IDs, diagnostic feedback, and location tracking.'}
+                </p>
+              </div>
+              <button
+                onClick={handleProtectAllPrivacy}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                Protect All Now
+              </button>
+            </div>
+
+            {/* Policies List */}
+            {privacyState && (
+              <div className="space-y-2">
+                {privacyState.settings.map((s) => (
+                  <div
+                    key={s.id}
+                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{s.label}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 capitalize">
+                          {s.category}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400">{s.description}</p>
+                    </div>
+                    <button
+                      onClick={() => handleTogglePrivacy(s.id, s.is_enabled)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                        s.is_enabled
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-zinc-800 text-zinc-400'
+                      }`}
+                    >
+                      {s.is_enabled ? 'Protected' : 'Exposed'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <div className="p-8 text-xs text-zinc-400">Section active</div>
         )}
