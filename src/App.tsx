@@ -26,6 +26,7 @@ import {
   FirewallAuditSummary,
   CveScanSummary,
   SoftwareUpdateSummary,
+  ScheduleSummary,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -67,13 +68,15 @@ import {
   Flame,
   AlertOctagon,
   ArrowUpCircle,
+  CalendarClock,
+  Clock,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'firewall' | 'cve' | 'updater' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'firewall' | 'cve' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -121,6 +124,10 @@ export function App() {
   const [updateSummary, setUpdateSummary] = useState<SoftwareUpdateSummary | null>(null)
   const [loadingUpdates, setLoadingUpdates] = useState(false)
   const [updateFeedback, setUpdateFeedback] = useState<string | null>(null)
+
+  // Schedules state
+  const [scheduleSummary, setScheduleSummary] = useState<ScheduleSummary | null>(null)
+  const [scheduleFeedback, setScheduleFeedback] = useState<string | null>(null)
 
   // Context Menu state
   const [ctxEntries, setCtxEntries] = useState<ContextMenuEntryInfo[]>([])
@@ -417,6 +424,25 @@ export function App() {
       await fetchSoftwareUpdates()
     } catch (err) {
       setUpdateFeedback(`Upgrade error: ${String(err)}`)
+    }
+  }
+
+  const fetchSchedules = async () => {
+    try {
+      const sum = await tauriApi.getSchedules()
+      setScheduleSummary(sum)
+    } catch (err) {
+      console.error('Schedules error:', err)
+    }
+  }
+
+  const handleToggleSchedule = async (id: string, currentlyEnabled: boolean) => {
+    try {
+      await tauriApi.toggleSchedule(id, !currentlyEnabled)
+      setScheduleFeedback(`Updated schedule ${id}`)
+      await fetchSchedules()
+    } catch (err) {
+      setScheduleFeedback(`Schedule error: ${String(err)}`)
     }
   }
 
@@ -943,6 +969,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('schedules')
+                if (!scheduleSummary) fetchSchedules()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'schedules'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <CalendarClock className="w-4 h-4" />
+              Schedules
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('contextmenu')
                 if (ctxEntries.length === 0 && !loadingCtx) fetchContextMenu()
               }}
@@ -1174,6 +1214,8 @@ export function App() {
               ? 'System Vulnerability (CVE) Audit'
               : activeTab === 'updater'
               ? 'Bulk Desktop Software Updater (Winget/Choco/Scoop)'
+              : activeTab === 'schedules'
+              ? 'Automated Background Maintenance Schedules'
               : activeTab === 'contextmenu'
               ? 'Explorer Right-Click Context Menu Manager'
               : activeTab === 'game'
@@ -1205,14 +1247,13 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'updater' ? (
+            {activeTab === 'schedules' ? (
               <button
-                onClick={fetchSoftwareUpdates}
-                disabled={loadingUpdates}
+                onClick={fetchSchedules}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingUpdates ? 'animate-spin' : ''}`} />
-                Check Updates
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Schedules
               </button>
             ) : (
               <button
@@ -1292,68 +1333,61 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'updater' ? (
-          /* Software Updater Page */
+        ) : activeTab === 'schedules' ? (
+          /* Schedules Page */
           <div className="p-8 max-w-6xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
                 <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-bold text-white">
-                    Outdated Software: {updateSummary?.total_outdated || 0} Packages Available
-                  </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                    Source: {updateSummary?.manager_name || 'winget'}
+                  <h2 className="text-lg font-bold text-white">Automated Scan & Clean Schedules</h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {scheduleSummary?.active_count || 0} / {scheduleSummary?.total_schedules || 0} Active
                   </span>
                 </div>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {updateFeedback || 'Bulk upgrade outdated desktop software packages with silent background installer.'}
+                  {scheduleFeedback || `Next scheduled run: ${scheduleSummary?.next_scheduled_run || 'None configured'}`}
                 </p>
               </div>
-
-              <button
-                onClick={handleUpgradeAll}
-                disabled={!updateSummary || updateSummary.total_outdated === 0}
-                className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-semibold text-xs shadow-lg shadow-amber-500/20 transition flex items-center gap-2 cursor-pointer"
-              >
-                <ArrowUpCircle className="w-4 h-4" />
-                Update All Packages
-              </button>
             </div>
 
-            {/* Packages list */}
             <div className="space-y-3">
-              {updateSummary?.packages.map((pkg) => (
+              {scheduleSummary?.schedules.map((s) => (
                 <div
-                  key={pkg.id}
-                  className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  key={s.id}
+                  className={`p-4 rounded-xl border flex justify-between items-center transition ${
+                    s.is_enabled ? 'bg-[#16161a] border-emerald-500/30' : 'bg-[#16161a] border-[#2a2a36]'
+                  }`}
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold text-white">{pkg.name}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
-                        {pkg.id}
+                      <span className="text-sm font-semibold text-white">{s.name}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300">
+                        {s.frequency}
                       </span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                          pkg.severity === 'major'
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'bg-amber-500/20 text-amber-400'
-                        }`}
-                      >
-                        {pkg.severity} upgrade
+                      <span className="text-xs font-mono text-zinc-400 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {String(s.hour).padStart(2, '0')}:{String(s.minute).padStart(2, '0')}
                       </span>
+                      {s.auto_clean && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          Auto-Clean
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs font-mono text-zinc-400">
-                      Current: <span className="text-zinc-500">{pkg.current_version}</span> → Available:{' '}
-                      <span className="text-emerald-400 font-bold">{pkg.available_version}</span>
+                    <p className="text-xs text-zinc-400">
+                      Categories: {s.categories.join(', ')}
                     </p>
                   </div>
 
                   <button
-                    onClick={() => handleUpgradeSingle(pkg.id)}
-                    className="px-4 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-white transition cursor-pointer"
+                    onClick={() => handleToggleSchedule(s.id, s.is_enabled)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                      s.is_enabled
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-zinc-800 text-zinc-400'
+                    }`}
                   >
-                    Update
+                    {s.is_enabled ? 'Active' : 'Disabled'}
                   </button>
                 </div>
               ))}

@@ -16,9 +16,10 @@ use taukudu_lib::{
     MalwareScannerEngine, NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine,
     PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState,
     RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult,
-    ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
-    SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, TrimDriveStatus,
-    UninstallerShredderEngine, UpdateExecutionResult, GLOBAL_HISTORY,
+    ScheduleItem, ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult,
+    SoftwareUpdateSummary, SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem,
+    TrimDriveStatus, UninstallerShredderEngine, UpdateExecutionResult, GLOBAL_HISTORY,
+    GLOBAL_SCHEDULER,
 };
 
 #[tauri::command]
@@ -337,6 +338,16 @@ fn upgrade_all_software_packages() -> Result<UpdateExecutionResult, String> {
     SoftwareUpdaterEngine::upgrade_all_packages()
 }
 
+#[tauri::command]
+fn get_schedules() -> ScheduleSummary {
+    GLOBAL_SCHEDULER.get_schedules()
+}
+
+#[tauri::command]
+fn toggle_schedule(id: String, enable: bool) -> Result<(), String> {
+    GLOBAL_SCHEDULER.toggle_schedule(&id, enable)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -402,7 +413,9 @@ fn main() {
             scan_cves,
             check_software_updates,
             upgrade_software_package,
-            upgrade_all_software_packages
+            upgrade_all_software_packages,
+            get_schedules,
+            toggle_schedule
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

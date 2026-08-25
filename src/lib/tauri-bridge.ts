@@ -368,6 +368,27 @@ export interface UpdateExecutionResult {
   output: string
 }
 
+export interface ScheduleItem {
+  id: string
+  name: string
+  frequency: string
+  hour: number
+  minute: number
+  day_of_week?: number
+  day_of_month?: number
+  categories: string[]
+  is_enabled: boolean
+  auto_clean: boolean
+  last_run_at?: string
+}
+
+export interface ScheduleSummary {
+  schedules: ScheduleItem[]
+  total_schedules: number
+  active_count: number
+  next_scheduled_run?: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -521,5 +542,11 @@ export const tauriApi = {
   },
   upgradeAllSoftwarePackages: async (): Promise<UpdateExecutionResult> => {
     return await invoke('upgrade_all_software_packages')
+  },
+  getSchedules: async (): Promise<ScheduleSummary> => {
+    return await invoke('get_schedules')
+  },
+  toggleSchedule: async (id: string, enable: boolean): Promise<void> => {
+    return await invoke('toggle_schedule', { id, enable })
   },
 }

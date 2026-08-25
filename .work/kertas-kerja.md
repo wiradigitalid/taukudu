@@ -30,16 +30,15 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-19** | **Windows Firewall Security Audit**| Inbound open ports audit, broad rule risk assessment | NetFirewallRule PowerShell, `FirewallAuditPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-20** | **CVE Vulnerability Audit Scanner**| Client library and runtime memory-safety CVE advisory checks | `CveScannerEngine`, `CveScannerPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-21** | **Multi-Package Software Updater** | Winget/Choco package manager inspection & bulk update runner | `winget` upgrade CLI parser, `SoftwareUpdaterPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-22** | **Automated Task Scheduler** | Daily, weekly, monthly automated background maintenance jobs | `ScheduleEngine`, `SchedulesPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
 
-### Area 21 — Multi-Package Software Updater (Selesai: 2026-08-26)
+### Area 22 — Automated Background Maintenance Scheduler (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **Software Updater Engine (`src-tauri/src/software_updater.rs`):**
-     - Eksekusi dan parsing pembaruan software terinstal via `winget upgrade --include-unknown` memuat package ID, nama aplikasi, versi terpasang, versi terbaru yang tersedia, dan tingkat keparahan (*major, minor, patch*).
-     - Fungsi eksekusi pembaruan paket satuan (`upgrade_package`) dan pembaruan massal (`upgrade_all_packages`) secara senyap/background.
-  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `check_software_updates`, `upgrade_software_package`, dan `upgrade_all_software_packages`.
-  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Software Updater* lengkap dengan tombol *Update All Packages*, daftar paket kadaluwarsa, dan tombol update per aplikasi.
+  1. **Schedule Engine (`src-tauri/src/scheduler.rs`):** Manajemen jadwal pembersihan latar belakang otomatis berbasis frekuensi (Daily, Weekly, Monthly) dengan opsi target kategori dan eksekusi Auto-Clean.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_schedules` dan `toggle_schedule`.
+  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Schedules* lengkap dengan daftar jadwal, waktu eksekusi, kategori pembersihan, dan tombol switch *Active / Disabled*.
   4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

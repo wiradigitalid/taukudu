@@ -14,6 +14,7 @@ pub mod perf_monitor;
 pub mod privacy;
 pub mod registry_cleaner;
 pub mod rules;
+pub mod scheduler;
 pub mod service_driver;
 pub mod software_updater;
 pub mod startup_debloat;
@@ -41,6 +42,7 @@ pub use network_tools::{ActiveConnectionInfo, NetworkItemInfo, NetworkToolsEngin
 pub use perf_monitor::{PerfMonitorEngine, PerformanceSnapshot, ProcessItem};
 pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};
 pub use registry_cleaner::{RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult};
+pub use scheduler::{ScheduleEngine, ScheduleItem, ScheduleSummary, GLOBAL_SCHEDULER};
 pub use service_driver::{DriverPackageInfo, ServiceDriverEngine, ServiceItemInfo};
 pub use software_updater::{SoftwareUpdateSummary, SoftwareUpdaterEngine, UpdatablePackage, UpdateExecutionResult};
 pub use startup_debloat::{BloatwareApp, StartupDebloatEngine, StartupItem};
