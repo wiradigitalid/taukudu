@@ -41,10 +41,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-30** | **Windows Delete Access & Lock Probe** | Non-destructive Win32 CreateFileW sharing violation & permission probe | `DeleteFailureProbeEngine`, System Cleaner Probe UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-31** | **Granular Deletion Audit Ledger** | JSONL append-only audit trail with rotation & keyword search | `DeletionLoggerEngine`, HistoryPage ledger view | ✅ COMPLETED | 2026-08-26 |
 | **AREA-32** | **SSD ReTrim History & 24h Throttle** | Per-drive TRIM timestamp persistence & frequency safety guard | `TrimHistoryStore`, Disk Maintenance TRIM view | ✅ COMPLETED | 2026-08-26 |
+| **AREA-33** | **Persistent App Settings & Exclusions** | Complete JSON store for cleaner safeguards, backup paths & exclusions | `SettingsStoreEngine`, SettingsPage UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 33 — Persistent Settings Store & Path Exclusions (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Settings Store Engine (`src-tauri/src/settings_store.rs`):** Penyimpanan konfigurasi aplikasi secara persisten (`%LOCALAPPDATA%/TauKudu/config.json`) mencakup preferensi tema (dark/light), pilihan bahasa i18n, safeguard cleaner (tutup browser otomatis, buat restore point sebelum clean, simpan ledger JSONL), direktori backup kustom, serta daftar eksklusi path (*scanner path exclusions*).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_app_settings`, `update_app_settings`, `add_exclusion_path`, dan `remove_exclusion_path`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `CleanerConfig`, `AppSettings`, serta method `tauriApi.getAppSettings`, `tauriApi.updateAppSettings`, `tauriApi.addExclusionPath`, dan `tauriApi.removeExclusionPath`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Settings & Preferences* lengkap dengan selector tema, dropdown bahasa internasional, toggle safeguard cleaner, dan manajemen daftar eksklusi path.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 32 — SSD ReTrim History & 24h Throttle Guard (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

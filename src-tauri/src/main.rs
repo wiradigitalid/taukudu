@@ -24,11 +24,12 @@ use taukudu_lib::{
     RegistryFixResult, RegistryIssue, RegistryScanResult, RestorePointEngine,
     RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
     ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
+    AppSettings, CleanerConfig, SettingsStoreEngine,
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatMonitorEngine,
     ThreatMonitorSummary, TrimDriveStatus, TrimHistoryStore, TrimHistorySummary, TrimRecord,
     UninstallerShredderEngine, UpdateExecutionResult,
     GLOBAL_BREACH_MONITOR, GLOBAL_DELETION_LOGGER, GLOBAL_GAME_MODE, GLOBAL_HISTORY,
-    GLOBAL_SCHEDULER, GLOBAL_THREAT_MONITOR, GLOBAL_TRIM_HISTORY,
+    GLOBAL_SCHEDULER, GLOBAL_SETTINGS, GLOBAL_THREAT_MONITOR, GLOBAL_TRIM_HISTORY,
 };
 
 #[tauri::command]
@@ -526,6 +527,26 @@ fn clear_deletion_log() -> Result<(), String> {
     GLOBAL_DELETION_LOGGER.clear_logs()
 }
 
+#[tauri::command]
+fn get_app_settings() -> AppSettings {
+    GLOBAL_SETTINGS.get_settings()
+}
+
+#[tauri::command]
+fn update_app_settings(settings: AppSettings) -> AppSettings {
+    GLOBAL_SETTINGS.update_settings(settings)
+}
+
+#[tauri::command]
+fn add_exclusion_path(path: String) -> Vec<String> {
+    GLOBAL_SETTINGS.add_exclusion(path)
+}
+
+#[tauri::command]
+fn remove_exclusion_path(path: String) -> Vec<String> {
+    GLOBAL_SETTINGS.remove_exclusion(&path)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -618,7 +639,11 @@ fn main() {
             discover_browser_cache_targets,
             query_deletion_log,
             get_deletion_log_stats,
-            clear_deletion_log
+            clear_deletion_log,
+            get_app_settings,
+            update_app_settings,
+            add_exclusion_path,
+            remove_exclusion_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

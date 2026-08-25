@@ -577,6 +577,29 @@ export interface DeletionLogStats {
   log_file_path: string
 }
 
+export interface CleanerConfig {
+  skip_recent_minutes: number
+  secure_delete: boolean
+  close_browsers_before_clean: boolean
+  create_restore_point_before_clean: boolean
+  protect_recycle_bin: boolean
+  keep_deletion_log: boolean
+}
+
+export interface AppSettings {
+  theme: string
+  language: string
+  minimize_to_tray: boolean
+  show_notification_on_complete: boolean
+  show_threat_notifications: boolean
+  run_at_startup: boolean
+  auto_update: boolean
+  backup_path: string
+  cleaner: CleanerConfig
+  exclusions: string[]
+  ignored_software_updates: string[]
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -816,5 +839,17 @@ export const tauriApi = {
   },
   clearDeletionLog: async (): Promise<void> => {
     return await invoke('clear_deletion_log')
+  },
+  getAppSettings: async (): Promise<AppSettings> => {
+    return await invoke('get_app_settings')
+  },
+  updateAppSettings: async (settings: AppSettings): Promise<AppSettings> => {
+    return await invoke('update_app_settings', { settings })
+  },
+  addExclusionPath: async (path: string): Promise<string[]> => {
+    return await invoke('add_exclusion_path', { path })
+  },
+  removeExclusionPath: async (path: string): Promise<string[]> => {
+    return await invoke('remove_exclusion_path', { path })
   },
 }

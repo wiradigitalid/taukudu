@@ -24,6 +24,7 @@ pub mod restore_point;
 pub mod rules;
 pub mod scheduler;
 pub mod service_driver;
+pub mod settings_store;
 pub mod software_updater;
 pub mod startup_debloat;
 pub mod threat_monitor;
@@ -75,6 +76,9 @@ pub use restore_point::{
 };
 pub use scheduler::{ScheduleEngine, ScheduleItem, ScheduleSummary, GLOBAL_SCHEDULER};
 pub use service_driver::{DriverPackageInfo, ServiceDriverEngine, ServiceItemInfo};
+pub use settings_store::{
+    AppSettings, CleanerConfig, SettingsStoreEngine, GLOBAL_SETTINGS,
+};
 pub use software_updater::{SoftwareUpdateSummary, SoftwareUpdaterEngine, UpdatablePackage, UpdateExecutionResult};
 pub use startup_debloat::{BloatwareApp, StartupDebloatEngine, StartupItem};
 pub use threat_monitor::{

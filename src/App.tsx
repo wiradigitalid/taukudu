@@ -46,6 +46,8 @@ import {
   DeletionLogStats,
   TrimHistorySummary,
   TrimRecord,
+  AppSettings,
+  CleanerConfig,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -112,6 +114,8 @@ export function App() {
   // Settings State
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark')
   const [currentLang, setCurrentLang] = useState<string>('en')
+  const [appSettings, setAppSettings] = useState<AppSettings | null>(null)
+  const [newExclusion, setNewExclusion] = useState('')
   const [settingsFeedback, setSettingsFeedback] = useState<string | null>(null)
 
   // Cleaner state
@@ -1154,9 +1158,80 @@ export function App() {
     }
   }
 
+  const fetchAppSettings = async () => {
+    try {
+      const s = await tauriApi.getAppSettings()
+      setAppSettings(s)
+      setThemeMode((s.theme as 'dark' | 'light') || 'dark')
+      setCurrentLang(s.language || 'en')
+    } catch (err) {
+      console.error('Fetch settings error:', err)
+    }
+  }
+
+  const handleUpdateCleanerSetting = async <K extends keyof CleanerConfig>(key: K, val: CleanerConfig[K]) => {
+    if (!appSettings) return
+    const next: AppSettings = {
+      ...appSettings,
+      cleaner: {
+        ...appSettings.cleaner,
+        [key]: val,
+      },
+    }
+    try {
+      const saved = await tauriApi.updateAppSettings(next)
+      setAppSettings(saved)
+      setSettingsFeedback(`Updated ${String(key)} setting.`)
+    } catch (err) {
+      setSettingsFeedback(`Update error: ${String(err)}`)
+    }
+  }
+
+  const handleToggleSetting = async (key: keyof AppSettings, val: any) => {
+    if (!appSettings) return
+    const next: AppSettings = {
+      ...appSettings,
+      [key]: val,
+    }
+    try {
+      const saved = await tauriApi.updateAppSettings(next)
+      setAppSettings(saved)
+      setSettingsFeedback(`Updated ${key} setting.`)
+    } catch (err) {
+      setSettingsFeedback(`Update error: ${String(err)}`)
+    }
+  }
+
+  const handleAddExclusion = async () => {
+    if (!newExclusion) return
+    try {
+      const updated = await tauriApi.addExclusionPath(newExclusion)
+      if (appSettings) {
+        setAppSettings({ ...appSettings, exclusions: updated })
+      }
+      setNewExclusion('')
+      setSettingsFeedback(`Added exclusion: ${newExclusion}`)
+    } catch (err) {
+      setSettingsFeedback(`Add exclusion error: ${String(err)}`)
+    }
+  }
+
+  const handleRemoveExclusion = async (path: string) => {
+    try {
+      const updated = await tauriApi.removeExclusionPath(path)
+      if (appSettings) {
+        setAppSettings({ ...appSettings, exclusions: updated })
+      }
+      setSettingsFeedback(`Removed exclusion: ${path}`)
+    } catch (err) {
+      setSettingsFeedback(`Remove exclusion error: ${String(err)}`)
+    }
+  }
+
   const handleChangeLanguage = (langCode: string) => {
     setCurrentLang(langCode)
     i18n.changeLanguage(langCode)
+    handleToggleSetting('language', langCode)
     setSettingsFeedback(`Language updated to ${langCode}`)
   }
 
@@ -1165,11 +1240,13 @@ export function App() {
     const root = document.documentElement
     root.classList.remove('dark', 'light')
     root.classList.add(mode)
+    handleToggleSetting('theme', mode)
     setSettingsFeedback(`Theme set to ${mode} mode`)
   }
 
   useEffect(() => {
     fetchOverview()
+    fetchAppSettings()
   }, [])
 
   const formatBytes = (bytes: number) => {
@@ -2747,6 +2824,143 @@ export function App() {
                 )}
               </div>
             )}
+          </div>
+        ) : activeTab === 'settings' ? (
+          /* Settings & Preferences Page */
+          <div className="p-8 max-w-5xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Application Settings & Preferences</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {settingsFeedback || 'Configure theme, internationalization language, cleaner policies, and path exclusions.'}
+                </p>
+              </div>
+            </div>
+
+            {/* General & UI Preferences */}
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-4">
+              <h3 className="text-sm font-semibold text-white">Appearance & Localization</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Theme Selector */}
+                <div className="p-4 rounded-xl bg-black/40 border border-zinc-800 space-y-2">
+                  <span className="text-xs font-semibold text-zinc-300">Theme Mode</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleToggleTheme('dark')}
+                      className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer ${
+                        themeMode === 'dark'
+                          ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
+                          : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      <Moon className="w-3.5 h-3.5" />
+                      Dark Theme
+                    </button>
+                    <button
+                      onClick={() => handleToggleTheme('light')}
+                      className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer ${
+                        themeMode === 'light'
+                          ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
+                          : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      <Sun className="w-3.5 h-3.5" />
+                      Light Theme
+                    </button>
+                  </div>
+                </div>
+
+                {/* Language Selector */}
+                <div className="p-4 rounded-xl bg-black/40 border border-zinc-800 space-y-2">
+                  <span className="text-xs font-semibold text-zinc-300">Display Language</span>
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-amber-500" />
+                    <select
+                      value={currentLang}
+                      onChange={(e) => handleChangeLanguage(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                    >
+                      {LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.name} ({lang.nativeName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cleaner Policy Toggles */}
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+              <h3 className="text-sm font-semibold text-white">Cleaner Engine Safeguards</h3>
+              <div className="space-y-2">
+                <label className="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/[0.03] cursor-pointer">
+                  <span className="text-xs text-zinc-300">Close active browsers automatically before cleaning cache</span>
+                  <input
+                    type="checkbox"
+                    checked={appSettings?.cleaner.close_browsers_before_clean || false}
+                    onChange={(e) => handleUpdateCleanerSetting('close_browsers_before_clean', e.target.checked)}
+                    className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                  />
+                </label>
+                <label className="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/[0.03] cursor-pointer">
+                  <span className="text-xs text-zinc-300">Create Windows System Restore Point checkpoint before cleaning</span>
+                  <input
+                    type="checkbox"
+                    checked={appSettings?.cleaner.create_restore_point_before_clean || false}
+                    onChange={(e) => handleUpdateCleanerSetting('create_restore_point_before_clean', e.target.checked)}
+                    className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                  />
+                </label>
+                <label className="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/[0.03] cursor-pointer">
+                  <span className="text-xs text-zinc-300">Maintain append-only granular deletion audit ledger (JSONL)</span>
+                  <input
+                    type="checkbox"
+                    checked={appSettings?.cleaner.keep_deletion_log ?? true}
+                    onChange={(e) => handleUpdateCleanerSetting('keep_deletion_log', e.target.checked)}
+                    className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Path Exclusions */}
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-4">
+              <h3 className="text-sm font-semibold text-white">Scanner Path Exclusions</h3>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={newExclusion}
+                  onChange={(e) => setNewExclusion(e.target.value)}
+                  placeholder="Enter directory name or pattern to exclude (e.g. D:\Projects\MyData)..."
+                  className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                />
+                <button
+                  onClick={handleAddExclusion}
+                  className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Exclusion
+                </button>
+              </div>
+
+              {appSettings && appSettings.exclusions.length > 0 && (
+                <div className="space-y-1.5 pt-2">
+                  {appSettings.exclusions.map((ex) => (
+                    <div key={ex} className="flex justify-between items-center p-2.5 rounded-lg bg-black/30 border border-zinc-800 text-xs font-mono">
+                      <span className="text-zinc-300">{ex}</span>
+                      <button
+                        onClick={() => handleRemoveExclusion(ex)}
+                        className="text-[11px] text-zinc-500 hover:text-red-400 transition cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="p-8 text-xs text-zinc-400">Section active</div>
