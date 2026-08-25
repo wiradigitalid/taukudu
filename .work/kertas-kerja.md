@@ -42,10 +42,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-31** | **Granular Deletion Audit Ledger** | JSONL append-only audit trail with rotation & keyword search | `DeletionLoggerEngine`, HistoryPage ledger view | ✅ COMPLETED | 2026-08-26 |
 | **AREA-32** | **SSD ReTrim History & 24h Throttle** | Per-drive TRIM timestamp persistence & frequency safety guard | `TrimHistoryStore`, Disk Maintenance TRIM view | ✅ COMPLETED | 2026-08-26 |
 | **AREA-33** | **Persistent App Settings & Exclusions** | Complete JSON store for cleaner safeguards, backup paths & exclusions | `SettingsStoreEngine`, SettingsPage UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-34** | **Prometheus OpenMetrics Exporter** | Standardized observability telemetry exporter for hardware & cleaning stats | `MetricsEngine`, MetricsPage UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 34 — Prometheus OpenMetrics Telemetry Exporter (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Metrics Engine (`src-tauri/src/metrics.rs`):** Koleksi metrik standar sistem dan aplikasi (info rilis, uptime, utilisasi CPU/RAM, total sesi pembersihan, total berkas terhapus, total kapasitas dibebaskan) serta format output OpenMetrics / Prometheus.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `collect_prometheus_metrics`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `MetricLine`, `PrometheusMetricsSummary`, serta method `tauriApi.collectPrometheusMetrics`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan tab *Prometheus Metrics* lengkap dengan metrik breakdown cards dan raw text payload preview.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 33 — Persistent Settings Store & Path Exclusions (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

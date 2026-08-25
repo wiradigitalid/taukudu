@@ -600,6 +600,19 @@ export interface AppSettings {
   ignored_software_updates: string[]
 }
 
+export interface MetricLine {
+  name: string
+  type: string
+  help: string
+  labels: Record<string, string>
+  value: number
+}
+
+export interface PrometheusMetricsSummary {
+  metrics: MetricLine[]
+  raw_prometheus_text: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -851,5 +864,8 @@ export const tauriApi = {
   },
   removeExclusionPath: async (path: string): Promise<string[]> => {
     return await invoke('remove_exclusion_path', { path })
+  },
+  collectPrometheusMetrics: async (): Promise<PrometheusMetricsSummary> => {
+    return await invoke('collect_prometheus_metrics')
   },
 }

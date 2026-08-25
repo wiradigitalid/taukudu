@@ -17,7 +17,7 @@ use taukudu_lib::{
     EmptyFolderScanResult, FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
     GameModeStatus, GameOptimizationItem, HistoryRecord, InstalledProgramInfo,
     LargeFileScanResult, LeftoversCleanerEngine, LeftoversCleanResult, LeftoversScanResult,
-    MalwareActionResult, MalwareScanResult, MalwareScannerEngine,
+    MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MetricLine, MetricsEngine,
     NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot,
     PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RecycleBinCleanResult,
     RecycleBinDriveStat, RecycleBinEngine, RecycleBinSummary, RegistryCleanerEngine,
@@ -547,6 +547,11 @@ fn remove_exclusion_path(path: String) -> Vec<String> {
     GLOBAL_SETTINGS.remove_exclusion(&path)
 }
 
+#[tauri::command]
+fn collect_prometheus_metrics() -> taukudu_lib::PrometheusMetricsSummary {
+    MetricsEngine::get_summary()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -643,7 +648,8 @@ fn main() {
             get_app_settings,
             update_app_settings,
             add_exclusion_path,
-            remove_exclusion_path
+            remove_exclusion_path,
+            collect_prometheus_metrics
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

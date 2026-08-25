@@ -48,6 +48,8 @@ import {
   TrimRecord,
   AppSettings,
   CleanerConfig,
+  PrometheusMetricsSummary,
+  MetricLine,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -101,13 +103,14 @@ import {
   PowerOff,
   Radio,
   Compass,
+  BarChart3,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -263,6 +266,11 @@ export function App() {
   const [perfSnapshot, setPerfSnapshot] = useState<PerformanceSnapshot | null>(null)
   const [loadingPerf, setLoadingPerf] = useState(false)
   const [perfFeedback, setPerfFeedback] = useState<string | null>(null)
+
+  // Prometheus Metrics state
+  const [prometheusMetrics, setPrometheusMetrics] = useState<PrometheusMetricsSummary | null>(null)
+  const [loadingMetrics, setLoadingMetrics] = useState(false)
+  const [metricsFeedback, setMetricsFeedback] = useState<string | null>(null)
 
   // History & Deletion Log state
   const [historyList, setHistoryList] = useState<HistoryRecord[]>([])
@@ -1082,6 +1090,18 @@ export function App() {
     }
   }
 
+  const fetchPrometheusMetrics = async () => {
+    setLoadingMetrics(true)
+    try {
+      const res = await tauriApi.collectPrometheusMetrics()
+      setPrometheusMetrics(res)
+    } catch (err) {
+      console.error('Fetch metrics error:', err)
+    } finally {
+      setLoadingMetrics(false)
+    }
+  }
+
   const handleRunMalwareScan = async (type: string = 'quick') => {
     setMalwareScanning(true)
     setMalwareStatus(null)
@@ -1649,6 +1669,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('metrics')
+                if (!prometheusMetrics && !loadingMetrics) fetchPrometheusMetrics()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'metrics'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              Prometheus Metrics
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('malware')
                 if (!malwareResult && !malwareScanning) handleRunMalwareScan('quick')
               }}
@@ -1753,6 +1787,8 @@ export function App() {
               ? 'Cryptographic File Shredder (DoD 5220.22-M)'
               : activeTab === 'history'
               ? 'Cleaning History & Audit Trail (SQLite)'
+              : activeTab === 'metrics'
+              ? 'Prometheus OpenMetrics Telemetry Exporter'
               : activeTab === 'settings'
               ? 'Application Settings & Internationalization'
               : activeTab === 'malware'
@@ -1815,6 +1851,14 @@ export function App() {
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Refresh Logs
+              </button>
+            ) : activeTab === 'metrics' ? (
+              <button
+                onClick={fetchPrometheusMetrics}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Metrics
               </button>
             ) : activeTab === 'schedules' ? (
               <button
@@ -2822,6 +2866,56 @@ export function App() {
                     <p className="text-xs text-zinc-400">No granular file deletion entries matched the query.</p>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'metrics' ? (
+          /* Prometheus Metrics Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Prometheus OpenMetrics Telemetry Exporter</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {metricsFeedback || 'Standardized metrics formatted for local observability, Grafana dashboards, and system profiling.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchPrometheusMetrics}
+                  disabled={loadingMetrics}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingMetrics ? 'animate-spin' : ''}`} />
+                  {loadingMetrics ? 'Scraping Metrics...' : 'Scrape Metrics'}
+                </button>
+              </div>
+            </div>
+
+            {/* Metrics Breakdown Cards */}
+            {prometheusMetrics && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {prometheusMetrics.metrics.slice(0, 6).map((m) => (
+                    <div key={m.name} className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-semibold text-white truncate max-w-xs">{m.name}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] font-mono text-amber-400 uppercase">
+                          {m.type}
+                        </span>
+                      </div>
+                      <div className="text-base font-mono font-bold text-amber-400">{m.value}</div>
+                      <p className="text-[10px] text-zinc-500">{m.help}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Raw Prometheus Text Preview */}
+                <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                  <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Raw OpenMetrics Payload Preview</h3>
+                  <pre className="p-4 rounded-lg bg-black/60 border border-zinc-800 text-[11px] font-mono text-zinc-300 overflow-x-auto max-h-80 select-all">
+                    {prometheusMetrics.raw_prometheus_text}
+                  </pre>
+                </div>
               </div>
             )}
           </div>

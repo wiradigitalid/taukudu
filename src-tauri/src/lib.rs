@@ -15,6 +15,7 @@ pub mod game_mode;
 pub mod history_store;
 pub mod leftovers_cleaner;
 pub mod malware_scanner;
+pub mod metrics;
 pub mod network_tools;
 pub mod perf_monitor;
 pub mod privacy;
@@ -64,6 +65,7 @@ pub use leftovers_cleaner::{
 pub use malware_scanner::{
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MalwareThreat, QuarantinedItem,
 };
+pub use metrics::{MetricLine, MetricsEngine, PrometheusMetricsSummary};
 pub use network_tools::{ActiveConnectionInfo, NetworkItemInfo, NetworkToolsEngine};
 pub use perf_monitor::{PerfMonitorEngine, PerformanceSnapshot, ProcessItem};
 pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};
