@@ -23,6 +23,7 @@ import {
   TrimDriveStatus,
   DiskRepairOutput,
   ContextMenuEntryInfo,
+  FirewallAuditSummary,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -60,13 +61,15 @@ import {
   Gamepad2,
   Hammer,
   MousePointerClick,
+  ShieldCheck,
+  Flame,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'firewall' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -100,6 +103,11 @@ export function App() {
   const [trimFeedback, setTrimFeedback] = useState<string | null>(null)
   const [runningRepair, setRunningRepair] = useState<string | null>(null)
   const [repairResults, setRepairResults] = useState<Record<string, DiskRepairOutput>>({})
+
+  // Firewall Audit state
+  const [firewallSummary, setFirewallSummary] = useState<FirewallAuditSummary | null>(null)
+  const [loadingFirewall, setLoadingFirewall] = useState(false)
+  const [firewallFeedback, setFirewallFeedback] = useState<string | null>(null)
 
   // Context Menu state
   const [ctxEntries, setCtxEntries] = useState<ContextMenuEntryInfo[]>([])
@@ -328,6 +336,28 @@ export function App() {
       console.error('CHKDSK error:', err)
     } finally {
       setRunningRepair(null)
+    }
+  }
+
+  const fetchFirewall = async () => {
+    setLoadingFirewall(true)
+    try {
+      const sum = await tauriApi.auditFirewall()
+      setFirewallSummary(sum)
+    } catch (err) {
+      console.error('Firewall audit error:', err)
+    } finally {
+      setLoadingFirewall(false)
+    }
+  }
+
+  const handleToggleFirewallRule = async (rule: import('@/lib/tauri-bridge').FirewallRuleInfo) => {
+    try {
+      await tauriApi.toggleFirewallRule(rule.name, !rule.is_enabled)
+      setFirewallFeedback(`Updated rule: ${rule.display_name}`)
+      await fetchFirewall()
+    } catch (err) {
+      setFirewallFeedback(`Firewall error: ${String(err)}`)
     }
   }
 
@@ -812,6 +842,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('firewall')
+                if (!firewallSummary && !loadingFirewall) fetchFirewall()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'firewall'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Flame className="w-4 h-4" />
+              Firewall Audit
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('contextmenu')
                 if (ctxEntries.length === 0 && !loadingCtx) fetchContextMenu()
               }}
@@ -1037,6 +1081,8 @@ export function App() {
               ? 'Disk Space & Treemap Analyzer'
               : activeTab === 'repair'
               ? 'SSD TRIM & Filesystem Integrity Repair'
+              : activeTab === 'firewall'
+              ? 'Windows Firewall & Open Port Security Audit'
               : activeTab === 'contextmenu'
               ? 'Explorer Right-Click Context Menu Manager'
               : activeTab === 'game'
@@ -1068,14 +1114,14 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'contextmenu' ? (
+            {activeTab === 'firewall' ? (
               <button
-                onClick={fetchContextMenu}
-                disabled={loadingCtx}
+                onClick={fetchFirewall}
+                disabled={loadingFirewall}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingCtx ? 'animate-spin' : ''}`} />
-                Refresh Entries
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingFirewall ? 'animate-spin' : ''}`} />
+                Audit Firewall
               </button>
             ) : (
               <button
@@ -1155,46 +1201,70 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'contextmenu' ? (
-          /* Context Menu Cleaner Page */
+        ) : activeTab === 'firewall' ? (
+          /* Firewall Audit Page */
           <div className="p-8 max-w-6xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-white">Explorer Right-Click Context Menu ({ctxEntries.length})</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Firewall Audit: {firewallSummary?.high_risk_count || 0} Permissive Rules Detected
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    {firewallSummary?.total_rules || 0} Total Active Rules
+                  </span>
+                </div>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {ctxFeedback || 'Disable cluttering shell extensions and third-party context menu handlers.'}
+                  {firewallFeedback || 'Inspect inbound open ports and disable broad permissive firewall rules.'}
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
-              {ctxEntries.map((item) => (
+              {firewallSummary?.rules.map((r, i) => (
                 <div
-                  key={item.id}
-                  className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  key={i}
+                  className={`p-4 rounded-xl border flex justify-between items-start transition ${
+                    r.risk_level === 'high'
+                      ? 'bg-[#16161a] border-red-500/30'
+                      : r.risk_level === 'medium'
+                      ? 'bg-[#16161a] border-amber-500/30'
+                      : 'bg-[#16161a] border-[#2a2a36]'
+                  }`}
                 >
-                  <div className="space-y-1 truncate mr-4">
+                  <div className="space-y-1 mr-4">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold text-white truncate">{item.name}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
-                        {item.source}
+                      <span className="text-sm font-semibold text-white">{r.display_name}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                          r.risk_level === 'high'
+                            ? 'bg-red-500/20 text-red-400'
+                            : r.risk_level === 'medium'
+                            ? 'bg-amber-500/20 text-amber-400'
+                            : 'bg-emerald-500/20 text-emerald-400'
+                        }`}
+                      >
+                        {r.risk_level} risk
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
-                        {item.scope} ({item.hive})
+                      <span className="px-2 py-0.5 rounded bg-zinc-800 text-[10px] font-mono text-zinc-300">
+                        Profile: {r.profile}
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-500 font-mono truncate">{item.key_path}</p>
+                    <p className="text-xs text-zinc-400">{r.risk_reason}</p>
+                    <p className="text-[11px] text-zinc-500 font-mono">
+                      Protocol: {r.protocol} • Port: {r.local_port} • Program: {r.program}
+                    </p>
                   </div>
 
                   <button
-                    onClick={() => handleToggleContextMenu(item)}
+                    onClick={() => handleToggleFirewallRule(r)}
                     className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                      item.is_enabled
+                      r.is_enabled
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                         : 'bg-zinc-800 text-zinc-400'
                     }`}
                   >
-                    {item.is_enabled ? 'Enabled' : 'Disabled'}
+                    {r.is_enabled ? 'Allowed' : 'Blocked'}
                   </button>
                 </div>
               ))}

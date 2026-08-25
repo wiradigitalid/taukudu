@@ -305,6 +305,28 @@ export interface ContextMenuScanResult {
   total_found: number
 }
 
+export interface FirewallRuleInfo {
+  name: string
+  display_name: string
+  direction: string
+  action: string
+  is_enabled: boolean
+  profile: string
+  local_port: string
+  remote_port: string
+  protocol: string
+  program: string
+  risk_level: string
+  risk_reason: string
+}
+
+export interface FirewallAuditSummary {
+  rules: FirewallRuleInfo[]
+  total_rules: number
+  high_risk_count: number
+  open_inbound_ports: number[]
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -440,5 +462,11 @@ export const tauriApi = {
   },
   toggleContextMenuEntry: async (key_path: string, enable: boolean): Promise<void> => {
     return await invoke('toggle_context_menu_entry', { keyPath: key_path, enable })
+  },
+  auditFirewall: async (): Promise<FirewallAuditSummary> => {
+    return await invoke('audit_firewall')
+  },
+  toggleFirewallRule: async (rule_name: string, enable: boolean): Promise<void> => {
+    return await invoke('toggle_firewall_rule', { ruleName: rule_name, enable })
   },
 }

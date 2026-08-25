@@ -10,13 +10,14 @@ use taukudu_lib::{
     CliArgs, ContextMenuEngine, ContextMenuEntryInfo, ContextMenuScanResult, DeduplicationEngine,
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
     DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
-    EmptyFolderScanResult, GameModeEngine, GameModeStatus, GameOptimizationItem, HistoryRecord,
-    InstalledProgramInfo, LargeFileScanResult, MalwareActionResult, MalwareScanResult,
-    MalwareScannerEngine, NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine,
-    PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState,
-    RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult,
-    ServiceDriverEngine, ServiceItemInfo, ShredderResult, StartupDebloatEngine, StartupItem,
-    TrimDriveStatus, UninstallerShredderEngine, GLOBAL_HISTORY,
+    EmptyFolderScanResult, FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
+    GameModeStatus, GameOptimizationItem, HistoryRecord, InstalledProgramInfo, LargeFileScanResult,
+    MalwareActionResult, MalwareScanResult, MalwareScannerEngine, NetworkItemInfo,
+    NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot, PrivacyApplyResult,
+    PrivacyShieldEngine, PrivacyShieldState, RegistryCleanerEngine, RegistryFixResult,
+    RegistryIssue, RegistryScanResult, ScanResult, ServiceDriverEngine, ServiceItemInfo,
+    ShredderResult, StartupDebloatEngine, StartupItem, TrimDriveStatus, UninstallerShredderEngine,
+    GLOBAL_HISTORY,
 };
 
 #[tauri::command]
@@ -305,6 +306,16 @@ fn toggle_context_menu_entry(key_path: String, enable: bool) -> Result<(), Strin
     ContextMenuEngine::toggle_entry(&key_path, enable)
 }
 
+#[tauri::command]
+fn audit_firewall() -> FirewallAuditSummary {
+    FirewallAuditEngine::audit_firewall_rules()
+}
+
+#[tauri::command]
+fn toggle_firewall_rule(rule_name: String, enable: bool) -> Result<(), String> {
+    FirewallAuditEngine::toggle_rule(&rule_name, enable)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -364,7 +375,9 @@ fn main() {
             run_dism_scan,
             run_chkdsk_scan,
             get_context_menu_entries,
-            toggle_context_menu_entry
+            toggle_context_menu_entry,
+            audit_firewall,
+            toggle_firewall_rule
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

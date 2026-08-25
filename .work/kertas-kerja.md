@@ -27,17 +27,18 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-16** | **Game Mode & Latency Optimizer**| Power plan switching, GameDVR toggle, Search indexer pause | `winreg`, powercfg, net service, `GameModePage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-17** | **Disk Maintenance & Repair** | SSD Storage ReTrim, SFC file checker, DISM repair, CHKDSK | fsutil, PowerShell ReTrim, sfc, dism, `DiskRepairPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-18** | **Context Menu Cleaner** | Explorer right-click shell extensions & handlers cleaner | `winreg`, PowerShell registry toggle, `ContextMenuPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-19** | **Windows Firewall Security Audit**| Inbound open ports audit, broad rule risk assessment | NetFirewallRule PowerShell, `FirewallAuditPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
 
-### Area 18 — Explorer Context Menu Cleaner (Selesai: 2026-08-26)
+### Area 19 — Windows Firewall Security Audit (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **Context Menu Engine (`src-tauri/src/context_menu.rs`):**
-     - Enumerasi ekstensi menu klik kanan Windows Explorer di `HKCR\*\shell`, `HKCR\Directory\shell`, `HKCU\Software\Classes\...\shell` dengan safelist verb standar (open, edit, print, runas, dll.).
-     - Inferensi otomatis sumber aplikasi (7-Zip, WinRAR, VS Code, Git, Notepad++, VLC, Discord).
-     - Kemampuan menonaktifkan/mengaktifkan kembali entri menu tanpa menghapus konfigurasi command aslinya.
-  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_context_menu_entries` dan `toggle_context_menu_entry`.
-  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Context Menu Cleaner* lengkap dengan informasi scope (Files, Directory, Folder), sumber aplikasi, dan switch status.
+  1. **Firewall Audit Engine (`src-tauri/src/firewall_audit.rs`):**
+     - Enumerasi aturan firewall aktif via `Get-NetFirewallRule` (Action, Profile, Direction, LocalPort, Protocol).
+     - Analisis risiko keamanan otomatis (aturan permisif yang membuka port RDP/SMB ke profil Public/Any diklasifikasikan sebagai *High Risk*).
+     - Pengaturan status aturan firewall (Allow/Block/Disable) via `Set-NetFirewallRule`.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `audit_firewall` dan `toggle_firewall_rule`.
+  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Firewall Audit* dengan ringkasan jumlah aturan berisiko tinggi, detail port, dan tombol switch *Allowed / Blocked*.
   4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
