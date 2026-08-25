@@ -52,10 +52,17 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-41** | **Empty Folders & Large File Hunter UI** | Dedicated scanning & purge views for 0-byte directories and oversized files | `DeduplicationEngine`, Empty & Large File UI tabs | ✅ COMPLETED | 2026-08-26 |
 | **AREA-42** | **Full System Navigation & Feature Unification** | Unified multi-view sidebar covering all 35+ native system tools & engines | `src/App.tsx` navigation & view router | ✅ COMPLETED | 2026-08-26 |
 | **AREA-43** | **Official Release & Update Verifier** | Native release version metadata & GitHub release tag verifier | `AppUpdaterEngine`, About & Settings UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-44** | **Client-Side CVE False-Positive Filter** | Debian epoch/revision version parser & runtime misattribution filter | `CveScannerEngine`, CVE Scanner Page | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 44 — Client-Side CVE False-Positive Filter Engine (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **CVE Filter Engine (`src-tauri/src/cve_scanner.rs`):** Parser versi Debian/Ubuntu/RPM (epoch, upstream version, revision `0ubuntu8.1`), normalisasi suffix Debian (`+really`, `+dfsg`, `~beta`), perbandingan versi numerik `is_version_at_least`, serta pendeteksi misatribusi paket (`is_misattributed_package`) untuk menyaring false positives (misal `bash-completion` vs interpreter `bash`, `python3-*` vs runtime CPython, `node-*` vs runtime `nodejs`, `php-pear` vs core engine C PHP).
+  2. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `CveItem` (field `is_filtered_false_positive`, `filter_reason`) dan `CveScanSummary` (`filtered_false_positives_count`).
+  3. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 43 — Official Release & Update Verifier (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

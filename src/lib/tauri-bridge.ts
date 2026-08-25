@@ -389,6 +389,8 @@ export interface CveItem {
   description: string
   published_date: string
   is_remediated: boolean
+  is_filtered_false_positive: boolean
+  filter_reason?: string | null
 }
 
 export interface CveScanSummary {
@@ -396,6 +398,7 @@ export interface CveScanSummary {
   total_cves: number
   critical_count: number
   high_count: number
+  filtered_false_positives_count: number
 }
 
 export interface UpdatablePackage {
