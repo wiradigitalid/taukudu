@@ -66,6 +66,22 @@ export interface DuplicateScanOptions {
   max_depth: number | null
 }
 
+export interface PrivacySetting {
+  id: string
+  category: string
+  label: string
+  description: string
+  requires_admin: boolean
+  is_enabled: boolean
+}
+
+export interface PrivacyShieldState {
+  settings: PrivacySetting[]
+  protected_count: number
+  total_count: number
+  score_percentage: number
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -84,5 +100,11 @@ export const tauriApi = {
   },
   deleteDuplicateFiles: async (paths: string[]): Promise<number> => {
     return await invoke('delete_duplicate_files', { paths })
+  },
+  getPrivacyShieldState: async (): Promise<PrivacyShieldState> => {
+    return await invoke('get_privacy_shield_state')
+  },
+  applyPrivacySetting: async (id: string, enable: boolean): Promise<void> => {
+    return await invoke('apply_privacy_setting', { id, enable })
   },
 }

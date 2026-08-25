@@ -12,9 +12,9 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-01** | **Cleaner Core Engine & UI** | Pemindaian berkas sampah (System, Browser, App, Gaming, Registry) + CleanerPage | `walkdir`, `rayon`, `serde_json`, `CleanerPage` split-view | ✅ COMPLETED | 2026-08-25 |
 | **AREA-02** | **Rules Registry & Importer** | Parser rules JSON Kudu + integrasi CleanerML BleachBit | `serde_json`, `rules.rs`, path resolver | ✅ COMPLETED | 2026-08-25 |
 | **AREA-03** | **Deduplication & Disk Tools** | Multi-stage hash (Czkawka concept) + DuplicateFinderPage, LargeFile, EmptyFolder | `blake3`, `rayon`, `walkdir`, `DuplicateFinderPage` UI | ✅ COMPLETED | 2026-08-25 |
-| **AREA-04** | **Disk Analyzer (Treemap)** | Visualisasi Treemap penggunaan disk + DiskAnalyzerPage | `jwalk`, `rayon`, Canvas / D3 Treemap | ⏳ NEXT UP | — |
-| **AREA-05** | **Privacy Shield** | 30+ Windows privacy & telemetry policies + PrivacyShieldPage | `winreg`, `windows-rs` | ⬜ PENDING | — |
-| **AREA-06** | **Malware Scanner (YARA-X)** | On-demand YARA scan + MalwareScannerPage, ThreatMonitor | `yara-x` / `yara-sys` | ⬜ PENDING | — |
+| **AREA-05** | **Privacy Shield** | 30+ Windows privacy & telemetry policies + PrivacyShieldPage | `winreg`, `windows-rs`, `PrivacyShieldPage` UI | ✅ COMPLETED | 2026-08-25 |
+| **AREA-06** | **Malware Scanner (YARA-X)** | On-demand YARA scan + MalwareScannerPage, ThreatMonitor | `yara-x` / `yara-sys` | ⏳ NEXT UP | — |
+| **AREA-04** | **Disk Analyzer (Treemap)** | Visualisasi Treemap penggunaan disk + DiskAnalyzerPage | `jwalk`, `rayon`, Canvas / D3 Treemap | ⬜ PENDING | — |
 | **AREA-07** | **System Tools: Startup & Debloat** | Startup Manager & Windows Debloater (UWP purge) + Pages | `winreg`, `windows-rs` | ⬜ PENDING | — |
 | **AREA-08** | **System Tools: Services & Drivers** | Service Manager & DriverStore Purge + Pages | `windows-service`, `windows-rs` | ⬜ PENDING | — |
 | **AREA-09** | **Uninstaller & Secure Shredder** | Clean Uninstaller + Multi-pass cryptographic file shredder | `zeroize`, `rand`, `windows-rs` | ⬜ PENDING | — |
@@ -34,9 +34,11 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 - Rules parser deklaratif, parallel scanner rayon + walkdir, scan & clean IPC commands, dan Cleaner split-view UI.
 
 ### Area 03 — Deduplication & Disk Tools (Selesai: 2026-08-25)
+- Multi-stage hasher Blake3, disk anomaly scanners, dan Duplicate Finder UI.
+
+### Area 05 — Privacy Shield (Selesai: 2026-08-25)
 - **Yang telah dikerjakan:**
-  1. **Multi-Stage Hasher (`src-tauri/src/deduplication.rs`):** Mengadopsi algoritma Czkawka (Exact File Size grouping $\rightarrow$ 4KB partial hash $\rightarrow$ Full cryptographic Blake3 hash) untuk pencarian duplikat instan tanpa full read I/O di muka.
-  2. **Disk Anomaly Scanners:** Scanner folder kosong (`scan_empty_folders`) dan pemindai berkas besar (`scan_large_files`).
-  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_duplicates`, `scan_empty_folders`, `scan_large_files`, dan `delete_duplicate_files`.
-  4. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka Duplicate Finder dengan konfigurasi direktori, visualisasi grup duplikat berdasar hash Blake3, auto-selection salinan redundan, dan eksekusi penghapusan selektif.
-  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
+  1. **Win32 Privacy Engine (`src-tauri/src/privacy.rs`):** Menggunakan `winreg` untuk membaca dan memanipulasi kebijakan privasi Windows secara native (Diagnostic Telemetry level, Activity Feed, Typing/Handwriting telemetry, Advertising ID, Tailored Experiences, Cortana, Bing in Start menu, Location Sensor).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_privacy_shield_state` dan `apply_privacy_setting`.
+  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka Privacy Shield dengan kalkulasi skor proteksi persentase, status indikator, toggle switch individual, dan tombol *Protect All Now*.
+  4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

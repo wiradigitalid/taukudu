@@ -4,6 +4,7 @@ import {
   SystemOverview,
   ScanResult,
   DuplicateScanResult,
+  PrivacyShieldState,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -16,10 +17,13 @@ import {
   CheckCircle2,
   CopyCheck,
   FolderOpen,
+  Lock,
+  Eye,
+  AlertTriangle,
 } from 'lucide-react'
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -36,6 +40,11 @@ export function App() {
   const [dupResult, setDupResult] = useState<DuplicateScanResult | null>(null)
   const [selectedDupPaths, setSelectedDupPaths] = useState<Set<string>>(new Set())
   const [dupStatus, setDupStatus] = useState<string | null>(null)
+
+  // Privacy Shield state
+  const [privacyState, setPrivacyState] = useState<PrivacyShieldState | null>(null)
+  const [loadingPrivacy, setLoadingPrivacy] = useState(false)
+  const [privacyFeedback, setPrivacyFeedback] = useState<string | null>(null)
 
   const fetchOverview = async () => {
     setLoadingOverview(true)
@@ -97,7 +106,6 @@ export function App() {
         max_depth: 30,
       })
       setDupResult(res)
-      // Auto-select redundant duplicates (keep 1st copy)
       const toSelect = new Set<string>()
       res.groups.forEach((g) => {
         g.files.slice(1).forEach((f) => toSelect.add(f.path))
@@ -120,6 +128,45 @@ export function App() {
     } catch (err) {
       console.error('Failed to delete duplicates:', err)
       setDupStatus('Deletion failed: ' + String(err))
+    }
+  }
+
+  const fetchPrivacySettings = async () => {
+    setLoadingPrivacy(true)
+    try {
+      const state = await tauriApi.getPrivacyShieldState()
+      setPrivacyState(state)
+    } catch (err) {
+      console.error('Failed to load privacy state:', err)
+    } finally {
+      setLoadingPrivacy(false)
+    }
+  }
+
+  const handleTogglePrivacy = async (id: string, currentlyEnabled: boolean) => {
+    try {
+      await tauriApi.applyPrivacySetting(id, !currentlyEnabled)
+      setPrivacyFeedback(`Updated policy for ${id}`)
+      await fetchPrivacySettings()
+    } catch (err) {
+      console.error(`Failed to apply privacy setting ${id}:`, err)
+      setPrivacyFeedback(`Error: ${String(err)}`)
+    }
+  }
+
+  const handleProtectAllPrivacy = async () => {
+    if (!privacyState) return
+    try {
+      for (const s of privacyState.settings) {
+        if (!s.is_enabled) {
+          await tauriApi.applyPrivacySetting(s.id, true)
+        }
+      }
+      setPrivacyFeedback('All privacy shields successfully applied!')
+      await fetchPrivacySettings()
+    } catch (err) {
+      console.error('Batch protect failed:', err)
+      setPrivacyFeedback(`Error applying all: ${String(err)}`)
     }
   }
 
@@ -192,9 +239,19 @@ export function App() {
               <CopyCheck className="w-4 h-4" />
               Duplicate Finder
             </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-zinc-500 hover:text-zinc-400 text-sm cursor-not-allowed">
+            <button
+              onClick={() => {
+                setActiveTab('privacy')
+                if (!privacyState && !loadingPrivacy) fetchPrivacySettings()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition ${
+                activeTab === 'privacy'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
               <Shield className="w-4 h-4" />
-              Security & Privacy
+              Privacy Shield
             </button>
           </nav>
         </div>
@@ -213,7 +270,9 @@ export function App() {
               ? 'System Overview & Health'
               : activeTab === 'cleaner'
               ? 'Deep System Cleaner (Rules-Engine)'
-              : 'Multi-Stage Duplicate Finder (Czkawka Concept)'}
+              : activeTab === 'duplicates'
+              ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
+              : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
             {activeTab === 'dashboard' ? (
@@ -234,7 +293,7 @@ export function App() {
                 <RefreshCw className={`w-3.5 h-3.5 ${scanning ? 'animate-spin' : ''}`} />
                 Rescan
               </button>
-            ) : (
+            ) : activeTab === 'duplicates' ? (
               <button
                 onClick={handleScanDuplicates}
                 disabled={dupScanning}
@@ -242,6 +301,15 @@ export function App() {
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${dupScanning ? 'animate-spin' : ''}`} />
                 Scan Duplicates
+              </button>
+            ) : (
+              <button
+                onClick={fetchPrivacySettings}
+                disabled={loadingPrivacy}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingPrivacy ? 'animate-spin' : ''}`} />
+                Refresh Policies
               </button>
             )}
           </div>
@@ -404,7 +472,7 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'duplicates' ? (
           /* Duplicate Finder Page */
           <div className="p-8 max-w-6xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
@@ -439,7 +507,6 @@ export function App() {
               </div>
             </div>
 
-            {/* Path input */}
             <div className="flex items-center gap-3 p-3 rounded-xl bg-[#16161a] border border-[#2a2a36]">
               <FolderOpen className="w-4 h-4 text-zinc-400" />
               <input
@@ -458,7 +525,6 @@ export function App() {
               </button>
             </div>
 
-            {/* Duplicate Groups List */}
             <div className="space-y-4">
               {dupResult && dupResult.groups.length > 0 ? (
                 dupResult.groups.map((group, gIdx) => (
@@ -516,6 +582,71 @@ export function App() {
                   <p className="text-sm">No duplicate files found</p>
                 </div>
               )}
+            </div>
+          </div>
+        ) : (
+          /* Privacy Shield Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Privacy Protection Score: {privacyState?.score_percentage || 0}%
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {privacyState?.protected_count || 0} / {privacyState?.total_count || 0} Protected
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {privacyFeedback || 'Disable diagnostic telemetry, advertising tracking IDs, and background data collectors.'}
+                </p>
+              </div>
+              <button
+                onClick={handleProtectAllPrivacy}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs shadow-lg shadow-amber-500/20 transition flex items-center gap-2 cursor-pointer"
+              >
+                <Lock className="w-4 h-4" />
+                Protect All Now
+              </button>
+            </div>
+
+            {/* Privacy Toggles List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {privacyState?.settings.map((setting) => (
+                <div
+                  key={setting.id}
+                  className={`p-4 rounded-xl border transition flex justify-between items-start ${
+                    setting.is_enabled
+                      ? 'bg-[#16161a] border-emerald-500/30'
+                      : 'bg-[#16161a] border-[#2a2a36]'
+                  }`}
+                >
+                  <div className="mr-4 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-white">{setting.label}</span>
+                      {setting.requires_admin && (
+                        <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 font-mono">
+                          Admin
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400 leading-relaxed">{setting.description}</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleTogglePrivacy(setting.id, setting.is_enabled)}
+                    className={`shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer ${
+                      setting.is_enabled ? 'bg-emerald-500' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                        setting.is_enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}

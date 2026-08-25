@@ -1,5 +1,6 @@
 pub mod cleaner;
 pub mod deduplication;
+pub mod privacy;
 pub mod rules;
 
 pub use cleaner::{CleanExecutionResult, CleanerEngine, ScanResult};
@@ -7,3 +8,4 @@ pub use deduplication::{
     DeduplicationEngine, DuplicateFile, DuplicateGroup, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, LargeFileScanResult,
 };
+pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};

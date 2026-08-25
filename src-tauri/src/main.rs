@@ -5,7 +5,8 @@ use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
     CleanExecutionResult, CleanerEngine, DeduplicationEngine, DuplicateScanOptions,
-    DuplicateScanResult, EmptyFolderScanResult, LargeFileScanResult, ScanResult,
+    DuplicateScanResult, EmptyFolderScanResult, LargeFileScanResult, PrivacyApplyResult,
+    PrivacyShieldEngine, PrivacyShieldState, ScanResult,
 };
 
 #[tauri::command]
@@ -71,6 +72,16 @@ fn delete_duplicate_files(paths: Vec<String>) -> usize {
     DeduplicationEngine::delete_files(&paths)
 }
 
+#[tauri::command]
+fn get_privacy_shield_state() -> PrivacyShieldState {
+    PrivacyShieldEngine::get_all_settings()
+}
+
+#[tauri::command]
+fn apply_privacy_setting(id: String, enable: bool) -> Result<(), String> {
+    PrivacyShieldEngine::apply_setting(&id, enable)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -82,7 +93,9 @@ fn main() {
             scan_duplicates,
             scan_empty_folders,
             scan_large_files,
-            delete_duplicate_files
+            delete_duplicate_files,
+            get_privacy_shield_state,
+            apply_privacy_setting
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
