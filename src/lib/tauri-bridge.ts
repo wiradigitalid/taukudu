@@ -82,6 +82,35 @@ export interface PrivacyShieldState {
   score_percentage: number
 }
 
+export interface DiskDriveInfo {
+  name: string
+  mount_point: string
+  total_space_bytes: number
+  available_space_bytes: number
+  used_space_bytes: number
+  file_system: string
+  is_removable: boolean
+}
+
+export interface DiskTreemapNode {
+  name: string
+  path: string
+  size: number
+  children: DiskTreemapNode[]
+}
+
+export interface FileTypeBreakdown {
+  extension: string
+  count: number
+  total_size_bytes: number
+}
+
+export interface DiskAnalysisResult {
+  tree: DiskTreemapNode
+  file_types: FileTypeBreakdown[]
+  total_size_bytes: number
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -106,5 +135,11 @@ export const tauriApi = {
   },
   applyPrivacySetting: async (id: string, enable: boolean): Promise<void> => {
     return await invoke('apply_privacy_setting', { id, enable })
+  },
+  getDrives: async (): Promise<DiskDriveInfo[]> => {
+    return await invoke('get_drives')
+  },
+  analyzeDiskDirectory: async (dir_path: string, max_depth: number = 3): Promise<DiskAnalysisResult> => {
+    return await invoke('analyze_disk_directory', { dirPath: dir_path, maxDepth: max_depth })
   },
 }

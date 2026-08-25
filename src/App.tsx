@@ -5,6 +5,8 @@ import {
   ScanResult,
   DuplicateScanResult,
   PrivacyShieldState,
+  DiskDriveInfo,
+  DiskAnalysisResult,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -18,12 +20,13 @@ import {
   CopyCheck,
   FolderOpen,
   Lock,
-  Eye,
-  AlertTriangle,
+  PieChart,
+  Folder,
+  FileCode,
 } from 'lucide-react'
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'privacy' | 'disk'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -45,6 +48,12 @@ export function App() {
   const [privacyState, setPrivacyState] = useState<PrivacyShieldState | null>(null)
   const [loadingPrivacy, setLoadingPrivacy] = useState(false)
   const [privacyFeedback, setPrivacyFeedback] = useState<string | null>(null)
+
+  // Disk Analyzer state
+  const [drives, setDrives] = useState<DiskDriveInfo[]>([])
+  const [selectedDrivePath, setSelectedDrivePath] = useState<string>('D:\\')
+  const [analyzingDisk, setAnalyzingDisk] = useState(false)
+  const [diskAnalysis, setDiskAnalysis] = useState<DiskAnalysisResult | null>(null)
 
   const fetchOverview = async () => {
     setLoadingOverview(true)
@@ -170,6 +179,22 @@ export function App() {
     }
   }
 
+  const fetchDrivesAndAnalyze = async (targetPath?: string) => {
+    setAnalyzingDisk(true)
+    try {
+      const driveList = await tauriApi.getDrives()
+      setDrives(driveList)
+      const path = targetPath || (driveList.length > 0 ? driveList[0].mount_point : 'D:\\')
+      setSelectedDrivePath(path)
+      const res = await tauriApi.analyzeDiskDirectory(path, 3)
+      setDiskAnalysis(res)
+    } catch (err) {
+      console.error('Disk analysis error:', err)
+    } finally {
+      setAnalyzingDisk(false)
+    }
+  }
+
   useEffect(() => {
     fetchOverview()
   }, [])
@@ -202,7 +227,7 @@ export function App() {
           <nav className="space-y-1">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
                 activeTab === 'dashboard'
                   ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
@@ -216,7 +241,7 @@ export function App() {
                 setActiveTab('cleaner')
                 if (!scanResult && !scanning) handleRunScan()
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
                 activeTab === 'cleaner'
                   ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
@@ -230,7 +255,7 @@ export function App() {
                 setActiveTab('duplicates')
                 if (!dupResult && !dupScanning) handleScanDuplicates()
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
                 activeTab === 'duplicates'
                   ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
@@ -241,10 +266,24 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('disk')
+                if (drives.length === 0 && !analyzingDisk) fetchDrivesAndAnalyze()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'disk'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <PieChart className="w-4 h-4" />
+              Disk Analyzer
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('privacy')
                 if (!privacyState && !loadingPrivacy) fetchPrivacySettings()
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
                 activeTab === 'privacy'
                   ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
@@ -272,6 +311,8 @@ export function App() {
               ? 'Deep System Cleaner (Rules-Engine)'
               : activeTab === 'duplicates'
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
+              : activeTab === 'disk'
+              ? 'Disk Space & Treemap Analyzer'
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
@@ -301,6 +342,15 @@ export function App() {
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${dupScanning ? 'animate-spin' : ''}`} />
                 Scan Duplicates
+              </button>
+            ) : activeTab === 'disk' ? (
+              <button
+                onClick={() => fetchDrivesAndAnalyze(selectedDrivePath)}
+                disabled={analyzingDisk}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${analyzingDisk ? 'animate-spin' : ''}`} />
+                Analyze Drive
               </button>
             ) : (
               <button
@@ -425,7 +475,7 @@ export function App() {
                   <button
                     key={cat.category}
                     onClick={() => setSelectedCategory(cat.category)}
-                    className={`w-full text-left p-3.5 rounded-xl border transition flex justify-between items-center ${
+                    className={`w-full text-left p-3.5 rounded-xl border transition flex justify-between items-center cursor-pointer ${
                       selectedCategory === cat.category
                         ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
                         : 'bg-[#16161a] border-[#2a2a36] text-zinc-300 hover:border-zinc-700'
@@ -584,6 +634,114 @@ export function App() {
               )}
             </div>
           </div>
+        ) : activeTab === 'disk' ? (
+          /* Disk Analyzer Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            {/* Drive selector cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {drives.map((d, i) => {
+                const isSelected = selectedDrivePath === d.mount_point
+                const usagePercent = Math.round((d.used_space_bytes / d.total_space_bytes) * 100)
+                return (
+                  <button
+                    key={i}
+                    onClick={() => fetchDrivesAndAnalyze(d.mount_point)}
+                    className={`p-4 rounded-xl border text-left transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-amber-500/10 border-amber-500/30'
+                        : 'bg-[#16161a] border-[#2a2a36] hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <HardDrive className="w-4 h-4 text-blue-400" />
+                        <span className="text-sm font-bold text-white">{d.name || d.mount_point}</span>
+                      </div>
+                      <span className="text-xs font-mono text-zinc-400">{d.file_system}</span>
+                    </div>
+                    <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mb-2">
+                      <div
+                        className="bg-blue-500 h-full rounded-full"
+                        style={{ width: `${usagePercent}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[11px] text-zinc-500">
+                      <span>{formatBytes(d.used_space_bytes)} used</span>
+                      <span>{formatBytes(d.available_space_bytes)} free</span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Folder and Extension Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Directory Subtree List */}
+              <div className="md:col-span-2 space-y-2">
+                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
+                  Folder Size Breakdown ({selectedDrivePath})
+                </div>
+                <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] min-h-[350px] max-h-[500px] overflow-y-auto space-y-2">
+                  {analyzingDisk ? (
+                    <div className="h-full flex flex-col items-center justify-center text-zinc-500 py-16">
+                      <RefreshCw className="w-8 h-8 mb-2 animate-spin text-zinc-600" />
+                      <p className="text-sm">Calculating disk space usage...</p>
+                    </div>
+                  ) : diskAnalysis?.tree.children && diskAnalysis.tree.children.length > 0 ? (
+                    diskAnalysis.tree.children.map((child, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-lg bg-black/20 border border-white/[0.03] flex justify-between items-center text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 truncate mr-4">
+                          <Folder className="w-4 h-4 text-amber-400 shrink-0" />
+                          <span className="font-medium text-zinc-200 truncate">{child.name}</span>
+                        </div>
+                        <div className="text-zinc-400 font-mono font-medium shrink-0">
+                          {formatBytes(child.size)}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-zinc-500 py-16">
+                      <CheckCircle2 className="w-8 h-8 mb-2 text-zinc-600" />
+                      <p className="text-sm">No folders detected</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* File Type Distribution */}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
+                  By Extension
+                </div>
+                <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] min-h-[350px] max-h-[500px] overflow-y-auto space-y-2">
+                  {diskAnalysis?.file_types && diskAnalysis.file_types.length > 0 ? (
+                    diskAnalysis.file_types.slice(0, 15).map((ft, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2.5 rounded-lg bg-black/20 border border-white/[0.03] flex justify-between items-center text-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <FileCode className="w-3.5 h-3.5 text-zinc-400" />
+                          <span className="font-mono text-zinc-300 font-semibold">{ft.extension}</span>
+                          <span className="text-[10px] text-zinc-500">({ft.count})</span>
+                        </div>
+                        <span className="font-mono text-zinc-400 font-medium">
+                          {formatBytes(ft.total_size_bytes)}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-zinc-500 py-16">
+                      <p className="text-xs">No extensions</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           /* Privacy Shield Page */
           <div className="p-8 max-w-6xl space-y-6">
@@ -610,7 +768,6 @@ export function App() {
               </button>
             </div>
 
-            {/* Privacy Toggles List */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {privacyState?.settings.map((setting) => (
                 <div

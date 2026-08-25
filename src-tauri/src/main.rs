@@ -4,9 +4,10 @@
 use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
-    CleanExecutionResult, CleanerEngine, DeduplicationEngine, DuplicateScanOptions,
-    DuplicateScanResult, EmptyFolderScanResult, LargeFileScanResult, PrivacyApplyResult,
-    PrivacyShieldEngine, PrivacyShieldState, ScanResult,
+    CleanExecutionResult, CleanerEngine, DeduplicationEngine, DiskAnalysisResult,
+    DiskAnalyzerEngine, DiskDriveInfo, DuplicateScanOptions, DuplicateScanResult,
+    EmptyFolderScanResult, LargeFileScanResult, PrivacyApplyResult, PrivacyShieldEngine,
+    PrivacyShieldState, ScanResult,
 };
 
 #[tauri::command]
@@ -82,6 +83,16 @@ fn apply_privacy_setting(id: String, enable: bool) -> Result<(), String> {
     PrivacyShieldEngine::apply_setting(&id, enable)
 }
 
+#[tauri::command]
+fn get_drives() -> Vec<DiskDriveInfo> {
+    DiskAnalyzerEngine::get_drives()
+}
+
+#[tauri::command]
+fn analyze_disk_directory(dir_path: String, max_depth: usize) -> DiskAnalysisResult {
+    DiskAnalyzerEngine::analyze_directory(&dir_path, max_depth)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -95,7 +106,9 @@ fn main() {
             scan_large_files,
             delete_duplicate_files,
             get_privacy_shield_state,
-            apply_privacy_setting
+            apply_privacy_setting,
+            get_drives,
+            analyze_disk_directory
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
