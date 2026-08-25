@@ -9,6 +9,7 @@ pub mod disk_maintenance;
 pub mod firewall_audit;
 pub mod game_mode;
 pub mod history_store;
+pub mod leftovers_cleaner;
 pub mod malware_scanner;
 pub mod network_tools;
 pub mod perf_monitor;
@@ -37,6 +38,9 @@ pub use disk_maintenance::{DiskMaintenanceEngine, DiskRepairOutput, TrimDriveSta
 pub use firewall_audit::{FirewallAuditEngine, FirewallAuditSummary, FirewallRuleInfo};
 pub use game_mode::{GameModeEngine, GameModeStatus, GameOptimizationItem};
 pub use history_store::{HistoryRecord, HistoryStore, GLOBAL_HISTORY};
+pub use leftovers_cleaner::{
+    LeftoverFolderItem, LeftoversCleanResult, LeftoversCleanerEngine, LeftoversScanResult,
+};
 pub use malware_scanner::{
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MalwareThreat, QuarantinedItem,
 };

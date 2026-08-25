@@ -28,6 +28,8 @@ import {
   SoftwareUpdateSummary,
   ScheduleSummary,
   BreachMonitorSummary,
+  LeftoversScanResult,
+  LeftoverFolderItem,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -74,13 +76,14 @@ import {
   Mail,
   UserCheck,
   Plus,
+  FolderSearch,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'leftovers' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -102,6 +105,13 @@ export function App() {
   const [dupResult, setDupResult] = useState<DuplicateScanResult | null>(null)
   const [selectedDupPaths, setSelectedDupPaths] = useState<Set<string>>(new Set())
   const [dupStatus, setDupStatus] = useState<string | null>(null)
+
+  // Uninstall Leftovers state
+  const [leftoversScanning, setLeftoversScanning] = useState(false)
+  const [leftoversResult, setLeftoversResult] = useState<LeftoversScanResult | null>(null)
+  const [selectedLeftoverPaths, setSelectedLeftoverPaths] = useState<Set<string>>(new Set())
+  const [leftoversFeedback, setLeftoversFeedback] = useState<string | null>(null)
+  const [cleaningLeftovers, setCleaningLeftovers] = useState(false)
 
   // Disk Analyzer state
   const [drives, setDrives] = useState<DiskDriveInfo[]>([])
@@ -294,6 +304,40 @@ export function App() {
     } catch (err) {
       console.error('Failed to delete duplicates:', err)
       setDupStatus('Deletion failed: ' + String(err))
+    }
+  }
+
+  const handleScanLeftovers = async () => {
+    setLeftoversScanning(true)
+    setLeftoversFeedback(null)
+    setSelectedLeftoverPaths(new Set())
+    try {
+      const res = await tauriApi.scanUninstallLeftovers()
+      setLeftoversResult(res)
+      const toSelect = new Set<string>()
+      res.items.forEach((i) => toSelect.add(i.path))
+      setSelectedLeftoverPaths(toSelect)
+      setLeftoversFeedback(`Found ${res.total_count} leftover folders (${formatBytes(res.total_size_bytes)}) in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      console.error('Leftovers scan error:', err)
+      setLeftoversFeedback('Scan error: ' + String(err))
+    } finally {
+      setLeftoversScanning(false)
+    }
+  }
+
+  const handleDeleteSelectedLeftovers = async () => {
+    if (selectedLeftoverPaths.size === 0) return
+    setCleaningLeftovers(true)
+    try {
+      const res = await tauriApi.deleteUninstallLeftovers(Array.from(selectedLeftoverPaths))
+      setLeftoversFeedback(`Purged ${res.success_count} leftover folders, freed ${formatBytes(res.bytes_freed)}.`)
+      await handleScanLeftovers()
+    } catch (err) {
+      console.error('Delete leftovers error:', err)
+      setLeftoversFeedback('Deletion failed: ' + String(err))
+    } finally {
+      setCleaningLeftovers(false)
     }
   }
 
@@ -949,6 +993,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('leftovers')
+                if (!leftoversResult && !leftoversScanning) handleScanLeftovers()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'leftovers'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <FolderSearch className="w-4 h-4" />
+              Uninstall Leftovers
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('disk')
                 if (drives.length === 0 && !analyzingDisk) fetchDrivesAndAnalyze()
               }}
@@ -1268,6 +1326,8 @@ export function App() {
               ? 'Deep System Cleaner (Rules-Engine)'
               : activeTab === 'duplicates'
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
+              : activeTab === 'leftovers'
+              ? 'Uninstalled Software Leftovers Cleaner'
               : activeTab === 'disk'
               ? 'Disk Space & Treemap Analyzer'
               : activeTab === 'repair'
@@ -1313,7 +1373,15 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'schedules' ? (
+            {activeTab === 'leftovers' ? (
+              <button
+                onClick={handleScanLeftovers}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Rescan Leftovers
+              </button>
+            ) : activeTab === 'schedules' ? (
               <button
                 onClick={fetchSchedules}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
@@ -1406,6 +1474,88 @@ export function App() {
                 </div>
               </div>
             </div>
+          </div>
+        ) : activeTab === 'leftovers' ? (
+          /* Uninstall Leftovers Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Uninstalled Software Leftovers: {leftoversResult?.total_count || 0} Orphan Folders
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    {formatBytes(leftoversResult?.total_size_bytes || 0)} Reclaimable
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {leftoversFeedback || 'Scans AppData, LocalAppData, ProgramData, and Program Files for leftover directories from uninstalled apps.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanLeftovers}
+                  disabled={leftoversScanning}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${leftoversScanning ? 'animate-spin' : ''}`} />
+                  {leftoversScanning ? 'Scanning...' : 'Scan Leftovers'}
+                </button>
+                <button
+                  onClick={handleDeleteSelectedLeftovers}
+                  disabled={cleaningLeftovers || selectedLeftoverPaths.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {cleaningLeftovers ? 'Purging...' : `Purge Selected (${selectedLeftoverPaths.size})`}
+                </button>
+              </div>
+            </div>
+
+            {leftoversResult && leftoversResult.items.length > 0 ? (
+              <div className="space-y-2">
+                {leftoversResult.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-xl border flex justify-between items-center transition ${
+                      selectedLeftoverPaths.has(item.path) ? 'bg-[#16161a] border-amber-500/30' : 'bg-[#16161a] border-[#2a2a36]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedLeftoverPaths.has(item.path)}
+                        onChange={(e) => {
+                          const next = new Set(selectedLeftoverPaths)
+                          if (e.target.checked) next.add(item.path)
+                          else next.delete(item.path)
+                          setSelectedLeftoverPaths(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{item.folder_name}</span>
+                          <span className="text-[10px] font-mono text-zinc-500">({item.file_count} files)</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 font-mono mt-0.5">{item.path}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-mono font-bold text-amber-400">{formatBytes(item.size_bytes)}</span>
+                      <p className="text-[10px] text-zinc-500">Orphan directory</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <FolderSearch className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {leftoversScanning ? 'Scanning system directories for orphaned leftover folders...' : 'No uninstall leftover folders found.'}
+                </p>
+              </div>
+            )}
           </div>
         ) : activeTab === 'schedules' ? (
           /* Schedules Page */

@@ -13,7 +13,8 @@ use taukudu_lib::{
     DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
     GameModeStatus, GameOptimizationItem, HistoryRecord, InstalledProgramInfo,
-    LargeFileScanResult, MalwareActionResult, MalwareScanResult, MalwareScannerEngine,
+    LargeFileScanResult, LeftoversCleanerEngine, LeftoversCleanResult, LeftoversScanResult,
+    MalwareActionResult, MalwareScanResult, MalwareScannerEngine,
     NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot,
     PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RegistryCleanerEngine,
     RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult, ScheduleItem,
@@ -369,6 +370,16 @@ fn acknowledge_breach_incident(breach_id: String) -> Result<BreachMonitorSummary
     GLOBAL_BREACH_MONITOR.acknowledge_breach(&breach_id)
 }
 
+#[tauri::command]
+fn scan_uninstall_leftovers() -> LeftoversScanResult {
+    LeftoversCleanerEngine::scan_leftovers()
+}
+
+#[tauri::command]
+fn delete_uninstall_leftovers(paths: Vec<String>) -> LeftoversCleanResult {
+    LeftoversCleanerEngine::delete_leftover_folders(&paths)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -440,7 +451,9 @@ fn main() {
             get_breach_summary,
             add_breach_email,
             remove_breach_email,
-            acknowledge_breach_incident
+            acknowledge_breach_incident,
+            scan_uninstall_leftovers,
+            delete_uninstall_leftovers
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

@@ -412,6 +412,31 @@ export interface BreachMonitorSummary {
   unacknowledged_count: number
 }
 
+export interface LeftoverFolderItem {
+  id: string
+  path: string
+  folder_name: string
+  parent_directory: string
+  size_bytes: number
+  file_count: number
+  last_modified: number
+  is_selected: boolean
+}
+
+export interface LeftoversScanResult {
+  items: LeftoverFolderItem[]
+  total_count: number
+  total_size_bytes: number
+  scan_duration_ms: number
+}
+
+export interface LeftoversCleanResult {
+  success_count: number
+  failed_count: number
+  bytes_freed: number
+  errors: string[]
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -583,5 +608,11 @@ export const tauriApi = {
   },
   acknowledgeBreachIncident: async (breach_id: string): Promise<BreachMonitorSummary> => {
     return await invoke('acknowledge_breach_incident', { breachId: breach_id })
+  },
+  scanUninstallLeftovers: async (): Promise<LeftoversScanResult> => {
+    return await invoke('scan_uninstall_leftovers')
+  },
+  deleteUninstallLeftovers: async (paths: string[]): Promise<LeftoversCleanResult> => {
+    return await invoke('delete_uninstall_leftovers', { paths })
   },
 }

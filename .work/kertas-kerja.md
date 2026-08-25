@@ -32,10 +32,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-21** | **Multi-Package Software Updater** | Winget/Choco package manager inspection & bulk update runner | `winget` upgrade CLI parser, `SoftwareUpdaterPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-22** | **Automated Task Scheduler** | Daily, weekly, monthly automated background maintenance jobs | `ScheduleEngine`, `SchedulesPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-23** | **Account Breach & Credential Monitor** | Monitored email exposure audit & compromised breach tracker | `BreachMonitorEngine`, `BreachMonitorPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-24** | **Uninstall Leftovers Cleaner** | Deep orphan AppData/ProgramData leftover directory detector & cleaner | `LeftoversCleanerEngine`, `LeftoversPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 24 — Uninstalled Software Leftovers Cleaner (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Leftovers Engine (`src-tauri/src/leftovers_cleaner.rs`):** Scanning direktori sistem (`%APPDATA%`, `%LOCALAPPDATA%`, `%ProgramData%`, `%ProgramFiles%`, `%ProgramFiles(x86)%`) untuk mendeteksi folder sisa instalasi aplikasi yang telah dihapus (*orphaned leftovers*). Mengimplementasikan comprehensive safelist (Windows core components, system folders, developer runtimes, driver packages) serta token matching cerdas terhadap aplikasi yang terdaftar di Windows Registry (`Uninstall` keys).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_uninstall_leftovers` dan `delete_uninstall_leftovers`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `LeftoverFolderItem`, `LeftoversScanResult`, `LeftoversCleanResult`, serta binding method `tauriApi.scanUninstallLeftovers` dan `tauriApi.deleteUninstallLeftovers`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan tab *Uninstall Leftovers* lengkap dengan breakdown folder orphan, ukuran direktori, jumlah berkas, checkbox seleksi, tombol scan ulang, dan aksi pembersihan massal (*Purge Selected*).
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 23 — Account Breach & Credential Compromise Monitor (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
