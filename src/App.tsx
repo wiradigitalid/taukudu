@@ -55,6 +55,8 @@ import {
   ThreatBlacklistData,
   LogEntry,
   LogStats,
+  EmptyFolderScanResult,
+  LargeFileScanResult,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -113,13 +115,15 @@ import {
   ExternalLink,
   Terminal,
   Search,
+  FolderX,
+  FileUp,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -167,6 +171,21 @@ export function App() {
   const [dupResult, setDupResult] = useState<DuplicateScanResult | null>(null)
   const [selectedDupPaths, setSelectedDupPaths] = useState<Set<string>>(new Set())
   const [dupStatus, setDupStatus] = useState<string | null>(null)
+
+  // Empty Folders state
+  const [emptyFolderDir, setEmptyFolderDir] = useState<string>('D:\\Developer\\wiradigital.id\\taukudu')
+  const [emptyFolderScanning, setEmptyFolderScanning] = useState(false)
+  const [emptyFolderResult, setEmptyFolderResult] = useState<EmptyFolderScanResult | null>(null)
+  const [selectedEmptyFolderPaths, setSelectedEmptyFolderPaths] = useState<Set<string>>(new Set())
+  const [emptyFolderFeedback, setEmptyFolderFeedback] = useState<string | null>(null)
+
+  // Large Files state
+  const [largeFilesDir, setLargeFilesDir] = useState<string>('D:\\Developer\\wiradigital.id\\taukudu')
+  const [largeFilesMinSize, setLargeFilesMinSize] = useState<number>(52_428_800) // 50MB default
+  const [largeFilesScanning, setLargeFilesScanning] = useState(false)
+  const [largeFilesResult, setLargeFilesResult] = useState<LargeFileScanResult | null>(null)
+  const [selectedLargeFilePaths, setSelectedLargeFilePaths] = useState<Set<string>>(new Set())
+  const [largeFilesFeedback, setLargeFilesFeedback] = useState<string | null>(null)
 
   // Uninstall Leftovers state
   const [leftoversScanning, setLeftoversScanning] = useState(false)
@@ -525,6 +544,65 @@ export function App() {
     } catch (err) {
       console.error('Failed to delete duplicates:', err)
       setDupStatus('Deletion failed: ' + String(err))
+    }
+  }
+
+  const handleScanEmptyFolders = async () => {
+    if (!emptyFolderDir) return
+    setEmptyFolderScanning(true)
+    setEmptyFolderFeedback(null)
+    setSelectedEmptyFolderPaths(new Set())
+    try {
+      const res = await tauriApi.scanEmptyFolders(emptyFolderDir)
+      setEmptyFolderResult(res)
+      const toSelect = new Set<string>()
+      res.folders.forEach((f) => toSelect.add(f.path))
+      setSelectedEmptyFolderPaths(toSelect)
+      setEmptyFolderFeedback(`Found ${res.total_count} empty folders in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      console.error('Empty folder scan error:', err)
+      setEmptyFolderFeedback('Scan error: ' + String(err))
+    } finally {
+      setEmptyFolderScanning(false)
+    }
+  }
+
+  const handleDeleteEmptyFolders = async () => {
+    if (selectedEmptyFolderPaths.size === 0) return
+    try {
+      const count = await tauriApi.deleteDuplicateFiles(Array.from(selectedEmptyFolderPaths))
+      setEmptyFolderFeedback(`Deleted ${count} empty folders successfully.`)
+      await handleScanEmptyFolders()
+    } catch (err) {
+      setEmptyFolderFeedback('Deletion error: ' + String(err))
+    }
+  }
+
+  const handleScanLargeFiles = async () => {
+    if (!largeFilesDir) return
+    setLargeFilesScanning(true)
+    setLargeFilesFeedback(null)
+    setSelectedLargeFilePaths(new Set())
+    try {
+      const res = await tauriApi.scanLargeFiles(largeFilesDir, largeFilesMinSize)
+      setLargeFilesResult(res)
+      setLargeFilesFeedback(`Found ${res.total_count} large files (${formatBytes(res.total_size_bytes)}) in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      console.error('Large files scan error:', err)
+      setLargeFilesFeedback('Scan error: ' + String(err))
+    } finally {
+      setLargeFilesScanning(false)
+    }
+  }
+
+  const handleDeleteSelectedLargeFiles = async () => {
+    if (selectedLargeFilePaths.size === 0) return
+    try {
+      const count = await tauriApi.deleteDuplicateFiles(Array.from(selectedLargeFilePaths))
+      setLargeFilesFeedback(`Deleted ${count} large files successfully.`)
+      await handleScanLargeFiles()
+    } catch (err) {
+      setLargeFilesFeedback('Deletion error: ' + String(err))
     }
   }
 
@@ -1438,6 +1516,34 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('emptyfolders')
+                if (!emptyFolderResult && !emptyFolderScanning) handleScanEmptyFolders()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'emptyfolders'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <FolderX className="w-4 h-4" />
+              Empty Folders
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('largefiles')
+                if (!largeFilesResult && !largeFilesScanning) handleScanLargeFiles()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'largefiles'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <FileUp className="w-4 h-4" />
+              Large File Finder
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('leftovers')
                 if (!leftoversResult && !leftoversScanning) handleScanLeftovers()
               }}
@@ -1830,6 +1936,10 @@ export function App() {
               ? 'Live C2 & Malicious Outbound Threat Monitor'
               : activeTab === 'duplicates'
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
+              : activeTab === 'emptyfolders'
+              ? 'Empty Folder Scanner & Removal'
+              : activeTab === 'largefiles'
+              ? 'Large File Hunter & Analyzer'
               : activeTab === 'leftovers'
               ? 'Uninstalled Software Leftovers Cleaner'
               : activeTab === 'restore'
@@ -1908,6 +2018,22 @@ export function App() {
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Rescan Threats
+              </button>
+            ) : activeTab === 'emptyfolders' ? (
+              <button
+                onClick={handleScanEmptyFolders}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Rescan Empty Folders
+              </button>
+            ) : activeTab === 'largefiles' ? (
+              <button
+                onClick={handleScanLargeFiles}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Rescan Large Files
               </button>
             ) : activeTab === 'leftovers' ? (
               <button
@@ -2410,6 +2536,299 @@ export function App() {
                 <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {loadingThreats ? 'Auditing active sockets against threat intelligence database...' : 'No suspicious C2 or malicious outbound network connections detected.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'duplicates' ? (
+          /* Duplicate Finder Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Duplicate Finder (Czkawka 3-Stage Blake3)
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                    {dupResult ? `${dupResult.total_duplicates} duplicates (${formatBytes(dupResult.reclaimable_space)})` : 'Ready'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {dupStatus || `Scanned ${dupResult?.files_scanned || 0} files in ${dupResult?.scan_duration_ms || 0}ms.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanDuplicates}
+                  disabled={dupScanning}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${dupScanning ? 'animate-spin' : ''}`} />
+                  {dupScanning ? 'Hashing Files...' : 'Scan Duplicates'}
+                </button>
+                <button
+                  onClick={handleDeleteSelectedDuplicates}
+                  disabled={selectedDupPaths.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Purge Selected ({selectedDupPaths.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Target Directory Input */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+              <FolderOpen className="w-4 h-4 text-amber-400" />
+              <input
+                type="text"
+                value={dupDir}
+                onChange={(e) => setDupDir(e.target.value)}
+                placeholder="Enter search directory path (e.g. D:\Projects)..."
+                className="flex-1 bg-transparent border-none text-xs text-zinc-200 focus:outline-none font-mono"
+              />
+            </div>
+
+            {/* Duplicate Groups */}
+            {dupResult && dupResult.groups.length > 0 ? (
+              <div className="space-y-3">
+                {dupResult.groups.map((group, gIdx) => (
+                  <div key={group.hash || gIdx} className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                    <div className="flex justify-between items-center pb-2 border-b border-white/[0.05]">
+                      <div className="flex items-center gap-2">
+                        <CopyCheck className="w-4 h-4 text-amber-400" />
+                        <span className="text-xs font-mono font-semibold text-white truncate max-w-md">
+                          Blake3: {group.hash.slice(0, 16)}...
+                        </span>
+                        <span className="text-[10px] text-zinc-500 font-mono">({group.files.length} clones)</span>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        {formatBytes(group.size)} each
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      {group.files.map((file, fIdx) => (
+                        <div
+                          key={file.path}
+                          className="flex items-center justify-between p-2 rounded-lg bg-black/30 border border-white/[0.02] text-xs font-mono"
+                        >
+                          <div className="flex items-center gap-2.5 truncate max-w-2xl">
+                            <input
+                              type="checkbox"
+                              checked={selectedDupPaths.has(file.path)}
+                              onChange={(e) => {
+                                const next = new Set(selectedDupPaths)
+                                if (e.target.checked) next.add(file.path)
+                                else next.delete(file.path)
+                                setSelectedDupPaths(next)
+                              }}
+                              className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                            />
+                            <span className={fIdx === 0 ? 'text-emerald-400 truncate' : 'text-zinc-300 truncate'}>
+                              {fIdx === 0 ? '[Original] ' : '[Duplicate] '} {file.path}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-zinc-500 shrink-0">
+                            {formatBytes(file.size)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CopyCheck className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {dupScanning ? 'Scanning and generating multi-stage Blake3 file hashes...' : 'No duplicate files found in selected directory.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'emptyfolders' ? (
+          /* Empty Folders Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  Empty Folder Cleaner: {emptyFolderResult?.total_count || 0} Empty Directories
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {emptyFolderFeedback || `Scanned recursively in ${emptyFolderResult?.scan_duration_ms || 0}ms.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanEmptyFolders}
+                  disabled={emptyFolderScanning}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${emptyFolderScanning ? 'animate-spin' : ''}`} />
+                  {emptyFolderScanning ? 'Scanning...' : 'Scan Empty Folders'}
+                </button>
+                <button
+                  onClick={handleDeleteEmptyFolders}
+                  disabled={selectedEmptyFolderPaths.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Selected ({selectedEmptyFolderPaths.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Target Directory Input */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+              <FolderX className="w-4 h-4 text-amber-400" />
+              <input
+                type="text"
+                value={emptyFolderDir}
+                onChange={(e) => setEmptyFolderDir(e.target.value)}
+                placeholder="Enter search directory path..."
+                className="flex-1 bg-transparent border-none text-xs text-zinc-200 focus:outline-none font-mono"
+              />
+            </div>
+
+            {/* Empty Folders List */}
+            {emptyFolderResult && emptyFolderResult.folders.length > 0 ? (
+              <div className="space-y-2">
+                {emptyFolderResult.folders.map((folder) => (
+                  <div
+                    key={folder.path}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedEmptyFolderPaths.has(folder.path)}
+                        onChange={(e) => {
+                          const next = new Set(selectedEmptyFolderPaths)
+                          if (e.target.checked) next.add(folder.path)
+                          else next.delete(folder.path)
+                          setSelectedEmptyFolderPaths(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-sm font-semibold text-white">{folder.name}</span>
+                        <p className="text-[11px] text-zinc-400 font-mono">{folder.path}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <FolderX className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {emptyFolderScanning ? 'Traversing directory trees...' : 'No empty folders detected.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'largefiles' ? (
+          /* Large File Finder Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Large File Finder: {largeFilesResult?.total_count || 0} Files
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                    {formatBytes(largeFilesResult?.total_size_bytes || 0)} Total
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {largeFilesFeedback || `Scanned in ${largeFilesResult?.scan_duration_ms || 0}ms.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanLargeFiles}
+                  disabled={largeFilesScanning}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${largeFilesScanning ? 'animate-spin' : ''}`} />
+                  {largeFilesScanning ? 'Scanning...' : 'Scan Large Files'}
+                </button>
+                <button
+                  onClick={handleDeleteSelectedLargeFiles}
+                  disabled={selectedLargeFilePaths.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Selected ({selectedLargeFilePaths.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Target Directory & Preset Threshold Input */}
+            <div className="flex gap-3">
+              <div className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <FileUp className="w-4 h-4 text-amber-400" />
+                <input
+                  type="text"
+                  value={largeFilesDir}
+                  onChange={(e) => setLargeFilesDir(e.target.value)}
+                  placeholder="Enter search directory path..."
+                  className="flex-1 bg-transparent border-none text-xs text-zinc-200 focus:outline-none font-mono"
+                />
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <span className="text-xs text-zinc-400">Min Size:</span>
+                <select
+                  value={largeFilesMinSize}
+                  onChange={(e) => setLargeFilesMinSize(Number(e.target.value))}
+                  className="bg-zinc-900 border border-zinc-700 rounded text-xs text-white px-2 py-1 focus:outline-none"
+                >
+                  <option value={10_485_760}>10 MB</option>
+                  <option value={52_428_800}>50 MB</option>
+                  <option value={104_857_600}>100 MB</option>
+                  <option value={524_288_000}>500 MB</option>
+                  <option value={1_073_741_824}>1 GB</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Large Files List */}
+            {largeFilesResult && largeFilesResult.files.length > 0 ? (
+              <div className="space-y-2">
+                {largeFilesResult.files.map((file) => (
+                  <div
+                    key={file.path}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3 truncate max-w-2xl">
+                      <input
+                        type="checkbox"
+                        checked={selectedLargeFilePaths.has(file.path)}
+                        onChange={(e) => {
+                          const next = new Set(selectedLargeFilePaths)
+                          if (e.target.checked) next.add(file.path)
+                          else next.delete(file.path)
+                          setSelectedLargeFilePaths(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <div className="truncate">
+                        <span className="text-sm font-semibold text-white">{file.name}</span>
+                        <p className="text-[11px] text-zinc-400 font-mono truncate">{file.path}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-amber-400 shrink-0">
+                      {formatBytes(file.size_bytes)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <FileUp className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {largeFilesScanning ? 'Scanning for oversized files...' : 'No large files detected exceeding threshold.'}
                 </p>
               </div>
             )}

@@ -80,6 +80,31 @@ export interface DuplicateScanOptions {
   max_depth: number | null
 }
 
+export interface EmptyFolderItem {
+  path: string
+  name: string
+}
+
+export interface EmptyFolderScanResult {
+  folders: EmptyFolderItem[]
+  total_count: number
+  scan_duration_ms: number
+}
+
+export interface LargeFileItem {
+  path: string
+  name: string
+  size_bytes: number
+  last_modified: number
+}
+
+export interface LargeFileScanResult {
+  files: LargeFileItem[]
+  total_count: number
+  total_size_bytes: number
+  scan_duration_ms: number
+}
+
 export interface PrivacySetting {
   id: string
   category: string
@@ -713,6 +738,12 @@ export const tauriApi = {
   },
   deleteDuplicateFiles: async (paths: string[]): Promise<number> => {
     return await invoke('delete_duplicate_files', { paths })
+  },
+  scanEmptyFolders: async (directory: string): Promise<EmptyFolderScanResult> => {
+    return await invoke('scan_empty_folders', { directory })
+  },
+  scanLargeFiles: async (directory: string, minSizeBytes: number): Promise<LargeFileScanResult> => {
+    return await invoke('scan_large_files', { directory, minSizeBytes })
   },
   getPrivacyShieldState: async (): Promise<PrivacyShieldState> => {
     return await invoke('get_privacy_shield_state')

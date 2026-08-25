@@ -49,10 +49,17 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-38** | **About & Open Source Identity** | App metadata, architectural concepts, zero-telemetry guarantee, license & repo links | `AboutPage` view in `App.tsx` | ✅ COMPLETED | 2026-08-26 |
 | **AREA-39** | **Diagnostic & Activity App Logger** | Local file logging with 5MB auto-rotation, level filters & viewer | `AppLoggerEngine`, Diagnostic Logs tab UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-40** | **Malware Scanner UI & Threat Isolation** | Interactive Quick/Full scan UI, detection cards, quarantine and purge actions | `MalwareScannerEngine`, Malware Scanner Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-41** | **Empty Folders & Large File Hunter UI** | Dedicated scanning & purge views for 0-byte directories and oversized files | `DeduplicationEngine`, Empty & Large File UI tabs | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 41 — Empty Folders & Large File Hunter UI Integration (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Frontend Empty Folders & Large Files UI (`src/App.tsx`):** Integrasi tab antarmuka mandiri *Empty Folders* (rekursif pencarian folder kosong 0-byte dan penghapusan massal) serta tab *Large File Finder* (pemindaian berkas berukuran besar dengan preset filter 10MB, 50MB, 100MB, 500MB, 1GB dan aksi hapus permanen).
+  2. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `EmptyFolderItem`, `EmptyFolderScanResult`, `LargeFileItem`, `LargeFileScanResult`, serta method `tauriApi.scanEmptyFolders` dan `tauriApi.scanLargeFiles`.
+  3. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 40 — Malware Scanner UI & Threat Isolation Integration (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
