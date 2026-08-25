@@ -1,6 +1,7 @@
 pub mod cleaner;
 pub mod cli;
 pub mod context_menu;
+pub mod cve_scanner;
 pub mod deduplication;
 pub mod disk_analyzer;
 pub mod disk_maintenance;
@@ -20,6 +21,7 @@ pub mod uninstaller_shredder;
 pub use cleaner::{CleanExecutionResult, CleanerEngine, ScanResult};
 pub use cli::{handle_cli_mode, CliArgs, Commands};
 pub use context_menu::{ContextMenuEngine, ContextMenuEntryInfo, ContextMenuScanResult};
+pub use cve_scanner::{CveItem, CveScanSummary, CveScannerEngine};
 pub use deduplication::{
     DeduplicationEngine, DuplicateFile, DuplicateGroup, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, LargeFileScanResult,

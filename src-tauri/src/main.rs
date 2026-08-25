@@ -7,17 +7,17 @@ use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
     handle_cli_mode, ActiveConnectionInfo, BloatwareApp, CleanExecutionResult, CleanerEngine,
-    CliArgs, ContextMenuEngine, ContextMenuEntryInfo, ContextMenuScanResult, DeduplicationEngine,
-    DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
-    DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
-    EmptyFolderScanResult, FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
-    GameModeStatus, GameOptimizationItem, HistoryRecord, InstalledProgramInfo, LargeFileScanResult,
-    MalwareActionResult, MalwareScanResult, MalwareScannerEngine, NetworkItemInfo,
-    NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot, PrivacyApplyResult,
-    PrivacyShieldEngine, PrivacyShieldState, RegistryCleanerEngine, RegistryFixResult,
-    RegistryIssue, RegistryScanResult, ScanResult, ServiceDriverEngine, ServiceItemInfo,
-    ShredderResult, StartupDebloatEngine, StartupItem, TrimDriveStatus, UninstallerShredderEngine,
-    GLOBAL_HISTORY,
+    CliArgs, ContextMenuEngine, ContextMenuEntryInfo, ContextMenuScanResult, CveItem,
+    CveScanSummary, CveScannerEngine, DeduplicationEngine, DiskAnalysisResult, DiskAnalyzerEngine,
+    DiskDriveInfo, DiskMaintenanceEngine, DiskRepairOutput, DriverPackageInfo,
+    DuplicateScanOptions, DuplicateScanResult, EmptyFolderScanResult, FirewallAuditEngine,
+    FirewallAuditSummary, GameModeEngine, GameModeStatus, GameOptimizationItem, HistoryRecord,
+    InstalledProgramInfo, LargeFileScanResult, MalwareActionResult, MalwareScanResult,
+    MalwareScannerEngine, NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine,
+    PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState,
+    RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult,
+    ServiceDriverEngine, ServiceItemInfo, ShredderResult, StartupDebloatEngine, StartupItem,
+    TrimDriveStatus, UninstallerShredderEngine, GLOBAL_HISTORY,
 };
 
 #[tauri::command]
@@ -316,6 +316,11 @@ fn toggle_firewall_rule(rule_name: String, enable: bool) -> Result<(), String> {
     FirewallAuditEngine::toggle_rule(&rule_name, enable)
 }
 
+#[tauri::command]
+fn scan_cves() -> CveScanSummary {
+    CveScannerEngine::scan_system_vulnerabilities()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -377,7 +382,8 @@ fn main() {
             get_context_menu_entries,
             toggle_context_menu_entry,
             audit_firewall,
-            toggle_firewall_rule
+            toggle_firewall_rule,
+            scan_cves
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

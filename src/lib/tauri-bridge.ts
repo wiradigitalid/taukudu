@@ -327,6 +327,24 @@ export interface FirewallAuditSummary {
   open_inbound_ports: number[]
 }
 
+export interface CveItem {
+  cve_id: string
+  package_name: string
+  installed_version: string
+  fixed_version: string
+  severity: string
+  description: string
+  published_date: string
+  is_remediated: boolean
+}
+
+export interface CveScanSummary {
+  vulnerabilities: CveItem[]
+  total_cves: number
+  critical_count: number
+  high_count: number
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -468,5 +486,8 @@ export const tauriApi = {
   },
   toggleFirewallRule: async (rule_name: string, enable: boolean): Promise<void> => {
     return await invoke('toggle_firewall_rule', { ruleName: rule_name, enable })
+  },
+  scanCves: async (): Promise<CveScanSummary> => {
+    return await invoke('scan_cves')
   },
 }

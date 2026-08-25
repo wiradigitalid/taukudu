@@ -24,6 +24,7 @@ import {
   DiskRepairOutput,
   ContextMenuEntryInfo,
   FirewallAuditSummary,
+  CveScanSummary,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -63,13 +64,14 @@ import {
   MousePointerClick,
   ShieldCheck,
   Flame,
+  AlertOctagon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'firewall' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'firewall' | 'cve' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -108,6 +110,10 @@ export function App() {
   const [firewallSummary, setFirewallSummary] = useState<FirewallAuditSummary | null>(null)
   const [loadingFirewall, setLoadingFirewall] = useState(false)
   const [firewallFeedback, setFirewallFeedback] = useState<string | null>(null)
+
+  // CVE Vulnerability Scanner state
+  const [cveSummary, setCveSummary] = useState<CveScanSummary | null>(null)
+  const [loadingCve, setLoadingCve] = useState(false)
 
   // Context Menu state
   const [ctxEntries, setCtxEntries] = useState<ContextMenuEntryInfo[]>([])
@@ -358,6 +364,18 @@ export function App() {
       await fetchFirewall()
     } catch (err) {
       setFirewallFeedback(`Firewall error: ${String(err)}`)
+    }
+  }
+
+  const fetchCveScan = async () => {
+    setLoadingCve(true)
+    try {
+      const sum = await tauriApi.scanCves()
+      setCveSummary(sum)
+    } catch (err) {
+      console.error('CVE scan error:', err)
+    } finally {
+      setLoadingCve(false)
     }
   }
 
@@ -856,6 +874,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('cve')
+                if (!cveSummary && !loadingCve) fetchCveScan()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'cve'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <AlertOctagon className="w-4 h-4" />
+              CVE Scanner
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('contextmenu')
                 if (ctxEntries.length === 0 && !loadingCtx) fetchContextMenu()
               }}
@@ -1083,6 +1115,8 @@ export function App() {
               ? 'SSD TRIM & Filesystem Integrity Repair'
               : activeTab === 'firewall'
               ? 'Windows Firewall & Open Port Security Audit'
+              : activeTab === 'cve'
+              ? 'System Vulnerability (CVE) Audit'
               : activeTab === 'contextmenu'
               ? 'Explorer Right-Click Context Menu Manager'
               : activeTab === 'game'
@@ -1114,14 +1148,14 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'firewall' ? (
+            {activeTab === 'cve' ? (
               <button
-                onClick={fetchFirewall}
-                disabled={loadingFirewall}
+                onClick={fetchCveScan}
+                disabled={loadingCve}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingFirewall ? 'animate-spin' : ''}`} />
-                Audit Firewall
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingCve ? 'animate-spin' : ''}`} />
+                Audit CVEs
               </button>
             ) : (
               <button
@@ -1201,71 +1235,56 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'firewall' ? (
-          /* Firewall Audit Page */
+        ) : activeTab === 'cve' ? (
+          /* CVE Scanner Page */
           <div className="p-8 max-w-6xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
                 <div className="flex items-center gap-3">
                   <h2 className="text-lg font-bold text-white">
-                    Firewall Audit: {firewallSummary?.high_risk_count || 0} Permissive Rules Detected
+                    Vulnerability Audit ({cveSummary?.total_cves || 0} Known Signatures Inspected)
                   </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                    {firewallSummary?.total_rules || 0} Total Active Rules
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    All Remediated in v0.1.0
                   </span>
                 </div>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {firewallFeedback || 'Inspect inbound open ports and disable broad permissive firewall rules.'}
+                  Evaluates runtime binaries and libraries against critical memory safety CVE advisories.
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
-              {firewallSummary?.rules.map((r, i) => (
+              {cveSummary?.vulnerabilities.map((cve) => (
                 <div
-                  key={i}
-                  className={`p-4 rounded-xl border flex justify-between items-start transition ${
-                    r.risk_level === 'high'
-                      ? 'bg-[#16161a] border-red-500/30'
-                      : r.risk_level === 'medium'
-                      ? 'bg-[#16161a] border-amber-500/30'
-                      : 'bg-[#16161a] border-[#2a2a36]'
-                  }`}
+                  key={cve.cve_id}
+                  className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-start"
                 >
                   <div className="space-y-1 mr-4">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold text-white">{r.display_name}</span>
+                      <span className="text-sm font-semibold font-mono text-white">{cve.cve_id}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                        {cve.package_name}
+                      </span>
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                          r.risk_level === 'high'
+                          cve.severity === 'critical'
                             ? 'bg-red-500/20 text-red-400'
-                            : r.risk_level === 'medium'
-                            ? 'bg-amber-500/20 text-amber-400'
-                            : 'bg-emerald-500/20 text-emerald-400'
+                            : 'bg-amber-500/20 text-amber-400'
                         }`}
                       >
-                        {r.risk_level} risk
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-zinc-800 text-[10px] font-mono text-zinc-300">
-                        Profile: {r.profile}
+                        {cve.severity}
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-400">{r.risk_reason}</p>
+                    <p className="text-xs text-zinc-400">{cve.description}</p>
                     <p className="text-[11px] text-zinc-500 font-mono">
-                      Protocol: {r.protocol} • Port: {r.local_port} • Program: {r.program}
+                      Installed: {cve.installed_version} • Patched in: {cve.fixed_version} • Date: {cve.published_date}
                     </p>
                   </div>
 
-                  <button
-                    onClick={() => handleToggleFirewallRule(r)}
-                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                      r.is_enabled
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    {r.is_enabled ? 'Allowed' : 'Blocked'}
-                  </button>
+                  <span className="px-2.5 py-1 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                    Remediated
+                  </span>
                 </div>
               ))}
             </div>

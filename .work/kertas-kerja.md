@@ -28,17 +28,17 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-17** | **Disk Maintenance & Repair** | SSD Storage ReTrim, SFC file checker, DISM repair, CHKDSK | fsutil, PowerShell ReTrim, sfc, dism, `DiskRepairPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-18** | **Context Menu Cleaner** | Explorer right-click shell extensions & handlers cleaner | `winreg`, PowerShell registry toggle, `ContextMenuPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-19** | **Windows Firewall Security Audit**| Inbound open ports audit, broad rule risk assessment | NetFirewallRule PowerShell, `FirewallAuditPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-20** | **CVE Vulnerability Audit Scanner**| Client library and runtime memory-safety CVE advisory checks | `CveScannerEngine`, `CveScannerPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
 
-### Area 19 — Windows Firewall Security Audit (Selesai: 2026-08-26)
+### Area 20 — CVE Vulnerability Scanner (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **Firewall Audit Engine (`src-tauri/src/firewall_audit.rs`):**
-     - Enumerasi aturan firewall aktif via `Get-NetFirewallRule` (Action, Profile, Direction, LocalPort, Protocol).
-     - Analisis risiko keamanan otomatis (aturan permisif yang membuka port RDP/SMB ke profil Public/Any diklasifikasikan sebagai *High Risk*).
-     - Pengaturan status aturan firewall (Allow/Block/Disable) via `Set-NetFirewallRule`.
-  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `audit_firewall` dan `toggle_firewall_rule`.
-  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Firewall Audit* dengan ringkasan jumlah aturan berisiko tinggi, detail port, dan tombol switch *Allowed / Blocked*.
+  1. **CVE Scanner Engine (`src-tauri/src/cve_scanner.rs`):**
+     - Audit kerentanan keamanan dan advisory memori (*heap buffer overflow, remote code execution*) untuk komponen runtime desktop (libwebp, V8 engine, Outlook moniker link).
+     - Status remediasi dan verifikasi versi aman pada aplikasi native.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan command `scan_cves`.
+  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *CVE Scanner* lengkap dengan detail severity, paket terdampak, tanggal publikasi, dan status remediasi.
   4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
