@@ -13,74 +13,81 @@
 # A component is born through wdi-init intent `component` at the tail of G2. This file is born empty.
 
 product_components:
-  - name: cleaner-core
+  - id: cleaner-core
     title: "System & Application Cleaner Engine"
     description: "Core junk cleaning engine across OS temp, browser caches, third-party apps, game shaders, and registry"
     satisfies: ["FR-1", "FR-2", "FR-3", "FR-4", "FR-5", "FR-20"]
     owns: ["CleanerRule", "CleaningSession", "DeletionRecord"]
+    containers: ["desktop-ui", "rust-engine"]
     risk_accepted: medium
     risk_note: "Performs file deletions across system and app caches; guarded by safe rules and user confirmation."
 
-  - name: deduplication-engine
+  - id: deduplication-engine
     title: "Deduplication & Disk Anomaly Engine"
     description: "High-performance duplicate finder, large file analyzer, empty folder, and broken symlink cleaner (inspired by Czkawka)"
     satisfies: ["FR-7"]
     owns: ["DuplicateGroup", "FileHashRecord", "DiskScanResult"]
+    containers: ["desktop-ui", "rust-engine"]
     risk_accepted: medium
     risk_note: "File removal and deduplication actions require explicit user confirmation."
 
-  - name: malware-scanner
+  - id: malware-scanner
     title: "YARA-X On-Demand Malware Scanner"
     description: "On-demand malware and heuristic scanning against persistence locations, running processes, and downloads"
     satisfies: ["FR-13"]
     owns: ["YaraRule", "ScanReport", "QuarantineItem"]
+    containers: ["desktop-ui", "rust-engine"]
     risk_accepted: medium
     risk_note: "Inspects system files and manages quarantine; on-demand execution without kernel hooks."
 
-  - name: privacy-shield
+  - id: privacy-shield
     title: "OS Privacy & Telemetry Controller"
     description: "Configuration manager for Windows telemetry, diagnostic data collection, and advertising tracking policies"
     satisfies: ["FR-14"]
     owns: ["PrivacySetting", "PolicySnapshot"]
+    containers: ["desktop-ui", "rust-engine"]
     risk_accepted: medium
     risk_note: "Modifies OS policies and registry keys; snapshots allow restoring defaults."
 
-  - name: system-tools
+  - id: system-tools
     title: "System Maintenance & Tooling Suite"
     description: "Suite of tools including Startup Manager, Windows Debloater, Driver Cleaner, Program Uninstaller, Service Manager, Software Updater, and Performance Monitor"
     satisfies: ["FR-6", "FR-8", "FR-9", "FR-10", "FR-11", "FR-12", "FR-16"]
     owns: ["StartupItem", "InstalledPackage", "ServiceItem", "DriverPackage", "HardwareMetric"]
+    containers: ["desktop-ui", "rust-engine"]
     risk_accepted: medium
     risk_note: "Manages autostart, Windows services, package updates, and uninstalls."
 
-  - name: secure-shredder
+  - id: secure-shredder
     title: "Cryptographic File Shredder"
     description: "Multi-pass cryptographic random overwrite file shredder preventing data recovery"
     satisfies: ["FR-15"]
     owns: ["ShredderJob"]
+    containers: ["desktop-ui", "rust-engine"]
     risk_accepted: low
     risk_note: "Irreversible cryptographic deletion; requires low risk_accepted and double-confirmation."
 
-  - name: platform-foundation
+  - id: platform-foundation
     title: "Platform Foundation & Automation"
     description: "System restore points, cleaning history audit log, automated scan scheduler, CLI mode, multi-language i18n, and auto-updater"
     satisfies: ["FR-17", "FR-18", "FR-19", "FR-21", "FR-22", "FR-23"]
     owns: ["RestorePoint", "HistoryAuditLog", "ScheduleJob", "AppSetting"]
+    containers: ["desktop-ui", "rust-engine", "sqlite-store"]
     risk_accepted: medium
     risk_note: "Handles automation, audit logs, CLI execution, and update verification."
 
 platform_owns: []
 
 containers:
-  - name: desktop-ui
+  - id: desktop-ui
     title: "Desktop Frontend UI"
     built: true
     technology: "React 18, Tailwind CSS, Vite, Lucide Icons, Radix UI"
-  - name: rust-engine
+  - id: rust-engine
     title: "Core Rust Engine"
     built: true
     technology: "Rust 2021, Tauri v2, Rayon, Yara-X, Windows-rs, Sysinfo"
-  - name: sqlite-store
+  - id: sqlite-store
     title: "Embedded Local Audit Store"
     built: true
     technology: "SQLite 3, rusqlite"

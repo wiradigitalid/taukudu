@@ -9,21 +9,21 @@ Dokumen ini adalah peta arsitektur lengkap untuk mem-porting **Kudu** (beserta k
 | Subsystem / Feature | Kudu (TypeScript/Node.js/Win32) | TauKudu Target (Rust Crates & Tauri) | Keterangan & Referensi Tambahan |
 |---|---|---|---|
 | **App Framework & Shell** | Electron 30 + React 18 + Vite | **Tauri v2 + React 18 / Svelte + Vite** | Mengurangi konsumsi RAM dari ~200MB menjadi ~30MB. Binary size turun dari ~150MB ke ~15MB. |
-| **UI Components & Styling** | Tailwind CSS + Lucide Icons + Radix UI | **Tailwind CSS + Lucide React + Radix UI / shadcn/ui** | Copy 1:1 design tokens, palet warna, dan aset ikon dari `.work/upstream/kudu/src/renderer`. |
-| **System Cleaning Engine** | `src/main/services/file-utils.ts`, custom glob/regex scan | **`walkdir` + `rayon` + `regex`** | Scanning multi-threaded berkecepatan tinggi ala **ripgrep** (crate `ignore` / `walkdir`). |
-| **Cleaner Rules Registry** | `.work/upstream/kudu/rules/*.json` | **`serde_json` + `serde_yaml`** | Mengimpor rules Kudu + CleanerML dari **BleachBit** (`.work/upstream/bleachbit/cleaners/`). |
-| **Deduplication Engine** | `DuplicateFinderPage.tsx` | **`czkawka_core` / porting algoritma Czkawka** | Multi-stage hash (size match -> 2KB header/footer hash -> full Blake3/xxHash). |
-| **Malware Scanner** | `@litko/yara-x` + `yara-engine.ts` | **`yara-x` / `yara-sys` (Rust native)** | Kompilasi YARA rules & scanning file tanpa Node.js native addon boundary. |
-| **Privacy Shield** | `src/main/platform/win32/privacy.ts` (Registry & PowerShell) | **`winreg` + `windows-rs` (Win32 API)** | Manipulasi registry langsung di Rust tanpa spawn process powershell/cmd. |
-| **Startup Manager** | `src/main/platform/win32/startup.ts` | **`winreg` (HKCU/HKLM Run, RunOnce, StartupApproved)** | Enumerasi cepat autostart Windows & systemd/launchd di Linux/macOS. |
-| **Disk Analyzer (Treemap)** | `DiskAnalyzerPage.tsx` | **`rayon` + `jwalk` + D3 / Treemap Canvas** | Pengumpulan ukuran direktori multi-core paralel. |
-| **Windows Debloater** | `DebloaterPage.tsx` + AppX package queries | **`windows-rs` (AppxPackaging / WinRT API) / DISM** | Uninstall UWP & OEM bloatware aman. |
-| **Driver Cleaner** | `DriverManagerPage.tsx` + pnputil calls | **`windows-rs` / `setupapi.dll`** | Scan & purge driver store yang kedaluwarsa. |
-| **Service Manager** | `ServiceManagerPage.tsx` + sc.exe / WMI | **`windows-service` crate** | Kontrol start/stop/config Windows Services. |
-| **File Shredder (Secure Delete)**| `FileShredderPage.tsx` | **`zeroize` + `rand` (DoD 5220.22-M 3/7 pass overwrite)** | Overwrite disk blocks secara kriptografis sebelum unlink. |
-| **Hardware & Perf Monitor** | `src/main/services/perf-monitor.ts` | **`sysinfo` crate** | Real-time CPU, RAM, Disk I/O, Network, dan S.M.A.R.T. metrics. |
-| **Local Database & History** | `history-store.ts` (JSON store) | **`rusqlite` (SQLite)** | Log riwayat pembersihan, audit log, dan statistik hemat storage. |
-| **CLI Mode** | `src/main/cli.ts` (Commander.js) | **`clap` crate** | Scriptable headless CLI (`taukudu clean --all --quiet`). |
+| **UI Components & Styling** | Tailwind CSS + Lucide Icons + Radix UI | **Tailwind CSS + Lucide React + Radix UI / shadcn/ui** | Copy 1:1 design tokens, palet warna, dan aset ikon dari Kudu renderer. |
+| **System Cleaning Engine** | File utils & custom glob/regex scan | **`walkdir` + `rayon` + `regex`** | Scanning multi-threaded berkecepatan tinggi ala **ripgrep** (crate `ignore` / `walkdir`). |
+| **Cleaner Rules Registry** | Rules JSON directory | **`serde_json` + `serde_yaml`** | Mengimpor rules Kudu + CleanerML dari **BleachBit** (`.work/upstream/bleachbit/cleaners/`). |
+| **Deduplication Engine** | Duplicate finder page | **`czkawka_core` / porting algoritma Czkawka** | Multi-stage hash (size match -> 2KB header/footer hash -> full Blake3/xxHash). |
+| **Malware Scanner** | `@litko/yara-x` + YARA engine service | **`yara-x` / `yara-sys` (Rust native)** | Kompilasi YARA rules & scanning file tanpa Node.js native addon boundary. |
+| **Privacy Shield** | Win32 Privacy registry & PowerShell | **`winreg` + `windows-rs` (Win32 API)** | Manipulasi registry langsung di Rust tanpa spawn process powershell/cmd. |
+| **Startup Manager** | Win32 Startup service | **`winreg` (HKCU/HKLM Run, RunOnce, StartupApproved)** | Enumerasi cepat autostart Windows & systemd/launchd di Linux/macOS. |
+| **Disk Analyzer (Treemap)** | Disk analyzer page | **`rayon` + `jwalk` + D3 / Treemap Canvas** | Pengumpulan ukuran direktori multi-core paralel. |
+| **Windows Debloater** | Debloater page + AppX package queries | **`windows-rs` (AppxPackaging / WinRT API) / DISM** | Uninstall UWP & OEM bloatware aman. |
+| **Driver Cleaner** | Driver manager page + pnputil calls | **`windows-rs` / `setupapi.dll`** | Scan & purge driver store yang kedaluwarsa. |
+| **Service Manager** | Service manager page + sc.exe / WMI | **`windows-service` crate** | Kontrol start/stop/config Windows Services. |
+| **File Shredder (Secure Delete)**| File shredder page | **`zeroize` + `rand` (DoD 5220.22-M 3/7 pass overwrite)** | Overwrite disk blocks secara kriptografis sebelum unlink. |
+| **Hardware & Perf Monitor** | Performance monitor service | **`sysinfo` crate** | Real-time CPU, RAM, Disk I/O, Network, dan S.M.A.R.T. metrics. |
+| **Local Database & History** | History store (JSON store) | **`rusqlite` (SQLite)** | Log riwayat pembersihan, audit log, dan statistik hemat storage. |
+| **CLI Mode** | CLI service (Commander.js) | **`clap` crate** | Scriptable headless CLI (`taukudu clean --all --quiet`). |
 
 ---
 

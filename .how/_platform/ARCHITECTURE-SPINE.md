@@ -1,3 +1,14 @@
+---
+type: spine
+status: draft
+created: '2026-08-25'
+updated: '2026-08-25'
+reviewed:
+  date: '2026-08-25'
+  sha: '044dd2f85f55a79697bb9a4e25a41e8864da1af3'
+  lenses: ["structure", "prose"]
+---
+
 # Architecture Spine — TauKudu
 
 Dokumen ini mendefinisikan keputusan arsitektural inti (*Architecture Decisions / Invariants*) yang mengikat seluruh implementasi sistem TauKudu.

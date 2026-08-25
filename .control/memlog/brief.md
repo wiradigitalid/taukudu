@@ -1,5 +1,6 @@
 ---
 topic: Kudu
+artifact: .what/_product-brief/brief.md
 updated: 2026-08-25T22:55
 ---
 

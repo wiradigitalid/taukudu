@@ -3,4 +3,206 @@
 # `critical: true` when the UC touches MONEY, PERSONAL DATA, or an IRREVERSIBLE ACTION.
 # This label decides something ONLY at `mode: deep`.
 
-usecases: []
+usecases:
+  - id: UC-1
+    title: "Memindai dan membersihkan file temporary dan cache sistem"
+    component: cleaner-core
+    actor: "Pengguna Desktop"
+    satisfies: [FR-1]
+    critical: false
+
+  - id: UC-2
+    title: "Membersihkan cache dan riwayat browser per profil"
+    component: cleaner-core
+    actor: "Pengguna Desktop"
+    satisfies: [FR-2]
+    critical: false
+
+  - id: UC-3
+    title: "Membersihkan residu cache aplikasi pihak ketiga"
+    component: cleaner-core
+    actor: "Pengguna Desktop"
+    satisfies: [FR-3]
+    critical: false
+
+  - id: UC-4
+    title: "Membersihkan cache shader gaming dan launcher"
+    component: cleaner-core
+    actor: "Pengguna Desktop"
+    satisfies: [FR-4]
+    critical: false
+
+  - id: UC-5
+    title: "Memperbaiki dan membersihkan entri registry Windows yang tidak valid"
+    component: cleaner-core
+    actor: "Pengguna Desktop"
+    satisfies: [FR-5]
+    critical: false
+
+  - id: UC-6
+    title: "Menjalankan One-Click Clean untuk kategori aman"
+    component: cleaner-core
+    actor: "Pengguna Desktop"
+    satisfies: [FR-20]
+    critical: false
+
+  - id: UC-7
+    title: "Memindai dan memvisualisasikan treemap penggunaan disk"
+    component: deduplication-engine
+    actor: "Pengguna Desktop"
+    satisfies: [FR-7]
+    critical: false
+
+  - id: UC-8
+    title: "Mencari dan menghapus file duplikat via multi-stage hash"
+    component: deduplication-engine
+    actor: "Pengguna Desktop"
+    satisfies: [FR-7]
+    critical: false
+
+  - id: UC-9
+    title: "Menemukan file berukuran besar dan folder kosong"
+    component: deduplication-engine
+    actor: "Pengguna Desktop"
+    satisfies: [FR-7]
+    critical: false
+
+  - id: UC-10
+    title: "Menjalankan quick scan malware terhadap autostart dan direktori downloads"
+    component: malware-scanner
+    actor: "Pengguna Desktop"
+    satisfies: [FR-13]
+    critical: false
+
+  - id: UC-11
+    title: "Menjalankan custom scan terhadap file atau folder spesifik"
+    component: malware-scanner
+    actor: "Pengguna Desktop"
+    satisfies: [FR-13]
+    critical: false
+
+  - id: UC-12
+    title: "Mengkarantina atau menghapus file yang terindikasi malware"
+    component: malware-scanner
+    actor: "Pengguna Desktop"
+    satisfies: [FR-13]
+    critical: true
+
+  - id: UC-13
+    title: "Membaca status kebijakan privasi dan telemetri OS saat ini"
+    component: privacy-shield
+    actor: "Pengguna Desktop"
+    satisfies: [FR-14]
+    critical: false
+
+  - id: UC-14
+    title: "Mengubah dan menerapkan toggle privasi/telemetri secara individual atau batch"
+    component: privacy-shield
+    actor: "Pengguna Desktop"
+    satisfies: [FR-14]
+    critical: false
+
+  - id: UC-15
+    title: "Mengembalikan konfigurasi privasi ke snapshot default bawaan"
+    component: privacy-shield
+    actor: "Pengguna Desktop"
+    satisfies: [FR-14]
+    critical: false
+
+  - id: UC-16
+    title: "Mengelola entri autostart program dan mengukur dampak boot"
+    component: system-tools
+    actor: "Pengguna Desktop"
+    satisfies: [FR-6]
+    critical: false
+
+  - id: UC-17
+    title: "Menghapus bloatware dan paket OEM UWP bawaan secara batch"
+    component: system-tools
+    actor: "Pengguna Desktop"
+    satisfies: [FR-8]
+    critical: false
+
+  - id: UC-18
+    title: "Memindai dan membersihkan paket driver kedaluwarsa di DriverStore"
+    component: system-tools
+    actor: "Pengguna Desktop"
+    satisfies: [FR-9]
+    critical: false
+
+  - id: UC-19
+    title: "Meng-uninstall aplikasi dan membersihkan residu file/registry"
+    component: system-tools
+    actor: "Pengguna Desktop"
+    satisfies: [FR-10]
+    critical: false
+
+  - id: UC-20
+    title: "Mengoptimalkan konfigurasi startup background services"
+    component: system-tools
+    actor: "Pengguna Desktop"
+    satisfies: [FR-11]
+    critical: false
+
+  - id: UC-21
+    title: "Mendeteksi dan memperbarui paket software lintas package manager"
+    component: system-tools
+    actor: "Pengguna Desktop"
+    satisfies: [FR-12]
+    critical: false
+
+  - id: UC-22
+    title: "Memantau metrik performa CPU, RAM, Disk I/O, Network, dan S.M.A.R.T."
+    component: system-tools
+    actor: "Pengguna Desktop"
+    satisfies: [FR-16]
+    critical: false
+
+  - id: UC-23
+    title: "Menghancurkan file/folder dengan multi-pass cryptographic overwrite"
+    component: secure-shredder
+    actor: "Pengguna Desktop"
+    satisfies: [FR-15]
+    critical: true
+
+  - id: UC-24
+    title: "Membuat restore point sistem sebelum operasi pembersihan destruktif"
+    component: platform-foundation
+    actor: "Pengguna Desktop"
+    satisfies: [FR-17]
+    critical: false
+
+  - id: UC-25
+    title: "Mencatat dan melihat riwayat sesi pembersihan serta statistik ruang hemat"
+    component: platform-foundation
+    actor: "Pengguna Desktop"
+    satisfies: [FR-18]
+    critical: false
+
+  - id: UC-26
+    title: "Menjadwalkan pemindaian otomatis periodik"
+    component: platform-foundation
+    actor: "Pengguna Desktop"
+    satisfies: [FR-19]
+    critical: false
+
+  - id: UC-27
+    title: "Mengeksekusi pemindaian dan pembersihan via CLI headless scriptable"
+    component: platform-foundation
+    actor: "SysAdmin / Skrip CLI"
+    satisfies: [FR-21]
+    critical: false
+
+  - id: UC-28
+    title: "Mengganti bahasa antarmuka secara instan (30+ bahasa)"
+    component: platform-foundation
+    actor: "Pengguna Desktop"
+    satisfies: [FR-22]
+    critical: false
+
+  - id: UC-29
+    title: "Memeriksa dan menerapkan pembaruan aplikasi secara otomatis"
+    component: platform-foundation
+    actor: "Pengguna Desktop"
+    satisfies: [FR-23]
+    critical: false

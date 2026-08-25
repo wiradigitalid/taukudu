@@ -21,117 +21,117 @@ capabilities:
     title: "System Cleaning Engine"
     description: "Cross-platform cleaner for temp files, logs, caches, crash dumps, and registry"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-2
     title: "Browser Cleaning"
     description: "Cache, history, cookie cleaning across all major browsers"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-3
     title: "Application Cleaning"
     description: "Leftover app data cleaning for installed applications"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-4
     title: "Gaming Cleaner"
     description: "Game launcher and shader cache cleaning"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-5
     title: "Registry Cleaner"
     description: "Broken/orphaned registry entry detection and removal (Windows)"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-6
     title: "Startup Manager"
     description: "Boot impact analysis and startup program management"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-7
     title: "Disk Analyzer"
     description: "Interactive treemap visualization of disk usage"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-8
     title: "Debloater"
     description: "Windows bloatware removal"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-9
     title: "Driver Cleanup"
     description: "Stale driver package removal"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-10
     title: "Program Uninstaller"
     description: "Uninstall with leftover cleanup"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-11
     title: "Service Manager"
     description: "Windows service optimization"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-12
     title: "Software Updater"
     description: "Bulk update across winget, Chocolatey, Scoop, npm"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-13
     title: "Malware Scanner"
     description: "YARA signature matching and heuristic analysis"
     target_release: "v1.0"
-    serves: [BG-2]
+    goal: BG-2
   - id: CAP-14
     title: "Privacy Shield"
     description: "Control 30+ Windows telemetry, ad ID, Cortana, tracking settings"
     target_release: "v1.0"
-    serves: [BG-3]
+    goal: BG-3
   - id: CAP-15
     title: "Secure Delete"
     description: "Overwrite files with random data before deletion"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-16
     title: "Performance Monitor"
     description: "Real-time CPU, memory, disk, network, per-core stats, S.M.A.R.T."
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-17
     title: "System Restore Points"
     description: "Create restore points before cleaning operations"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-18
     title: "Cleaning History"
     description: "Track past sessions and space recovered"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-19
     title: "Scheduled Scans"
     description: "Daily, weekly, or monthly automated scans"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-20
     title: "One-Click Clean"
     description: "Scan and clean everything in one click"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
   - id: CAP-21
     title: "CLI Mode"
     description: "Scriptable, headless operation without GUI"
     target_release: "v1.0"
-    serves: [BG-5]
+    goal: BG-5
   - id: CAP-22
     title: "Multi-language Support"
     description: "30+ languages via i18next"
     target_release: "v1.0"
-    serves: [BG-4]
+    goal: BG-4
   - id: CAP-23
     title: "Auto-Updater"
-    description: "Electron-based automatic updates"
+    description: "Automatic update checking and installation"
     target_release: "v1.0"
-    serves: [BG-1]
+    goal: BG-1
 
 functional:
   - id: FR-1
@@ -258,4 +258,4 @@ journeys:
     narrative: "Maria (privacy-conscious user) downloaded an installer from a third-party site and wants to verify system safety. She opens Kudu, navigates to Security, selects 'Quick Malware Scan', Kudu evaluates running processes and common persistence locations against YARA rules in 20 seconds, and reports 'No threats detected'."
   - id: UJ-3
     title: "DevOps engineer automates weekly server cleanup via CLI"
-    narrative: "A DevOps engineer adds `kudu clean --system --temp --quiet` to a weekly cron job on a Linux build server. The command executes headlessly, purges build artifacts and temp files, and logs reclaimed space to syslog."
+    narrative: "DevOps engineer configures a weekly cron job on an Ubuntu build server running `kudu clean --system --temp --quiet`. The job executes headlessly in 12 seconds, removes 45GB of stale build artifacts, logs JSON metrics to syslog, and exits cleanly with code 0."
