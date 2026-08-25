@@ -518,6 +518,21 @@ export interface ThreatMonitorSummary {
   is_monitoring_active: boolean
 }
 
+export interface BrowserProfileCacheTarget {
+  browser_key: string
+  browser_name: string
+  profile_name: string
+  cache_type: string
+  path: string
+  exists: boolean
+}
+
+export interface BrowserCacheScanSummary {
+  browsers_detected: string[]
+  targets: BrowserProfileCacheTarget[]
+  total_targets: number
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -731,5 +746,8 @@ export const tauriApi = {
   },
   terminateThreatProcess: async (pid: number): Promise<void> => {
     return await invoke('terminate_threat_process', { pid })
+  },
+  discoverBrowserCacheTargets: async (): Promise<BrowserCacheScanSummary> => {
+    return await invoke('discover_browser_cache_targets')
   },
 }

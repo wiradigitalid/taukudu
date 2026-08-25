@@ -37,10 +37,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-26** | **Fast Recycle Bin Turbo Cleaner** | Multi-drive $Recycle.Bin turbo direct unlink & Shell sync | `RecycleBinEngine`, `RecycleBinPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-27** | **Cleaner Process Blockers Detector** | Real-time file lock & blocking browser/process detector & closer | `CleanerBlockersEngine`, Cleaner blocker alert UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-28** | **Live Outbound Threat Monitor** | Network socket C2 & malicious CIDR blacklist auditor and process killer | `ThreatMonitorEngine`, `ThreatMonitorPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-29** | **Chromium & Gecko Multi-Profile Caches** | Shared shader/Vulkan caches & multi-profile cache discovery | `ChromiumCacheEngine`, `BrowserCachesPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 29 — Chromium & Gecko Multi-Profile Browser Caches (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Chromium Cache Engine (`src-tauri/src/chromium_cache.rs`):** Deteksi mendalam instalasi browser berbasis Chromium (Chrome, Edge, Brave, Vivaldi, Opera, Opera GX, Arc, Chromium, Thorium) dan enumerasi cache level profil (`Default`, `Profile 1..N`) serta cache level browser bersama (*Shared Angle/Vulkan ShaderCache, Skia GrShaderCache, Dawn Metal/D3D12 Cache*).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `discover_browser_cache_targets`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `BrowserProfileCacheTarget`, `BrowserCacheScanSummary`, serta method `tauriApi.discoverBrowserCacheTargets`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan tab *Browser Caches* lengkap dengan deteksi daftar browser, status keberadaan direktori cache (*Present / Empty*), path direktori, dan tombol aksi pembersihan individual (*Clean*).
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 28 — Live C2 & Malicious Outbound Threat Monitor (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

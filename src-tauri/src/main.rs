@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
     handle_cli_mode, ActiveConnectionInfo, BloatwareApp, BreachMonitorSummary,
+    BrowserCacheScanSummary, BrowserProfileCacheTarget, ChromiumCacheEngine,
     CleanExecutionResult, CleanerBlockersEngine, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
     ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DeduplicationEngine,
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
@@ -458,6 +459,11 @@ fn terminate_threat_process(pid: u32) -> Result<(), String> {
     GLOBAL_THREAT_MONITOR.terminate_threat_process(pid)
 }
 
+#[tauri::command]
+fn discover_browser_cache_targets() -> BrowserCacheScanSummary {
+    ChromiumCacheEngine::discover_browser_cache_targets()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -543,7 +549,8 @@ fn main() {
             empty_recycle_bin_fast,
             audit_active_threats,
             add_threat_blacklist_cidr,
-            terminate_threat_process
+            terminate_threat_process,
+            discover_browser_cache_targets
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

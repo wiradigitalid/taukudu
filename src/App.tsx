@@ -38,6 +38,8 @@ import {
   ProcessBlockerInfo,
   ThreatMonitorSummary,
   FlaggedConnection,
+  BrowserCacheScanSummary,
+  BrowserProfileCacheTarget,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -90,13 +92,14 @@ import {
   AlertTriangle,
   PowerOff,
   Radio,
+  Compass,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'recyclebin' | 'threats' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -113,6 +116,11 @@ export function App() {
   const [cleanStatus, setCleanStatus] = useState<string | null>(null)
   const [blockerSummary, setBlockerSummary] = useState<BlockerSummary | null>(null)
   const [checkingBlockers, setCheckingBlockers] = useState(false)
+
+  // Browser Profile Caches state
+  const [browserCaches, setBrowserCaches] = useState<BrowserCacheScanSummary | null>(null)
+  const [loadingBrowserCaches, setLoadingBrowserCaches] = useState(false)
+  const [browserFeedback, setBrowserFeedback] = useState<string | null>(null)
 
   // Recycle Bin state
   const [recycleSummary, setRecycleSummary] = useState<RecycleBinSummary | null>(null)
@@ -380,6 +388,28 @@ export function App() {
       await fetchThreats()
     } catch (err) {
       setThreatFeedback(`Terminate process error: ${String(err)}`)
+    }
+  }
+
+  const fetchBrowserCaches = async () => {
+    setLoadingBrowserCaches(true)
+    try {
+      const res = await tauriApi.discoverBrowserCacheTargets()
+      setBrowserCaches(res)
+    } catch (err) {
+      console.error('Discover browser caches error:', err)
+    } finally {
+      setLoadingBrowserCaches(false)
+    }
+  }
+
+  const handleCleanSingleBrowserCache = async (path: string, label: string) => {
+    try {
+      const res = await tauriApi.cleanTargets([path])
+      setBrowserFeedback(`Cleaned ${label}: freed ${formatBytes(res.deleted_bytes)} (${res.deleted_files} files)`)
+      await fetchBrowserCaches()
+    } catch (err) {
+      setBrowserFeedback(`Clean cache error: ${String(err)}`)
     }
   }
 
@@ -1150,6 +1180,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('browsers')
+                if (!browserCaches && !loadingBrowserCaches) fetchBrowserCaches()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'browsers'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Compass className="w-4 h-4" />
+              Browser Caches
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('recyclebin')
                 if (!recycleSummary && !loadingRecycle) fetchRecycleBin()
               }}
@@ -1537,6 +1581,8 @@ export function App() {
               ? 'System Overview & Health'
               : activeTab === 'cleaner'
               ? 'Deep System Cleaner (Rules-Engine)'
+              : activeTab === 'browsers'
+              ? 'Chromium & Gecko Multi-Profile Browser Caches'
               : activeTab === 'recyclebin'
               ? 'Fast Recycle Bin Turbo Cleaner (Multi-Drive)'
               : activeTab === 'threats'
@@ -1592,7 +1638,15 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'recyclebin' ? (
+            {activeTab === 'browsers' ? (
+              <button
+                onClick={fetchBrowserCaches}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Rescan Browsers
+              </button>
+            ) : activeTab === 'recyclebin' ? (
               <button
                 onClick={fetchRecycleBin}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
@@ -1820,6 +1874,79 @@ export function App() {
                 <Sparkles className="w-8 h-8 text-zinc-600 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {scanning ? 'Running deep parallel scan across system locations...' : 'System is clean. No temporary files detected.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'browsers' ? (
+          /* Browser Profile Caches Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Browser Profile Caches: {browserCaches?.browsers_detected.length || 0} Browsers Detected
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    {browserCaches?.total_targets || 0} Cache Targets
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {browserFeedback || `Detected installations: ${browserCaches?.browsers_detected.join(', ') || 'Scanning...'}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchBrowserCaches}
+                  disabled={loadingBrowserCaches}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingBrowserCaches ? 'animate-spin' : ''}`} />
+                  {loadingBrowserCaches ? 'Scanning...' : 'Rescan Profiles'}
+                </button>
+              </div>
+            </div>
+
+            {/* Browser Cache Targets List */}
+            {browserCaches && browserCaches.targets.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {browserCaches.targets.map((t, idx) => (
+                  <div
+                    key={`${t.path}-${idx}`}
+                    className={`p-4 rounded-xl border flex justify-between items-center transition ${
+                      t.exists ? 'bg-[#16161a] border-[#2a2a36]' : 'bg-[#16161a]/40 border-white/[0.02]'
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{t.browser_name}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                          {t.profile_name}
+                        </span>
+                        <span className={`text-[10px] font-semibold ${t.exists ? 'text-emerald-400' : 'text-zinc-600'}`}>
+                          {t.exists ? '• Present' : '• Empty'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400">{t.cache_type}</p>
+                      <p className="text-[10px] text-zinc-500 font-mono truncate max-w-sm">{t.path}</p>
+                    </div>
+                    {t.exists && (
+                      <button
+                        onClick={() => handleCleanSingleBrowserCache(t.path, `${t.browser_name} (${t.profile_name})`)}
+                        className="px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-red-500/20 hover:text-red-400 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Clean
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <Compass className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingBrowserCaches ? 'Enumerating Chromium & Gecko browser profiles...' : 'No active browser cache directories found.'}
                 </p>
               </div>
             )}
