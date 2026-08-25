@@ -53,6 +53,8 @@ import {
   SecurityPostureSummary,
   ThreatBlacklistSummary,
   ThreatBlacklistData,
+  LogEntry,
+  LogStats,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -109,13 +111,14 @@ import {
   BarChart3,
   Info,
   ExternalLink,
+  Terminal,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -287,6 +290,13 @@ export function App() {
   const [deletionLogStats, setDeletionLogStats] = useState<DeletionLogStats | null>(null)
   const [logSearchQuery, setLogSearchQuery] = useState('')
   const [activeHistoryView, setActiveHistoryView] = useState<'sessions' | 'files'>('sessions')
+
+  // Application Diagnostic Logs state
+  const [appLogs, setAppLogs] = useState<LogEntry[]>([])
+  const [appLogStats, setAppLogStats] = useState<LogStats | null>(null)
+  const [loadingAppLogs, setLoadingAppLogs] = useState(false)
+  const [logFilterLevel, setLogFilterLevel] = useState<string>('ALL')
+  const [appLogFeedback, setAppLogFeedback] = useState<string | null>(null)
 
   // Malware Scanner state
   const [malwareScanning, setMalwareScanning] = useState(false)
@@ -1126,6 +1136,31 @@ export function App() {
     }
   }
 
+  const fetchAppLogs = async (level?: string) => {
+    setLoadingAppLogs(true)
+    try {
+      const lvl = level || (logFilterLevel === 'ALL' ? undefined : logFilterLevel)
+      const logs = await tauriApi.queryAppLogs(150, lvl)
+      setAppLogs(logs)
+      const stats = await tauriApi.getAppLogStats()
+      setAppLogStats(stats)
+    } catch (err) {
+      console.error('Fetch app logs error:', err)
+    } finally {
+      setLoadingAppLogs(false)
+    }
+  }
+
+  const handleClearAppLogs = async () => {
+    try {
+      await tauriApi.clearAppLogs()
+      setAppLogFeedback('Cleared diagnostic application log file.')
+      await fetchAppLogs()
+    } catch (err) {
+      setAppLogFeedback(`Clear logs error: ${String(err)}`)
+    }
+  }
+
   const handleRunMalwareScan = async (type: string = 'quick') => {
     setMalwareScanning(true)
     setMalwareStatus(null)
@@ -1734,6 +1769,20 @@ export function App() {
               Privacy Shield
             </button>
             <button
+              onClick={() => {
+                setActiveTab('logs')
+                if (appLogs.length === 0 && !loadingAppLogs) fetchAppLogs()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'logs'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Terminal className="w-4 h-4" />
+              Diagnostic Logs
+            </button>
+            <button
               onClick={() => setActiveTab('settings')}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
                 activeTab === 'settings'
@@ -1824,6 +1873,8 @@ export function App() {
               ? 'Cleaning History & Audit Trail (SQLite)'
               : activeTab === 'metrics'
               ? 'Prometheus OpenMetrics Telemetry Exporter'
+              : activeTab === 'logs'
+              ? 'Application Diagnostics & Activity Logging'
               : activeTab === 'settings'
               ? 'Application Settings & Internationalization'
               : activeTab === 'about'
@@ -1872,6 +1923,14 @@ export function App() {
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Refresh Checkpoints
+              </button>
+            ) : activeTab === 'logs' ? (
+              <button
+                onClick={() => fetchAppLogs()}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Logs
               </button>
             ) : activeTab === 'game' ? (
               <button
@@ -2966,6 +3025,96 @@ export function App() {
                     {prometheusMetrics.raw_prometheus_text}
                   </pre>
                 </div>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'logs' ? (
+          /* Application Diagnostic Logs Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Application Diagnostic Logs</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {appLogFeedback || `Log File: ${appLogStats?.log_file_path || 'taukudu.log'} (${formatBytes(appLogStats?.log_file_size_bytes || 0)}) • ${appLogStats?.error_count || 0} errors / ${appLogStats?.warn_count || 0} warnings recorded.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => fetchAppLogs()}
+                  disabled={loadingAppLogs}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAppLogs ? 'animate-spin' : ''}`} />
+                  {loadingAppLogs ? 'Reloading...' : 'Reload Logs'}
+                </button>
+                <button
+                  onClick={handleClearAppLogs}
+                  disabled={appLogs.length === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 text-xs font-semibold transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear Logs
+                </button>
+              </div>
+            </div>
+
+            {/* Level Filter Switcher */}
+            <div className="flex gap-2">
+              {['ALL', 'INFO', 'WARN', 'ERROR'].map((lvl) => (
+                <button
+                  key={lvl}
+                  onClick={() => {
+                    setLogFilterLevel(lvl)
+                    fetchAppLogs(lvl === 'ALL' ? undefined : lvl)
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                    logFilterLevel === lvl
+                      ? 'bg-amber-500 text-black font-bold'
+                      : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+
+            {/* Logs List */}
+            {appLogs.length > 0 ? (
+              <div className="space-y-1.5 font-mono text-[11px]">
+                {appLogs.map((log, idx) => (
+                  <div
+                    key={`${log.timestamp}-${idx}`}
+                    className={`p-3 rounded-lg border flex justify-between items-start gap-4 ${
+                      log.level === 'ERROR'
+                        ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                        : log.level === 'WARN'
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                        : 'bg-[#16161a] border-white/[0.04] text-zinc-300'
+                    }`}
+                  >
+                    <div className="space-y-0.5 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                          log.level === 'ERROR'
+                            ? 'bg-red-500 text-white'
+                            : log.level === 'WARN'
+                            ? 'bg-amber-500 text-black'
+                            : 'bg-zinc-800 text-zinc-400'
+                        }`}>
+                          {log.level}
+                        </span>
+                        {log.source && <span className="text-zinc-500">[{log.source}]</span>}
+                        <span className="text-zinc-500 text-[10px]">{log.timestamp}</span>
+                      </div>
+                      <p className="break-all mt-1">{log.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <Terminal className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">No application diagnostic logs recorded.</p>
               </div>
             )}
           </div>

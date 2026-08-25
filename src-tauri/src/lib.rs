@@ -1,3 +1,4 @@
+pub mod app_logger;
 pub mod breach_monitor;
 pub mod chromium_cache;
 pub mod cleaner;
@@ -35,6 +36,7 @@ pub mod trim_history;
 pub mod uninstaller_shredder;
 pub mod window_state;
 
+pub use app_logger::{AppLoggerEngine, LogEntry, LogStats, GLOBAL_APP_LOGGER};
 pub use breach_monitor::{BreachIncident, BreachMonitorEngine, BreachMonitorSummary, MonitoredEmailStatus, GLOBAL_BREACH_MONITOR};
 pub use chromium_cache::{BrowserCacheScanSummary, BrowserProfileCacheTarget, ChromiumCacheEngine};
 pub use cleaner::{CleanExecutionResult, CleanerEngine, ScanResult};

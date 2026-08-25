@@ -671,6 +671,21 @@ export interface ThreatBlacklistSummary {
   file_path: string
 }
 
+export interface LogEntry {
+  timestamp: string
+  level: string
+  message: string
+  source?: string
+}
+
+export interface LogStats {
+  log_file_path: string
+  log_file_size_bytes: number
+  total_lines: number
+  error_count: number
+  warn_count: number
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -949,5 +964,17 @@ export const tauriApi = {
   },
   addThreatBlacklistDomain: async (domain: string): Promise<ThreatBlacklistSummary> => {
     return await invoke('add_threat_blacklist_domain', { domain })
+  },
+  writeAppLog: async (level: string, message: string, source?: string): Promise<void> => {
+    return await invoke('write_app_log', { level, message, source })
+  },
+  queryAppLogs: async (limit?: number, filterLevel?: string): Promise<LogEntry[]> => {
+    return await invoke('query_app_logs', { limit, filterLevel })
+  },
+  getAppLogStats: async (): Promise<LogStats> => {
+    return await invoke('get_app_log_stats')
+  },
+  clearAppLogs: async (): Promise<void> => {
+    return await invoke('clear_app_logs')
   },
 }

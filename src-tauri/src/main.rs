@@ -6,7 +6,7 @@ use std::env;
 use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
-    handle_cli_mode, ActiveConnectionInfo, BloatwareApp, BreachMonitorSummary,
+    handle_cli_mode, ActiveConnectionInfo, AppLoggerEngine, BloatwareApp, BreachMonitorSummary,
     BrowserCacheScanSummary, BrowserProfileCacheTarget, ChromiumCacheEngine,
     CleanExecutionResult, CleanerBlockersEngine, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
     ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DeduplicationEngine,
@@ -29,7 +29,7 @@ use taukudu_lib::{
     ThreatBlacklistStore, ThreatBlacklistSummary, ThreatMonitorEngine,
     ThreatMonitorSummary, TrimDriveStatus, TrimHistoryStore, TrimHistorySummary, TrimRecord,
     UninstallerShredderEngine, UpdateExecutionResult, WindowGeometryState, WindowStateEngine,
-    GLOBAL_BREACH_MONITOR, GLOBAL_DELETION_LOGGER, GLOBAL_GAME_MODE, GLOBAL_HISTORY,
+    GLOBAL_APP_LOGGER, GLOBAL_BREACH_MONITOR, GLOBAL_DELETION_LOGGER, GLOBAL_GAME_MODE, GLOBAL_HISTORY,
     GLOBAL_SCHEDULER, GLOBAL_SETTINGS, GLOBAL_THREAT_BLACKLIST, GLOBAL_THREAT_MONITOR,
     GLOBAL_TRIM_HISTORY, GLOBAL_WINDOW_STATE,
 };
@@ -594,6 +594,26 @@ fn add_threat_blacklist_domain(domain: String) -> ThreatBlacklistSummary {
     GLOBAL_THREAT_BLACKLIST.add_threat_domain(domain)
 }
 
+#[tauri::command]
+fn write_app_log(level: String, message: String, source: Option<String>) {
+    GLOBAL_APP_LOGGER.log(&level, &message, source.as_deref());
+}
+
+#[tauri::command]
+fn query_app_logs(limit: Option<usize>, filter_level: Option<String>) -> Vec<taukudu_lib::LogEntry> {
+    GLOBAL_APP_LOGGER.query_logs(limit.unwrap_or(100), filter_level)
+}
+
+#[tauri::command]
+fn get_app_log_stats() -> taukudu_lib::LogStats {
+    GLOBAL_APP_LOGGER.get_stats()
+}
+
+#[tauri::command]
+fn clear_app_logs() -> Result<(), String> {
+    GLOBAL_APP_LOGGER.clear()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -699,7 +719,11 @@ fn main() {
             get_threat_blacklist_summary,
             get_threat_blacklist_data,
             update_threat_blacklist_data,
-            add_threat_blacklist_domain
+            add_threat_blacklist_domain,
+            write_app_log,
+            query_app_logs,
+            get_app_log_stats,
+            clear_app_logs
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

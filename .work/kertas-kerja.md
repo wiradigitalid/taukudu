@@ -47,10 +47,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-36** | **Security Posture & Compliance Collector** | Antivirus WMI detection, BitLocker encryption, Hotfix audit & admin elevation | `SecurityPostureEngine`, Dashboard security card UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-37** | **Threat Intelligence Blacklist Store** | Persistent JSON store for C2 CIDRs, Tor exit nodes, and malicious domains | `ThreatBlacklistStore`, Threat Monitor tab UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-38** | **About & Open Source Identity** | App metadata, architectural concepts, zero-telemetry guarantee, license & repo links | `AboutPage` view in `App.tsx` | ✅ COMPLETED | 2026-08-26 |
+| **AREA-39** | **Diagnostic & Activity App Logger** | Local file logging with 5MB auto-rotation, level filters & viewer | `AppLoggerEngine`, Diagnostic Logs tab UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 39 — Application Diagnostic & Activity Logging (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **App Logger Engine (`src-tauri/src/app_logger.rs`):** Logging terstruktur lokal (`%LOCALAPPDATA%/TauKudu/logs/taukudu.log`) dengan rotasi berkas otomatis berukuran 5MB (`taukudu.old.log`), filter level log (*INFO, WARN, ERROR, DEBUG*), pencarian, dan statistik error/warning.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `write_app_log`, `query_app_logs`, `get_app_log_stats`, dan `clear_app_logs`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `LogEntry`, `LogStats`, serta method `tauriApi.writeAppLog`, `tauriApi.queryAppLogs`, `tauriApi.getAppLogStats`, dan `tauriApi.clearAppLogs`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan tab *Diagnostic Logs* lengkap dengan pill filter level log, daftar log dengan badge warna level, path file log, ukuran berkas, dan tombol aksi *Clear Logs*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 38 — About TauKudu & Open-Source Identity (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
