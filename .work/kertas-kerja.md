@@ -16,8 +16,8 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-05** | **Privacy Shield** | 30+ Windows privacy & telemetry policies + PrivacyShieldPage | `winreg`, `windows-rs`, `PrivacyShieldPage` UI | ✅ COMPLETED | 2026-08-25 |
 | **AREA-07** | **System Tools: Startup & Debloat** | Startup Manager & Windows Debloater (UWP purge) + Pages | `winreg`, AppX PowerShell, Startup & Debloat UI | ✅ COMPLETED | 2026-08-25 |
 | **AREA-06** | **Malware Scanner (YARA-X)** | On-demand YARA scan + MalwareScannerPage, ThreatMonitor | Heuristic scanner, quarantine isolation, `MalwareScannerPage` UI | ✅ COMPLETED | 2026-08-26 |
-| **AREA-08** | **System Tools: Services & Drivers** | Service Manager & DriverStore Purge + Pages | `windows-service`, `windows-rs` | ⏳ NEXT UP | — |
-| **AREA-09** | **Uninstaller & Secure Shredder** | Clean Uninstaller + Multi-pass cryptographic file shredder | `zeroize`, `rand`, `windows-rs` | ⬜ PENDING | — |
+| **AREA-08** | **System Tools: Services & Drivers** | Service Manager & DriverStore Purge + Pages | CIM/WMI service manager, pnputil driver cleaner, UI tabs | ✅ COMPLETED | 2026-08-26 |
+| **AREA-09** | **Uninstaller & Secure Shredder** | Clean Uninstaller + Multi-pass cryptographic file shredder | `zeroize`, `rand`, `windows-rs` | ⏳ NEXT UP | — |
 | **AREA-10** | **Performance Monitor** | Live CPU, RAM, Disk I/O, Network, S.M.A.R.T. health + Page | `sysinfo` | ⬜ PENDING | — |
 | **AREA-11** | **History & SQLite Store** | Audit trail & history logging + HistoryPage | `rusqlite` (SQLite 3) | ⬜ PENDING | — |
 | **AREA-12** | **Settings, i18n & Updates** | 30+ Bahasa (i18next), Theme Dark/Light, Auto-updater | `i18next`, Tauri updater plugin | ⬜ PENDING | — |
@@ -46,9 +46,12 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 - Startup Manager & Windows Debloater UI & IPC commands.
 
 ### Area 06 — Malware Scanner & Quarantine (Selesai: 2026-08-26)
+- Heuristic malware scanner, masquerading detection, double-extension hunter, dan quarantine utilities.
+
+### Area 08 — Services & Driver Cleaner (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **Malware Scanner Engine (`src-tauri/src/malware_scanner.rs`):** Deteksi ancaman on-demand mencakup: (a) Masquerading system binaries (svchost/lsass/csrss/taskmgr di luar System32), (b) Hidden scripts dengan deceptive double-extensions (.pdf.exe, .docx.vbs).
-  2. **Quarantine & File Removal Utilities:** Mekanisme isolasi aman ke direktori karantina dan penghapusan ancaman permanen.
-  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_malware`, `quarantine_threats`, dan `delete_threats`.
-  4. **Frontend UI (`src/App.tsx`):** Antarmuka *Malware Scanner* lengkap dengan Quick/Full scan, itemized threat breakdown, level severity badges, serta tombol aksi *Quarantine* dan *Delete Threats*.
+  1. **Windows Services Manager (`src-tauri/src/service_driver.rs`):** Inspeksi status service, klasifikasi rekomendasi optimasi (`safe_to_disable`), dan pengaturan startup type (Automatic/Manual/Disabled).
+  2. **DriverStore Purge Engine:** Parsing dan enumerasi paket driver OEM (`pnputil /enum-drivers`) serta penghapusan paket driver kedaluwarsa/superseded (`pnputil /delete-driver /force`).
+  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_services`, `set_service_start_mode`, `get_driver_packages`, dan `delete_driver`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman Services Manager dan Driver Cleaner dengan badge rekomendasi dan tombol aksi cepat.
   5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

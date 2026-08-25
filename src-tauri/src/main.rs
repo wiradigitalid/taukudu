@@ -5,10 +5,10 @@ use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
     BloatwareApp, CleanExecutionResult, CleanerEngine, DeduplicationEngine, DiskAnalysisResult,
-    DiskAnalyzerEngine, DiskDriveInfo, DuplicateScanOptions, DuplicateScanResult,
+    DiskAnalyzerEngine, DiskDriveInfo, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, LargeFileScanResult, MalwareActionResult, MalwareScanResult,
     MalwareScannerEngine, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, ScanResult,
-    StartupDebloatEngine, StartupItem,
+    ServiceDriverEngine, ServiceItemInfo, StartupDebloatEngine, StartupItem,
 };
 
 #[tauri::command]
@@ -129,6 +129,26 @@ fn delete_threats(file_paths: Vec<String>) -> MalwareActionResult {
     MalwareScannerEngine::delete_threat_files(&file_paths)
 }
 
+#[tauri::command]
+fn get_services() -> Vec<ServiceItemInfo> {
+    ServiceDriverEngine::list_services()
+}
+
+#[tauri::command]
+fn set_service_start_mode(service_name: String, start_type: String) -> Result<(), String> {
+    ServiceDriverEngine::set_service_state(&service_name, &start_type)
+}
+
+#[tauri::command]
+fn get_driver_packages() -> Vec<DriverPackageInfo> {
+    ServiceDriverEngine::list_drivers()
+}
+
+#[tauri::command]
+fn delete_driver(published_name: String) -> Result<(), String> {
+    ServiceDriverEngine::delete_driver_package(&published_name)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -151,7 +171,11 @@ fn main() {
             remove_bloatware,
             scan_malware,
             quarantine_threats,
-            delete_threats
+            delete_threats,
+            get_services,
+            set_service_start_mode,
+            get_driver_packages,
+            delete_driver
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

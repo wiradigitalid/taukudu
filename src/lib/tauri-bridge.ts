@@ -155,6 +155,27 @@ export interface MalwareActionResult {
   details: string[]
 }
 
+export interface ServiceItemInfo {
+  name: string
+  display_name: string
+  status: string
+  start_type: string
+  description: string
+  is_microsoft: boolean
+  recommendation: string
+}
+
+export interface DriverPackageInfo {
+  id: string
+  published_name: string
+  original_name: string
+  provider: string
+  class_name: string
+  version: string
+  date: string
+  is_superseded: boolean
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -206,5 +227,17 @@ export const tauriApi = {
   },
   deleteThreats: async (file_paths: string[]): Promise<MalwareActionResult> => {
     return await invoke('delete_threats', { filePaths: file_paths })
+  },
+  getServices: async (): Promise<ServiceItemInfo[]> => {
+    return await invoke('get_services')
+  },
+  setServiceStartMode: async (service_name: string, start_type: string): Promise<void> => {
+    return await invoke('set_service_start_mode', { serviceName: service_name, startType: start_type })
+  },
+  getDriverPackages: async (): Promise<DriverPackageInfo[]> => {
+    return await invoke('get_driver_packages')
+  },
+  deleteDriver: async (published_name: string): Promise<void> => {
+    return await invoke('delete_driver', { publishedName: published_name })
   },
 }

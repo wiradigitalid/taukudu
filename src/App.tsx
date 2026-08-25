@@ -10,6 +10,8 @@ import {
   StartupItem,
   BloatwareApp,
   MalwareScanResult,
+  ServiceItemInfo,
+  DriverPackageInfo,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -31,10 +33,12 @@ import {
   Bug,
   ShieldAlert,
   Archive,
+  Server,
+  Wrench,
 } from 'lucide-react'
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -68,6 +72,16 @@ export function App() {
   const [selectedBloat, setSelectedBloat] = useState<Set<string>>(new Set())
   const [removingBloat, setRemovingBloat] = useState(false)
   const [bloatFeedback, setBloatFeedback] = useState<string | null>(null)
+
+  // Services state
+  const [servicesList, setServicesList] = useState<ServiceItemInfo[]>([])
+  const [loadingServices, setLoadingServices] = useState(false)
+  const [servicesFeedback, setServicesFeedback] = useState<string | null>(null)
+
+  // Drivers state
+  const [driversList, setDriversList] = useState<DriverPackageInfo[]>([])
+  const [loadingDrivers, setLoadingDrivers] = useState(false)
+  const [driversFeedback, setDriversFeedback] = useState<string | null>(null)
 
   // Malware Scanner state
   const [malwareScanning, setMalwareScanning] = useState(false)
@@ -228,6 +242,51 @@ export function App() {
     }
   }
 
+  const fetchServices = async () => {
+    setLoadingServices(true)
+    try {
+      const list = await tauriApi.getServices()
+      setServicesList(list)
+    } catch (err) {
+      console.error('Services fetch error:', err)
+    } finally {
+      setLoadingServices(false)
+    }
+  }
+
+  const handleOptimizeService = async (svc: ServiceItemInfo) => {
+    try {
+      const newType = svc.start_type === 'Disabled' ? 'Automatic' : 'Disabled'
+      await tauriApi.setServiceStartMode(svc.name, newType)
+      setServicesFeedback(`Updated ${svc.name} start type to ${newType}`)
+      await fetchServices()
+    } catch (err) {
+      setServicesFeedback(`Service error: ${String(err)}`)
+    }
+  }
+
+  const fetchDrivers = async () => {
+    setLoadingDrivers(true)
+    try {
+      const list = await tauriApi.getDriverPackages()
+      setDriversList(list)
+    } catch (err) {
+      console.error('Driver fetch error:', err)
+    } finally {
+      setLoadingDrivers(false)
+    }
+  }
+
+  const handleDeleteDriver = async (publishedName: string) => {
+    try {
+      await tauriApi.deleteDriver(publishedName)
+      setDriversFeedback(`Deleted driver package ${publishedName}`)
+      await fetchDrivers()
+    } catch (err) {
+      setDriversFeedback(`Driver error: ${String(err)}`)
+    }
+  }
+
   const handleRunMalwareScan = async (type: string = 'quick') => {
     setMalwareScanning(true)
     setMalwareStatus(null)
@@ -300,7 +359,6 @@ export function App() {
       setPrivacyFeedback('All privacy shields successfully applied!')
       await fetchPrivacySettings()
     } catch (err) {
-      console.error('Batch protect failed:', err)
       setPrivacyFeedback(`Error applying all: ${String(err)}`)
     }
   }
@@ -390,20 +448,6 @@ export function App() {
             </button>
             <button
               onClick={() => {
-                setActiveTab('malware')
-                if (!malwareResult && !malwareScanning) handleRunMalwareScan('quick')
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
-                activeTab === 'malware'
-                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
-              }`}
-            >
-              <Bug className="w-4 h-4" />
-              Malware Scanner
-            </button>
-            <button
-              onClick={() => {
                 setActiveTab('startup')
                 if (startupItems.length === 0 && !loadingStartup) fetchStartupItems()
               }}
@@ -429,6 +473,48 @@ export function App() {
             >
               <PackageMinus className="w-4 h-4" />
               Debloater
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('services')
+                if (servicesList.length === 0 && !loadingServices) fetchServices()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'services'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Server className="w-4 h-4" />
+              Services Manager
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('drivers')
+                if (driversList.length === 0 && !loadingDrivers) fetchDrivers()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'drivers'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Wrench className="w-4 h-4" />
+              Driver Cleaner
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('malware')
+                if (!malwareResult && !malwareScanning) handleRunMalwareScan('quick')
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'malware'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Bug className="w-4 h-4" />
+              Malware Scanner
             </button>
             <button
               onClick={() => {
@@ -465,12 +551,16 @@ export function App() {
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'disk'
               ? 'Disk Space & Treemap Analyzer'
-              : activeTab === 'malware'
-              ? 'YARA & Heuristic Malware Scanner'
               : activeTab === 'startup'
               ? 'Windows Startup Programs'
               : activeTab === 'debloat'
               ? 'Windows OEM & Bloatware Removal'
+              : activeTab === 'services'
+              ? 'Windows Background Services'
+              : activeTab === 'drivers'
+              ? 'DriverStore & Obsolete Drivers Purge'
+              : activeTab === 'malware'
+              ? 'YARA & Heuristic Malware Scanner'
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
@@ -509,6 +599,24 @@ export function App() {
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${analyzingDisk ? 'animate-spin' : ''}`} />
                 Analyze Drive
+              </button>
+            ) : activeTab === 'services' ? (
+              <button
+                onClick={fetchServices}
+                disabled={loadingServices}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingServices ? 'animate-spin' : ''}`} />
+                Refresh Services
+              </button>
+            ) : activeTab === 'drivers' ? (
+              <button
+                onClick={fetchDrivers}
+                disabled={loadingDrivers}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingDrivers ? 'animate-spin' : ''}`} />
+                Scan Drivers
               </button>
             ) : activeTab === 'malware' ? (
               <button
@@ -922,6 +1030,113 @@ export function App() {
               </div>
             </div>
           </div>
+        ) : activeTab === 'services' ? (
+          /* Services Manager Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Windows Background Services ({servicesList.length})</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {servicesFeedback || 'Review background services and toggle telemetry/update services to save memory.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {servicesList.map((svc) => (
+                <div
+                  key={svc.name}
+                  className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                >
+                  <div className="space-y-1 truncate mr-4">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-sm font-semibold text-white truncate">{svc.display_name}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
+                        {svc.name}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          svc.status === 'Running'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-zinc-800 text-zinc-400'
+                        }`}
+                      >
+                        {svc.status}
+                      </span>
+                      {svc.recommendation === 'safe_to_disable' && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          Recommended to Disable
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400 truncate">{svc.description || 'No description available'}</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleOptimizeService(svc)}
+                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                      svc.start_type === 'Disabled'
+                        ? 'bg-zinc-800 text-zinc-400'
+                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    }`}
+                  >
+                    {svc.start_type}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : activeTab === 'drivers' ? (
+          /* Driver Cleaner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">DriverStore Packages ({driversList.length})</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {driversFeedback || 'Scan and remove obsolete OEM driver packages to reclaim gigabytes of storage.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {driversList.map((drv) => (
+                <div
+                  key={drv.id}
+                  className={`p-4 rounded-xl border flex justify-between items-center transition ${
+                    drv.is_superseded ? 'bg-[#16161a] border-amber-500/30' : 'bg-[#16161a] border-[#2a2a36]'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-sm font-semibold text-white">{drv.original_name}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
+                        {drv.published_name}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                        {drv.provider}
+                      </span>
+                      {drv.is_superseded && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          Superseded / Stale
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-500 font-mono">
+                      Class: {drv.class_name} • Version: {drv.version} • Date: {drv.date}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => handleDeleteDriver(drv.published_name)}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Purge
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : activeTab === 'malware' ? (
           /* Malware Scanner Page */
           <div className="p-8 max-w-6xl space-y-6">
@@ -970,7 +1185,6 @@ export function App() {
               </div>
             </div>
 
-            {/* Threat list breakdown */}
             <div className="space-y-3">
               {malwareResult && malwareResult.threats.length > 0 ? (
                 malwareResult.threats.map((threat) => {
