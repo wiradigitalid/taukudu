@@ -19,8 +19,8 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-08** | **System Tools: Services & Drivers** | Service Manager & DriverStore Purge + Pages | CIM/WMI service manager, pnputil driver cleaner, UI tabs | ✅ COMPLETED | 2026-08-26 |
 | **AREA-09** | **Uninstaller & Secure Shredder** | Clean Uninstaller + Multi-pass cryptographic file shredder | `zeroize`, `rand`, Uninstaller & Shredder UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-10** | **Performance Monitor** | Live CPU, RAM, Disk I/O, Network, Process Manager + Page | `sysinfo`, Performance Monitor UI | ✅ COMPLETED | 2026-08-26 |
-| **AREA-11** | **History & SQLite Store** | Audit trail & history logging + HistoryPage | `rusqlite` (SQLite 3) | ⏳ NEXT UP | — |
-| **AREA-12** | **Settings, i18n & Updates** | 30+ Bahasa (i18next), Theme Dark/Light, Auto-updater | `i18next`, Tauri updater plugin | ⬜ PENDING | — |
+| **AREA-11** | **History & SQLite Store** | Audit trail & history logging + HistoryPage | `rusqlite` (SQLite 3), `HistoryPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-12** | **Settings, i18n & Updates** | 30+ Bahasa (i18next), Theme Dark/Light, Auto-updater | `i18next`, Tauri updater plugin | ⏳ NEXT UP | — |
 | **AREA-13** | **CLI Mode & Headless** | Scriptable command-line interface (`taukudu clean --all`) | `clap` | ⬜ PENDING | — |
 
 ---
@@ -55,9 +55,12 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 - Program uninstaller dari registry dan DoD 5220.22-M multi-pass cryptographic file shredder.
 
 ### Area 10 — Hardware & Performance Monitor (Selesai: 2026-08-26)
+- Real-time CPU/RAM metrics, process manager, dan terminate process capability.
+
+### Area 11 — Cleaning History & SQLite Audit Store (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **Performance Monitor Engine (`src-tauri/src/perf_monitor.rs`):** Menggunakan `sysinfo` untuk membaca utilisasi global CPU real-time, memory load persentase, total/used memory, process count, uptime sistem, dan pemeringkatan top proses pemakan RAM/CPU.
-  2. **Process Management:** Fungsi terminasi proses aman (`kill_process` / `taskkill`).
-  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_performance_snapshot` dan `kill_perf_process`.
-  4. **Frontend UI (`src/App.tsx`):** Antarmuka *Performance Monitor* dengan kartu utilisasi CPU/RAM real-time, progress bar, daftar top 25 proses, dan tombol terminate per proses.
+  1. **SQLite Database Store (`src-tauri/src/history_store.rs`):** Menggunakan `rusqlite` untuk inisialisasi tabel audit permanen `history_records` (id, timestamp, action_type, space_saved, items_cleaned, duration, summary) yang thread-safe.
+  2. **Automated Session Logging:** Setiap eksekusi pembersihan di `clean_targets` otomatis mencatat hasil pembersihan ke database SQLite.
+  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_history_records` dan `clear_history_records`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka Cleaning History & Audit Trail dengan total statistik ruang yang dipulihkan dan rincian per sesi.
   5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

@@ -1,6 +1,7 @@
 pub mod cleaner;
 pub mod deduplication;
 pub mod disk_analyzer;
+pub mod history_store;
 pub mod malware_scanner;
 pub mod perf_monitor;
 pub mod privacy;
@@ -17,6 +18,7 @@ pub use deduplication::{
 pub use disk_analyzer::{
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskTreemapNode, FileTypeBreakdown,
 };
+pub use history_store::{HistoryRecord, HistoryStore, GLOBAL_HISTORY};
 pub use malware_scanner::{
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MalwareThreat, QuarantinedItem,
 };

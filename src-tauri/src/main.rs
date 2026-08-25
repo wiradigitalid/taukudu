@@ -6,10 +6,11 @@ use tauri::Manager;
 use taukudu_lib::{
     BloatwareApp, CleanExecutionResult, CleanerEngine, DeduplicationEngine, DiskAnalysisResult,
     DiskAnalyzerEngine, DiskDriveInfo, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
-    EmptyFolderScanResult, InstalledProgramInfo, LargeFileScanResult, MalwareActionResult,
-    MalwareScanResult, MalwareScannerEngine, PerfMonitorEngine, PerformanceSnapshot,
-    PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, ScanResult, ServiceDriverEngine,
-    ServiceItemInfo, ShredderResult, StartupDebloatEngine, StartupItem, UninstallerShredderEngine,
+    EmptyFolderScanResult, HistoryRecord, InstalledProgramInfo, LargeFileScanResult,
+    MalwareActionResult, MalwareScanResult, MalwareScannerEngine, PerfMonitorEngine,
+    PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, ScanResult,
+    ServiceDriverEngine, ServiceItemInfo, ShredderResult, StartupDebloatEngine, StartupItem,
+    UninstallerShredderEngine, GLOBAL_HISTORY,
 };
 
 #[tauri::command]
@@ -52,7 +53,23 @@ fn scan_cleaners(app_handle: tauri::AppHandle) -> ScanResult {
 
 #[tauri::command]
 fn clean_targets(paths: Vec<String>) -> CleanExecutionResult {
-    CleanerEngine::clean_files(&paths)
+    let res = CleanerEngine::clean_files(&paths);
+
+    // Save to history SQLite
+    if res.deleted_files > 0 {
+        let rec = HistoryRecord {
+            id: format!("clean-{}", chrono::Utc::now().timestamp_millis()),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            action_type: "cleaner".to_string(),
+            total_space_saved_bytes: res.deleted_bytes,
+            total_items_cleaned: res.deleted_files,
+            duration_ms: 100,
+            details_summary: format!("Cleaned {} temporary files", res.deleted_files),
+        };
+        let _ = GLOBAL_HISTORY.lock().unwrap().add_record(&rec);
+    }
+
+    res
 }
 
 #[tauri::command]
@@ -175,6 +192,24 @@ fn kill_perf_process(pid: u32) -> Result<(), String> {
     PerfMonitorEngine::kill_process(pid)
 }
 
+#[tauri::command]
+fn get_history_records() -> Vec<HistoryRecord> {
+    GLOBAL_HISTORY
+        .lock()
+        .unwrap()
+        .get_all_records()
+        .unwrap_or_default()
+}
+
+#[tauri::command]
+fn clear_history_records() -> Result<(), String> {
+    GLOBAL_HISTORY
+        .lock()
+        .unwrap()
+        .clear_all_records()
+        .map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -206,7 +241,9 @@ fn main() {
             uninstall_program,
             shred_files,
             get_performance_snapshot,
-            kill_perf_process
+            kill_perf_process,
+            get_history_records,
+            clear_history_records
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

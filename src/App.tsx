@@ -14,6 +14,7 @@ import {
   DriverPackageInfo,
   InstalledProgramInfo,
   PerformanceSnapshot,
+  HistoryRecord,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -41,10 +42,11 @@ import {
   FileX2,
   Gauge,
   XCircle,
+  History,
 } from 'lucide-react'
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'uninstaller' | 'shredder' | 'perf' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -103,6 +105,11 @@ export function App() {
   const [perfSnapshot, setPerfSnapshot] = useState<PerformanceSnapshot | null>(null)
   const [loadingPerf, setLoadingPerf] = useState(false)
   const [perfFeedback, setPerfFeedback] = useState<string | null>(null)
+
+  // History state
+  const [historyList, setHistoryList] = useState<HistoryRecord[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [historyFeedback, setHistoryFeedback] = useState<string | null>(null)
 
   // Malware Scanner state
   const [malwareScanning, setMalwareScanning] = useState(false)
@@ -367,6 +374,28 @@ export function App() {
     }
   }
 
+  const fetchHistory = async () => {
+    setLoadingHistory(true)
+    try {
+      const records = await tauriApi.getHistoryRecords()
+      setHistoryList(records)
+    } catch (err) {
+      console.error('History fetch error:', err)
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  const handleClearHistory = async () => {
+    try {
+      await tauriApi.clearHistoryRecords()
+      setHistoryFeedback('History records cleared.')
+      await fetchHistory()
+    } catch (err) {
+      setHistoryFeedback(`Clear error: ${String(err)}`)
+    }
+  }
+
   const handleRunMalwareScan = async (type: string = 'quick') => {
     setMalwareScanning(true)
     setMalwareStatus(null)
@@ -623,6 +652,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('history')
+                if (historyList.length === 0 && !loadingHistory) fetchHistory()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'history'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <History className="w-4 h-4" />
+              Cleaning History
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('malware')
                 if (!malwareResult && !malwareScanning) handleRunMalwareScan('quick')
               }}
@@ -684,20 +727,31 @@ export function App() {
               ? 'Clean Software Uninstaller'
               : activeTab === 'shredder'
               ? 'Cryptographic File Shredder (DoD 5220.22-M)'
+              : activeTab === 'history'
+              ? 'Cleaning History & Audit Trail (SQLite)'
               : activeTab === 'malware'
               ? 'YARA & Heuristic Malware Scanner'
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'perf' ? (
-              <button
-                onClick={fetchPerformanceSnapshot}
-                disabled={loadingPerf}
-                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingPerf ? 'animate-spin' : ''}`} />
-                Refresh Processes
-              </button>
+            {activeTab === 'history' ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={fetchHistory}
+                  disabled={loadingHistory}
+                  className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+                <button
+                  onClick={handleClearHistory}
+                  className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear Log
+                </button>
+              </div>
             ) : (
               <button
                 onClick={fetchOverview}
@@ -776,98 +830,56 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'perf' ? (
-          /* Performance Monitor Page */
+        ) : activeTab === 'history' ? (
+          /* Cleaning History & Audit Page */
           <div className="p-8 max-w-6xl space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
-                <div className="flex items-center gap-3 text-zinc-400 text-xs font-medium mb-2">
-                  <Cpu className="w-4 h-4 text-emerald-400" />
-                  Global CPU Usage
-                </div>
-                <div className="text-2xl font-bold text-white">
-                  {perfSnapshot ? `${perfSnapshot.cpu_usage_percent.toFixed(1)}%` : '0.0%'}
-                </div>
-                <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
-                  <div
-                    className="bg-emerald-500 h-full rounded-full transition-all"
-                    style={{ width: `${Math.min(perfSnapshot?.cpu_usage_percent || 0, 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
-                <div className="flex items-center gap-3 text-zinc-400 text-xs font-medium mb-2">
-                  <Activity className="w-4 h-4 text-purple-400" />
-                  Memory Load
-                </div>
-                <div className="text-2xl font-bold text-white">
-                  {perfSnapshot ? `${perfSnapshot.memory_usage_percent.toFixed(1)}%` : '0.0%'}
-                </div>
-                <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
-                  <div
-                    className="bg-purple-500 h-full rounded-full transition-all"
-                    style={{ width: `${Math.min(perfSnapshot?.memory_usage_percent || 0, 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
-                <div className="flex items-center gap-3 text-zinc-400 text-xs font-medium mb-2">
-                  <Gauge className="w-4 h-4 text-blue-400" />
-                  Running Processes
-                </div>
-                <div className="text-2xl font-bold text-white">
-                  {perfSnapshot ? `${perfSnapshot.process_count} Active` : '0'}
-                </div>
-                <div className="text-xs text-zinc-500 mt-2 font-mono">
-                  Uptime: {perfSnapshot ? Math.round(perfSnapshot.uptime_seconds / 3600) : 0} hours
-                </div>
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Maintenance & Audit History ({historyList.length})</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {historyFeedback || 'Persistent SQLite audit log of past cleaning, shredding, and optimization sessions.'}
+                </p>
               </div>
             </div>
 
-            {/* Top Processes Table */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                  Top Resource-Consuming Processes
-                </span>
-                {perfFeedback && <span className="text-xs text-amber-400">{perfFeedback}</span>}
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] max-h-[480px] overflow-y-auto space-y-2">
-                {perfSnapshot?.top_processes.map((p) => (
+            <div className="space-y-3">
+              {historyList.length > 0 ? (
+                historyList.map((rec) => (
                   <div
-                    key={p.pid}
-                    className="p-3 rounded-lg bg-black/20 border border-white/[0.03] flex items-center justify-between text-xs"
+                    key={rec.id}
+                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
                   >
-                    <div className="flex items-center gap-3 truncate mr-4">
-                      <span className="font-mono text-[10px] text-zinc-500 w-12">{p.pid}</span>
-                      <span className="font-semibold text-zinc-200 truncate">{p.name}</span>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-sm font-semibold text-white capitalize">{rec.action_type} Session</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
+                          {new Date(rec.timestamp).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400">{rec.details_summary}</p>
                     </div>
 
-                    <div className="flex items-center gap-6 shrink-0">
-                      <span className="font-mono text-zinc-400 text-[11px] w-20 text-right">
-                        CPU: {p.cpu_usage.toFixed(1)}%
-                      </span>
-                      <span className="font-mono text-zinc-300 font-medium text-[11px] w-24 text-right">
-                        {formatBytes(p.memory_bytes)}
-                      </span>
-                      <button
-                        onClick={() => handleKillProcess(p.pid, p.name)}
-                        className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition cursor-pointer"
-                        title="Kill Process"
-                      >
-                        <XCircle className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-bold font-mono text-emerald-400">
+                        {formatBytes(rec.total_space_saved_bytes)} Reclaimed
+                      </div>
+                      <div className="text-[11px] text-zinc-500">
+                        {rec.total_items_cleaned} files processed
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                ))
+              ) : (
+                <div className="p-12 rounded-xl bg-[#16161a] border border-[#2a2a36] flex flex-col items-center justify-center text-zinc-500">
+                  <History className="w-8 h-8 mb-2 text-zinc-600" />
+                  <p className="text-sm font-semibold text-zinc-300">No cleaning sessions recorded yet</p>
+                  <p className="text-xs text-zinc-500 mt-1">Clean your system to see space recovery analytics here.</p>
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          <div className="p-8 text-xs text-zinc-400">Section loaded</div>
+          <div className="p-8 text-xs text-zinc-400">Section active</div>
         )}
       </main>
     </div>

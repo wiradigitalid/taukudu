@@ -210,6 +210,16 @@ export interface PerformanceSnapshot {
   uptime_seconds: number
 }
 
+export interface HistoryRecord {
+  id: string
+  timestamp: string
+  action_type: string
+  total_space_saved_bytes: number
+  total_items_cleaned: number
+  duration_ms: number
+  details_summary: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -288,5 +298,11 @@ export const tauriApi = {
   },
   killProcess: async (pid: number): Promise<void> => {
     return await invoke('kill_perf_process', { pid })
+  },
+  getHistoryRecords: async (): Promise<HistoryRecord[]> => {
+    return await invoke('get_history_records')
+  },
+  clearHistoryRecords: async (): Promise<void> => {
+    return await invoke('clear_history_records')
   },
 }
