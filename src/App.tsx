@@ -57,6 +57,7 @@ import {
   LogStats,
   EmptyFolderScanResult,
   LargeFileScanResult,
+  AppReleaseInfo,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -133,6 +134,8 @@ export function App() {
   const [appSettings, setAppSettings] = useState<AppSettings | null>(null)
   const [newExclusion, setNewExclusion] = useState('')
   const [settingsFeedback, setSettingsFeedback] = useState<string | null>(null)
+  const [appReleaseInfo, setAppReleaseInfo] = useState<AppReleaseInfo | null>(null)
+  const [checkingAppRelease, setCheckingAppRelease] = useState(false)
 
   // Cleaner state
   const [scanning, setScanning] = useState(false)
@@ -1383,6 +1386,19 @@ export function App() {
       setSettingsFeedback(`Removed exclusion: ${path}`)
     } catch (err) {
       setSettingsFeedback(`Remove exclusion error: ${String(err)}`)
+    }
+  }
+
+  const handleCheckAppUpdate = async () => {
+    setCheckingAppRelease(true)
+    try {
+      const info = await tauriApi.checkAppUpdates()
+      setAppReleaseInfo(info)
+      setSettingsFeedback(info.is_update_available ? `Update available: v${info.latest_version}` : `TauKudu is up to date (v${info.current_version})`)
+    } catch (err) {
+      setSettingsFeedback(`Check update error: ${String(err)}`)
+    } finally {
+      setCheckingAppRelease(false)
     }
   }
 
@@ -3728,6 +3744,24 @@ export function App() {
                   TauKudu guarantees 100% offline local execution. Zero telemetry, zero analytics tracking, and zero data uploads by default. All scanning, registry fixes, and audit trails remain strictly on your local machine.
                 </p>
               </div>
+            </div>
+
+            {/* Open Source Links */}
+            <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div className="space-y-0.5">
+                <span className="text-sm font-semibold text-white">Release & Update Center</span>
+                <p className="text-xs text-zinc-500">
+                  {appReleaseInfo ? `Latest version: v${appReleaseInfo.latest_version} (Checked: ${appReleaseInfo.checked_at.slice(0, 10)})` : 'Official release builds verified via GitHub release signatures.'}
+                </p>
+              </div>
+              <button
+                onClick={handleCheckAppUpdate}
+                disabled={checkingAppRelease}
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${checkingAppRelease ? 'animate-spin' : ''}`} />
+                {checkingAppRelease ? 'Checking...' : 'Check for Updates'}
+              </button>
             </div>
 
             {/* Open Source Links */}

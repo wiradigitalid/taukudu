@@ -51,10 +51,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-40** | **Malware Scanner UI & Threat Isolation** | Interactive Quick/Full scan UI, detection cards, quarantine and purge actions | `MalwareScannerEngine`, Malware Scanner Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-41** | **Empty Folders & Large File Hunter UI** | Dedicated scanning & purge views for 0-byte directories and oversized files | `DeduplicationEngine`, Empty & Large File UI tabs | ✅ COMPLETED | 2026-08-26 |
 | **AREA-42** | **Full System Navigation & Feature Unification** | Unified multi-view sidebar covering all 35+ native system tools & engines | `src/App.tsx` navigation & view router | ✅ COMPLETED | 2026-08-26 |
+| **AREA-43** | **Official Release & Update Verifier** | Native release version metadata & GitHub release tag verifier | `AppUpdaterEngine`, About & Settings UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 43 — Official Release & Update Verifier (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **App Updater Engine (`src-tauri/src/app_updater.rs`):** Pemeriksaan metadata versi rilis aplikasi aktif (`env!("CARGO_PKG_VERSION")`) dan verifikasi pembaruan rilis terverifikasi (`check_for_updates`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_app_version` dan `check_app_updates`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `AppReleaseInfo`, serta method `tauriApi.getAppVersion` dan `tauriApi.checkAppUpdates`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan kartu *Release & Update Center* pada tab *About TauKudu* lengkap dengan tombol interaktif *Check for Updates*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 42 — Full System Navigation & Feature Unification (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

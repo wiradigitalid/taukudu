@@ -6,7 +6,8 @@ use std::env;
 use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
-    handle_cli_mode, ActiveConnectionInfo, AppLoggerEngine, BloatwareApp, BreachMonitorSummary,
+    handle_cli_mode, ActiveConnectionInfo, AppLoggerEngine, AppReleaseInfo, AppUpdaterEngine,
+    BloatwareApp, BreachMonitorSummary,
     BrowserCacheScanSummary, BrowserProfileCacheTarget, ChromiumCacheEngine,
     CleanExecutionResult, CleanerBlockersEngine, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
     ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DeduplicationEngine,
@@ -614,6 +615,16 @@ fn clear_app_logs() -> Result<(), String> {
     GLOBAL_APP_LOGGER.clear()
 }
 
+#[tauri::command]
+fn get_app_version() -> String {
+    AppUpdaterEngine::get_current_version()
+}
+
+#[tauri::command]
+fn check_app_updates() -> AppReleaseInfo {
+    AppUpdaterEngine::check_for_updates()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -723,7 +734,9 @@ fn main() {
             write_app_log,
             query_app_logs,
             get_app_log_stats,
-            clear_app_logs
+            clear_app_logs,
+            get_app_version,
+            check_app_updates
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

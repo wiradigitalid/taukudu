@@ -711,6 +711,17 @@ export interface LogStats {
   warn_count: number
 }
 
+export interface AppReleaseInfo {
+  current_version: string
+  latest_version: string
+  is_update_available: boolean
+  release_name: string
+  release_notes: string
+  published_at: string
+  download_url: string
+  checked_at: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -1007,5 +1018,11 @@ export const tauriApi = {
   },
   clearAppLogs: async (): Promise<void> => {
     return await invoke('clear_app_logs')
+  },
+  getAppVersion: async (): Promise<string> => {
+    return await invoke('get_app_version')
+  },
+  checkAppUpdates: async (): Promise<AppReleaseInfo> => {
+    return await invoke('check_app_updates')
   },
 }
