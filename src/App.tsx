@@ -22,6 +22,7 @@ import {
   GameOptimizationItem,
   TrimDriveStatus,
   DiskRepairOutput,
+  ContextMenuEntryInfo,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -57,15 +58,15 @@ import {
   Wifi,
   Database,
   Gamepad2,
-  ShieldCheck,
   Hammer,
+  MousePointerClick,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'game' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -99,6 +100,11 @@ export function App() {
   const [trimFeedback, setTrimFeedback] = useState<string | null>(null)
   const [runningRepair, setRunningRepair] = useState<string | null>(null)
   const [repairResults, setRepairResults] = useState<Record<string, DiskRepairOutput>>({})
+
+  // Context Menu state
+  const [ctxEntries, setCtxEntries] = useState<ContextMenuEntryInfo[]>([])
+  const [loadingCtx, setLoadingCtx] = useState(false)
+  const [ctxFeedback, setCtxFeedback] = useState<string | null>(null)
 
   // Game Mode state
   const [gameStatus, setGameStatus] = useState<GameModeStatus | null>(null)
@@ -322,6 +328,28 @@ export function App() {
       console.error('CHKDSK error:', err)
     } finally {
       setRunningRepair(null)
+    }
+  }
+
+  const fetchContextMenu = async () => {
+    setLoadingCtx(true)
+    try {
+      const res = await tauriApi.getContextMenuEntries()
+      setCtxEntries(res.entries)
+    } catch (err) {
+      console.error('Context menu fetch error:', err)
+    } finally {
+      setLoadingCtx(false)
+    }
+  }
+
+  const handleToggleContextMenu = async (item: ContextMenuEntryInfo) => {
+    try {
+      await tauriApi.toggleContextMenuEntry(item.key_path, !item.is_enabled)
+      setCtxFeedback(`Updated context menu state for ${item.name}`)
+      await fetchContextMenu()
+    } catch (err) {
+      setCtxFeedback(`Context menu error: ${String(err)}`)
     }
   }
 
@@ -784,6 +812,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('contextmenu')
+                if (ctxEntries.length === 0 && !loadingCtx) fetchContextMenu()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'contextmenu'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <MousePointerClick className="w-4 h-4" />
+              Context Menu
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('game')
                 if (!gameStatus) fetchGameMode()
               }}
@@ -995,6 +1037,8 @@ export function App() {
               ? 'Disk Space & Treemap Analyzer'
               : activeTab === 'repair'
               ? 'SSD TRIM & Filesystem Integrity Repair'
+              : activeTab === 'contextmenu'
+              ? 'Explorer Right-Click Context Menu Manager'
               : activeTab === 'game'
               ? 'Game Mode Latency & Power Optimization'
               : activeTab === 'registry'
@@ -1024,13 +1068,14 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'repair' ? (
+            {activeTab === 'contextmenu' ? (
               <button
-                onClick={fetchTrimInfo}
+                onClick={fetchContextMenu}
+                disabled={loadingCtx}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Refresh Disks
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingCtx ? 'animate-spin' : ''}`} />
+                Refresh Entries
               </button>
             ) : (
               <button
@@ -1110,95 +1155,49 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'repair' ? (
-          /* Disk Maintenance & Repair Page */
+        ) : activeTab === 'contextmenu' ? (
+          /* Context Menu Cleaner Page */
           <div className="p-8 max-w-6xl space-y-6">
-            {/* TRIM Section */}
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-white">SSD Storage TRIM Optimization</h2>
+                <h2 className="text-lg font-bold text-white">Explorer Right-Click Context Menu ({ctxEntries.length})</h2>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {trimFeedback || 'Send ReTrim command to SSDs and NVMe drives to reclaim erased flash blocks.'}
+                  {ctxFeedback || 'Disable cluttering shell extensions and third-party context menu handlers.'}
                 </p>
               </div>
-              <button
-                onClick={() => handleRunTrim('C')}
-                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition cursor-pointer"
-              >
-                TRIM System Drive (C:)
-              </button>
             </div>
 
-            {/* System File & Disk Integrity Tools */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {/* SFC Tool */}
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3 flex flex-col justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm font-semibold text-white">System File Checker (SFC)</span>
-                  </div>
-                  <p className="text-xs text-zinc-400">Verifies integrity of protected Windows OS system binaries.</p>
-                </div>
-                {repairResults.sfc && (
-                  <div className="text-[11px] p-2 rounded bg-black/30 text-zinc-300 font-mono">
-                    {repairResults.sfc.summary}
-                  </div>
-                )}
-                <button
-                  onClick={handleRunSfc}
-                  disabled={runningRepair === 'sfc'}
-                  className="w-full py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-white transition cursor-pointer"
+            <div className="space-y-3">
+              {ctxEntries.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
                 >
-                  {runningRepair === 'sfc' ? 'Verifying Files...' : 'Run SFC Check'}
-                </button>
-              </div>
+                  <div className="space-y-1 truncate mr-4">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-sm font-semibold text-white truncate">{item.name}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                        {item.source}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
+                        {item.scope} ({item.hive})
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 font-mono truncate">{item.key_path}</p>
+                  </div>
 
-              {/* DISM Tool */}
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3 flex flex-col justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Database className="w-4 h-4 text-purple-400" />
-                    <span className="text-sm font-semibold text-white">DISM Component Store</span>
-                  </div>
-                  <p className="text-xs text-zinc-400">Checks Windows component store health and repairability.</p>
+                  <button
+                    onClick={() => handleToggleContextMenu(item)}
+                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                      item.is_enabled
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-zinc-800 text-zinc-400'
+                    }`}
+                  >
+                    {item.is_enabled ? 'Enabled' : 'Disabled'}
+                  </button>
                 </div>
-                {repairResults.dism && (
-                  <div className="text-[11px] p-2 rounded bg-black/30 text-zinc-300 font-mono">
-                    {repairResults.dism.summary}
-                  </div>
-                )}
-                <button
-                  onClick={handleRunDism}
-                  disabled={runningRepair === 'dism'}
-                  className="w-full py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-white transition cursor-pointer"
-                >
-                  {runningRepair === 'dism' ? 'Checking Store...' : 'Run DISM Health Check'}
-                </button>
-              </div>
-
-              {/* CHKDSK Tool */}
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3 flex flex-col justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <HardDrive className="w-4 h-4 text-emerald-400" />
-                    <span className="text-sm font-semibold text-white">CHKDSK Volume Scan</span>
-                  </div>
-                  <p className="text-xs text-zinc-400">Scans volume filesystem metadata for corrupt sectors.</p>
-                </div>
-                {repairResults.chkdsk && (
-                  <div className="text-[11px] p-2 rounded bg-black/30 text-zinc-300 font-mono">
-                    {repairResults.chkdsk.summary}
-                  </div>
-                )}
-                <button
-                  onClick={() => handleRunChkdsk('C')}
-                  disabled={runningRepair === 'chkdsk'}
-                  className="w-full py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-white transition cursor-pointer"
-                >
-                  {runningRepair === 'chkdsk' ? 'Scanning Volume...' : 'Run CHKDSK Scan'}
-                </button>
-              </div>
+              ))}
             </div>
           </div>
         ) : (

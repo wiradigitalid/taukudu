@@ -289,6 +289,22 @@ export interface DiskRepairOutput {
   summary: string
 }
 
+export interface ContextMenuEntryInfo {
+  id: string
+  name: string
+  hive: string
+  scope: string
+  key_path: string
+  command: string
+  source: string
+  is_enabled: boolean
+}
+
+export interface ContextMenuScanResult {
+  entries: ContextMenuEntryInfo[]
+  total_found: number
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -418,5 +434,11 @@ export const tauriApi = {
   },
   runChkdskScan: async (drive_letter: string): Promise<DiskRepairOutput> => {
     return await invoke('run_chkdsk_scan', { driveLetter: drive_letter })
+  },
+  getContextMenuEntries: async (): Promise<ContextMenuScanResult> => {
+    return await invoke('get_context_menu_entries')
+  },
+  toggleContextMenuEntry: async (key_path: string, enable: boolean): Promise<void> => {
+    return await invoke('toggle_context_menu_entry', { keyPath: key_path, enable })
   },
 }

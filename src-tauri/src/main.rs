@@ -7,16 +7,16 @@ use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
     handle_cli_mode, ActiveConnectionInfo, BloatwareApp, CleanExecutionResult, CleanerEngine,
-    CliArgs, DeduplicationEngine, DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo,
-    DiskMaintenanceEngine, DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions,
-    DuplicateScanResult, EmptyFolderScanResult, GameModeEngine, GameModeStatus,
-    GameOptimizationItem, HistoryRecord, InstalledProgramInfo, LargeFileScanResult,
-    MalwareActionResult, MalwareScanResult, MalwareScannerEngine, NetworkItemInfo,
-    NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot, PrivacyApplyResult,
-    PrivacyShieldEngine, PrivacyShieldState, RegistryCleanerEngine, RegistryFixResult,
-    RegistryIssue, RegistryScanResult, ScanResult, ServiceDriverEngine, ServiceItemInfo,
-    ShredderResult, StartupDebloatEngine, StartupItem, TrimDriveStatus, UninstallerShredderEngine,
-    GLOBAL_HISTORY,
+    CliArgs, ContextMenuEngine, ContextMenuEntryInfo, ContextMenuScanResult, DeduplicationEngine,
+    DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
+    DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
+    EmptyFolderScanResult, GameModeEngine, GameModeStatus, GameOptimizationItem, HistoryRecord,
+    InstalledProgramInfo, LargeFileScanResult, MalwareActionResult, MalwareScanResult,
+    MalwareScannerEngine, NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine,
+    PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState,
+    RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult,
+    ServiceDriverEngine, ServiceItemInfo, ShredderResult, StartupDebloatEngine, StartupItem,
+    TrimDriveStatus, UninstallerShredderEngine, GLOBAL_HISTORY,
 };
 
 #[tauri::command]
@@ -295,6 +295,16 @@ fn run_chkdsk_scan(drive_letter: String) -> Result<DiskRepairOutput, String> {
     DiskMaintenanceEngine::run_chkdsk(&drive_letter)
 }
 
+#[tauri::command]
+fn get_context_menu_entries() -> ContextMenuScanResult {
+    ContextMenuEngine::scan_entries()
+}
+
+#[tauri::command]
+fn toggle_context_menu_entry(key_path: String, enable: bool) -> Result<(), String> {
+    ContextMenuEngine::toggle_entry(&key_path, enable)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -352,7 +362,9 @@ fn main() {
             run_disk_trim,
             run_sfc_scan,
             run_dism_scan,
-            run_chkdsk_scan
+            run_chkdsk_scan,
+            get_context_menu_entries,
+            toggle_context_menu_entry
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
