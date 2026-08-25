@@ -9,7 +9,7 @@ updated: "2026-08-24"
 
 ## Executive Summary
 
-TauKudu adalah aplikasi pembersih sistem, deduplikasi, dan pemindaian disk berkinerja tinggi lintas platform (Windows, macOS, Linux) yang gratis dan *open source* (MIT). TauKudu berfokus utama pada kecepatan pembersihan sampah sistem yang mendalam (**BleachBit**), algoritma deduplikasi & analisis file canggih (**Czkawka**), serta mesin penelusuran disk berkecepatan tinggi (**ripgrep**), dengan tetap mengadopsi fitur keamanan dasar (pemindai YARA) dan kontrol privasi OS bawaan dari **Kudu** secara *as-is*.
+TauKudu adalah aplikasi pembersih sistem, deduplikasi, dan pemindaian disk berkinerja tinggi lintas platform (Windows, macOS, Linux) yang gratis dan *open source* (MIT). TauKudu berfokus utama pada kecepatan pembersihan sampah sistem yang mendalam ([BleachBit](https://github.com/bleachbit/bleachbit)), algoritma deduplikasi & analisis file canggih ([Czkawka](https://github.com/qarmin/czkawka)), serta mesin penelusuran disk berkecepatan tinggi ([ripgrep](https://github.com/burntsushi/ripgrep)), dengan tetap mengadopsi fitur keamanan dasar (pemindai YARA) dan kontrol privasi OS bawaan dari [Kudu](https://github.com/adventdevinc/kudu) secara *as-is*.
 
 Kategori *PC cleaner* telah lama rusak oleh perangkat lunak *closed-source* yang penuh iklan, *bloatware*, dan model langganan agresif. TauKudu hadir sebagai utilitas perawatan sistem yang transparan, dapat diaudit kodenya, dan bekerja lokal secara *default*. Fokus utamanya adalah membebaskan ruang disk secara masif dan instan tanpa membebani memori dan CPU komputer pengguna.
 
@@ -24,16 +24,16 @@ Pengguna komputer pribadi dihadapkan pada masalah ruang penyimpanan dan penuruna
 ## The Solution
 
 TauKudu menyatukan fondasi performa tinggi dan utilitas perawatan lengkap:
-- **Pembersihan Residu Sistem Mendalam (Adopsi BleachBit & Kudu)**: Pembersihan menyeluruh untuk *cache* sistem, *browser*, aplikasi pihak ketiga, *game launcher*, sisa *uninstaller*, *registry* (Windows), serta *database vacuuming* berbasis aturan deklaratif JSON/XML yang mudah diperluas komunitas tanpa kompilasi kode.
-- **Deduplikasi & Analisis Disk Canggih (Adopsi Czkawka)**: Algoritma pencarian file duplikat (via *multi-stage hashing* cepat), file serupa, direktori kosong, file besar, dan *broken symlinks* dengan performa mendekati *native*.
-- **Mesin Penelusuran Cepat (Adopsi ripgrep)**: Pemanfaatan algoritma *parallel directory traversal* dan *regex matching* ala *ripgrep* untuk pemindaian jalur file, log, dan artefak disk secara instan tanpa mengunci antarmuka.
-- **Fitur Keamanan & Privasi Bawaan (Adopsi As-Is Kudu)**: Mengadopsi modul bawaan Kudu untuk pemindai malware *on-demand* berbasis YARA-X, penghapusan aman (*secure file shredder*), dan *Privacy Shield* untuk pengaturan privasi/telemetri Windows dasar tanpa perluasan cakupan berlebih.
+- **Pembersihan Residu Sistem Mendalam (Adopsi [BleachBit](https://github.com/bleachbit/bleachbit) & [Kudu](https://github.com/adventdevinc/kudu))**: Pembersihan menyeluruh untuk *cache* sistem, *browser*, aplikasi pihak ketiga, *game launcher*, sisa *uninstaller*, *registry* (Windows), serta *database vacuuming* berbasis aturan deklaratif JSON/XML yang mudah diperluas komunitas tanpa kompilasi kode.
+- **Deduplikasi & Analisis Disk Canggih (Adopsi [Czkawka](https://github.com/qarmin/czkawka))**: Algoritma pencarian file duplikat (via *multi-stage hashing* cepat), file serupa, direktori kosong, file besar, dan *broken symlinks* dengan performa mendekati *native*.
+- **Mesin Penelusuran Cepat (Adopsi [ripgrep](https://github.com/burntsushi/ripgrep))**: Pemanfaatan algoritma *parallel directory traversal* dan *regex matching* ala *ripgrep* untuk pemindaian jalur file, log, dan artefak disk secara instan tanpa mengunci antarmuka.
+- **Fitur Keamanan & Privasi Bawaan (Adopsi As-Is [Kudu](https://github.com/adventdevinc/kudu))**: Mengadopsi modul bawaan Kudu untuk pemindai malware *on-demand* berbasis YARA-X, penghapusan aman (*secure file shredder*), dan *Privacy Shield* untuk pengaturan privasi/telemetri Windows dasar tanpa perluasan cakupan berlebih.
 - **Antarmuka Desktop & CLI Skrip**: GUI modern yang responsif dan mode CLI *headless* penuh untuk integrasi otomasi/admin IT.
 
 ## What Makes This Different
 
-- **Fokus Utama Performa & Ruang Disk**: Menyatukan pembersihan mendalam (BleachBit), deduplikasi efisien (Czkawka), dan *traversal engine* super cepat (ripgrep) dalam satu antarmuka terpadu.
-- **Keamanan & Privasi Praktis Tanpa Bloat**: Fitur pemindai malware YARA dan kontrol privasi OS disertakan dari basis Kudu sebagai pelengkap praktis tanpa beban proses latar belakang (*resident background process*).
+- **Fokus Utama Performa & Ruang Disk**: Menyatukan pembersihan mendalam ([BleachBit](https://github.com/bleachbit/bleachbit)), deduplikasi efisien ([Czkawka](https://github.com/qarmin/czkawka)), dan *traversal engine* super cepat ([ripgrep](https://github.com/burntsushi/ripgrep)) dalam satu antarmuka terpadu.
+- **Keamanan & Privasi Praktis Tanpa Bloat**: Fitur pemindai malware YARA dan kontrol privasi OS disertakan dari basis [Kudu](https://github.com/adventdevinc/kudu) sebagai pelengkap praktis tanpa beban proses latar belakang (*resident background process*).
 - **Transparan & Lokal Penuh**: Lisensi MIT, tanpa iklan, tanpa telemetri default, dan seluruh operasi destruktif dapat ditinjau sebelum dieksekusi.
 - **Katalog Aturan Komunitas Rendah Hambatan**: Aturan pembersihan didefinisikan secara deklaratif dalam JSON yang dapat divalidasi skema otomatis di CI.
 
