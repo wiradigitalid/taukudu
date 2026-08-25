@@ -44,10 +44,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-33** | **Persistent App Settings & Exclusions** | Complete JSON store for cleaner safeguards, backup paths & exclusions | `SettingsStoreEngine`, SettingsPage UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-34** | **Prometheus OpenMetrics Exporter** | Standardized observability telemetry exporter for hardware & cleaning stats | `MetricsEngine`, MetricsPage UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-35** | **Window State & Geometry Manager** | Frameless window bounds persistence, display reachability sanitization | `WindowStateEngine`, Tauri IPC window restore | ✅ COMPLETED | 2026-08-26 |
+| **AREA-36** | **Security Posture & Compliance Collector** | Antivirus WMI detection, BitLocker encryption, Hotfix audit & admin elevation | `SecurityPostureEngine`, Dashboard security card UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 36 — Security Posture & Compliance Collector (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Security Posture Engine (`src-tauri/src/security_posture.rs`):** Deteksi status antivirus terdaftar melalui WMI `root/SecurityCenter2/AntiVirusProduct` (status real-time protection, signature update), evaluasi enkripsi disk BitLocker (`Get-BitLockerVolume`), audit 5 hotfix patch Windows terbaru (`Get-HotFix`), serta validasi hak akses Administrator (`net session`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `collect_security_posture` dan `check_is_admin`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `AntivirusProductInfo`, `BitlockerVolumeInfo`, `HotfixPatchInfo`, `SecurityPostureSummary`, serta method `tauriApi.collectSecurityPosture` dan `tauriApi.checkIsAdmin`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan kartu metrik *Security Posture* pada Dashboard utama lengkap dengan nama antivirus aktif dan indikator hak akses Administrator.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 35 — Window State & Geometry Management (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

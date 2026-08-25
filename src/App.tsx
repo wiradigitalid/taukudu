@@ -50,6 +50,7 @@ import {
   CleanerConfig,
   PrometheusMetricsSummary,
   MetricLine,
+  SecurityPostureSummary,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -287,8 +288,9 @@ export function App() {
   const [selectedThreatPaths, setSelectedThreatPaths] = useState<Set<string>>(new Set())
   const [malwareStatus, setMalwareStatus] = useState<string | null>(null)
 
-  // Privacy Shield state
+  // Privacy Shield & Security Posture state
   const [privacyState, setPrivacyState] = useState<PrivacyShieldState | null>(null)
+  const [securityPosture, setSecurityPosture] = useState<SecurityPostureSummary | null>(null)
   const [loadingPrivacy, setLoadingPrivacy] = useState(false)
   const [privacyFeedback, setPrivacyFeedback] = useState<string | null>(null)
 
@@ -297,6 +299,8 @@ export function App() {
     try {
       const data = await tauriApi.getSystemOverview()
       setOverview(data)
+      const posture = await tauriApi.collectSecurityPosture()
+      setSecurityPosture(posture)
     } catch (err) {
       console.error('Failed to load system overview from Rust:', err)
     } finally {
@@ -1913,43 +1917,56 @@ export function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
-                <div className="flex items-center gap-3 text-zinc-400 text-xs font-medium mb-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium mb-2">
                   <HardDrive className="w-4 h-4 text-blue-400" />
                   Operating System
                 </div>
-                <div className="text-lg font-bold text-white">
+                <div className="text-base font-bold text-white truncate">
                   {overview?.os_name || 'Loading...'}
                 </div>
-                <div className="text-xs text-zinc-500 mt-1">
-                  Build: {overview?.os_version || 'N/A'} ({overview?.host_name})
+                <div className="text-[11px] text-zinc-500 mt-1">
+                  Build: {overview?.os_version || 'N/A'}
                 </div>
               </div>
 
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
-                <div className="flex items-center gap-3 text-zinc-400 text-xs font-medium mb-3">
+              <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium mb-2">
                   <Cpu className="w-4 h-4 text-emerald-400" />
                   CPU Cores
                 </div>
-                <div className="text-lg font-bold text-white">
+                <div className="text-base font-bold text-white">
                   {overview?.cpu_count ? `${overview.cpu_count} Logical Cores` : 'Loading...'}
                 </div>
-                <div className="text-xs text-zinc-500 mt-1">
+                <div className="text-[11px] text-zinc-500 mt-1">
                   Parallel Rayon Traversal Ready
                 </div>
               </div>
 
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
-                <div className="flex items-center gap-3 text-zinc-400 text-xs font-medium mb-3">
+              <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium mb-2">
                   <Activity className="w-4 h-4 text-purple-400" />
                   Physical Memory
                 </div>
-                <div className="text-lg font-bold text-white">
+                <div className="text-base font-bold text-white">
                   {overview ? `${formatBytes(overview.used_memory_bytes)} / ${formatBytes(overview.total_memory_bytes)}` : 'Loading...'}
                 </div>
-                <div className="text-xs text-zinc-500 mt-1">
+                <div className="text-[11px] text-zinc-500 mt-1">
                   Usage: {overview ? Math.round((overview.used_memory_bytes / overview.total_memory_bytes) * 100) : 0}% Active
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium mb-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-400" />
+                  Security Posture
+                </div>
+                <div className="text-base font-bold text-white truncate">
+                  {securityPosture?.primary_antivirus || (securityPosture?.is_elevated_admin ? 'Elevated Admin' : 'Active Protected')}
+                </div>
+                <div className="text-[11px] text-zinc-500 mt-1">
+                  {securityPosture?.is_elevated_admin ? 'Admin Privilege: YES' : 'Standard User Mode'}
                 </div>
               </div>
             </div>

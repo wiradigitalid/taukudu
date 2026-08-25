@@ -23,7 +23,7 @@ use taukudu_lib::{
     RecycleBinDriveStat, RecycleBinEngine, RecycleBinSummary, RegistryCleanerEngine,
     RegistryFixResult, RegistryIssue, RegistryScanResult, RestorePointEngine,
     RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
-    ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
+    ScheduleSummary, SecurityPostureEngine, SecurityPostureSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
     AppSettings, CleanerConfig, SettingsStoreEngine,
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatMonitorEngine,
     ThreatMonitorSummary, TrimDriveStatus, TrimHistoryStore, TrimHistorySummary, TrimRecord,
@@ -563,6 +563,16 @@ fn save_window_state(state: WindowGeometryState) -> WindowGeometryState {
     GLOBAL_WINDOW_STATE.save_window_state(state)
 }
 
+#[tauri::command]
+fn collect_security_posture() -> SecurityPostureSummary {
+    SecurityPostureEngine::collect_security_posture()
+}
+
+#[tauri::command]
+fn check_is_admin() -> bool {
+    SecurityPostureEngine::is_admin()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -662,7 +672,9 @@ fn main() {
             remove_exclusion_path,
             collect_prometheus_metrics,
             get_window_state,
-            save_window_state
+            save_window_state,
+            collect_security_posture,
+            check_is_admin
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

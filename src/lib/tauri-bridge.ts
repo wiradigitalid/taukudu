@@ -621,6 +621,39 @@ export interface WindowGeometryState {
   is_maximized: boolean
 }
 
+export interface AntivirusProductInfo {
+  name: string
+  is_enabled: boolean
+  real_time_protection: boolean
+  signatures_up_to_date: boolean
+}
+
+export interface BitlockerVolumeInfo {
+  mount_point: string
+  volume_status: string
+  protection_on: boolean
+}
+
+export interface HotfixPatchInfo {
+  hotfix_id: string
+  description: string
+  installed_on: string
+}
+
+export interface SecurityPostureSummary {
+  is_elevated_admin: boolean
+  antivirus_products: AntivirusProductInfo[]
+  primary_antivirus?: string | null
+  bitlocker_volumes: BitlockerVolumeInfo[]
+  recent_hotfixes: HotfixPatchInfo[]
+  last_patch_date?: string | null
+  days_since_last_patch?: number | null
+  firewall_enabled: boolean
+  screen_lock_enabled: boolean
+  password_complexity_required: boolean
+  windows_hello_enrolled: boolean
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -881,5 +914,11 @@ export const tauriApi = {
   },
   saveWindowState: async (state: WindowGeometryState): Promise<WindowGeometryState> => {
     return await invoke('save_window_state', { state })
+  },
+  collectSecurityPosture: async (): Promise<SecurityPostureSummary> => {
+    return await invoke('collect_security_posture')
+  },
+  checkIsAdmin: async (): Promise<boolean> => {
+    return await invoke('check_is_admin')
   },
 }

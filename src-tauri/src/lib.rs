@@ -24,6 +24,7 @@ pub mod registry_cleaner;
 pub mod restore_point;
 pub mod rules;
 pub mod scheduler;
+pub mod security_posture;
 pub mod service_driver;
 pub mod settings_store;
 pub mod software_updater;
@@ -78,6 +79,10 @@ pub use restore_point::{
     RestorePointEngine, RestorePointItem, RestorePointResult, RestorePointSummary,
 };
 pub use scheduler::{ScheduleEngine, ScheduleItem, ScheduleSummary, GLOBAL_SCHEDULER};
+pub use security_posture::{
+    AntivirusProductInfo, BitlockerVolumeInfo, HotfixPatchInfo, SecurityPostureEngine,
+    SecurityPostureSummary,
+};
 pub use service_driver::{DriverPackageInfo, ServiceDriverEngine, ServiceItemInfo};
 pub use settings_store::{
     AppSettings, CleanerConfig, SettingsStoreEngine, GLOBAL_SETTINGS,
