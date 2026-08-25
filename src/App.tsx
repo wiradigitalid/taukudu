@@ -44,6 +44,8 @@ import {
   DeletePathProbeResult,
   GranularDeletedFileEntry,
   DeletionLogStats,
+  TrimHistorySummary,
+  TrimRecord,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -170,6 +172,7 @@ export function App() {
 
   // Disk Maintenance & Repair state
   const [trimDrives, setTrimDrives] = useState<TrimDriveStatus[]>([])
+  const [trimHistory, setTrimHistory] = useState<TrimHistorySummary | null>(null)
   const [trimFeedback, setTrimFeedback] = useState<string | null>(null)
   const [runningRepair, setRunningRepair] = useState<string | null>(null)
   const [repairResults, setRepairResults] = useState<Record<string, DiskRepairOutput>>({})
@@ -561,6 +564,8 @@ export function App() {
     try {
       const data = await tauriApi.getTrimInfo()
       setTrimDrives(data)
+      const hist = await tauriApi.getTrimHistorySummary()
+      setTrimHistory(hist)
     } catch (err) {
       console.error('TRIM error:', err)
     }

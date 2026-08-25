@@ -25,9 +25,10 @@ use taukudu_lib::{
     RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
     ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatMonitorEngine,
-    ThreatMonitorSummary, TrimDriveStatus, UninstallerShredderEngine, UpdateExecutionResult,
+    ThreatMonitorSummary, TrimDriveStatus, TrimHistoryStore, TrimHistorySummary, TrimRecord,
+    UninstallerShredderEngine, UpdateExecutionResult,
     GLOBAL_BREACH_MONITOR, GLOBAL_DELETION_LOGGER, GLOBAL_GAME_MODE, GLOBAL_HISTORY,
-    GLOBAL_SCHEDULER, GLOBAL_THREAT_MONITOR,
+    GLOBAL_SCHEDULER, GLOBAL_THREAT_MONITOR, GLOBAL_TRIM_HISTORY,
 };
 
 #[tauri::command]
@@ -333,7 +334,21 @@ fn get_trim_info() -> Vec<TrimDriveStatus> {
 
 #[tauri::command]
 fn run_disk_trim(drive_letter: String) -> Result<String, String> {
-    DiskMaintenanceEngine::execute_trim(&drive_letter)
+    let res = DiskMaintenanceEngine::execute_trim(&drive_letter);
+    if res.is_ok() {
+        GLOBAL_TRIM_HISTORY.record_trim(&drive_letter);
+    }
+    res
+}
+
+#[tauri::command]
+fn get_trim_history_summary() -> TrimHistorySummary {
+    GLOBAL_TRIM_HISTORY.get_summary()
+}
+
+#[tauri::command]
+fn is_drive_trim_throttled(drive_letter: String) -> bool {
+    GLOBAL_TRIM_HISTORY.is_throttled(&drive_letter)
 }
 
 #[tauri::command]
@@ -572,6 +587,8 @@ fn main() {
             get_custom_game_processes,
             get_trim_info,
             run_disk_trim,
+            get_trim_history_summary,
+            is_drive_trim_throttled,
             run_sfc_scan,
             run_dism_scan,
             run_chkdsk_scan,

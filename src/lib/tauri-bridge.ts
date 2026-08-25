@@ -297,6 +297,18 @@ export interface TrimDriveStatus {
   last_status: string
 }
 
+export interface TrimRecord {
+  drive_letter: string
+  timestamp_secs: number
+  date_formatted: string
+  is_throttled: boolean
+}
+
+export interface TrimHistorySummary {
+  records: TrimRecord[]
+  total_trimmed_drives: number
+}
+
 export interface DiskRepairOutput {
   tool: string
   success: boolean
@@ -703,6 +715,12 @@ export const tauriApi = {
   },
   runDiskTrim: async (drive_letter: string): Promise<string> => {
     return await invoke('run_disk_trim', { driveLetter: drive_letter })
+  },
+  getTrimHistorySummary: async (): Promise<TrimHistorySummary> => {
+    return await invoke('get_trim_history_summary')
+  },
+  isDriveTrimThrottled: async (drive_letter: string): Promise<boolean> => {
+    return await invoke('is_drive_trim_throttled', { driveLetter: drive_letter })
   },
   runSfcScan: async (): Promise<DiskRepairOutput> => {
     return await invoke('run_sfc_scan')

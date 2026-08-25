@@ -40,10 +40,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-29** | **Chromium & Gecko Multi-Profile Caches** | Shared shader/Vulkan caches & multi-profile cache discovery | `ChromiumCacheEngine`, `BrowserCachesPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-30** | **Windows Delete Access & Lock Probe** | Non-destructive Win32 CreateFileW sharing violation & permission probe | `DeleteFailureProbeEngine`, System Cleaner Probe UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-31** | **Granular Deletion Audit Ledger** | JSONL append-only audit trail with rotation & keyword search | `DeletionLoggerEngine`, HistoryPage ledger view | ✅ COMPLETED | 2026-08-26 |
+| **AREA-32** | **SSD ReTrim History & 24h Throttle** | Per-drive TRIM timestamp persistence & frequency safety guard | `TrimHistoryStore`, Disk Maintenance TRIM view | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 32 — SSD ReTrim History & 24h Throttle Guard (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Trim History Engine (`src-tauri/src/trim_history.rs`):** Penyimpanan riwayat waktu eksekusi TRIM per-drive dalam persistent JSON file (`%LOCALAPPDATA%/TauKudu/trim_history.json`). Mengimplementasikan *24-hour throttling guard* untuk mencegah wear/keausan berlebihan pada kontroler NAND SSD akibat pemanggilan ReTrim berulang.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_trim_history_summary` dan `is_drive_trim_throttled`, serta otomatisasi pencatatan timestamp saat `run_disk_trim` berhasil dieksekusi.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `TrimRecord`, `TrimHistorySummary`, serta method `tauriApi.getTrimHistorySummary` dan `tauriApi.isDriveTrimThrottled`.
+  4. **Frontend UI (`src/App.tsx`):** Menghubungkan pembaharuan data riwayat TRIM pada tab *Disk Maintenance*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 31 — Granular File Deletion Audit Ledger (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
