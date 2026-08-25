@@ -112,6 +112,7 @@ import {
   Info,
   ExternalLink,
   Terminal,
+  Search,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
@@ -1964,6 +1965,14 @@ export function App() {
                 <RefreshCw className="w-3.5 h-3.5" />
                 Refresh Schedules
               </button>
+            ) : activeTab === 'malware' ? (
+              <button
+                onClick={() => handleRunMalwareScan('quick')}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Rescan Malware
+              </button>
             ) : activeTab === 'breach' ? (
               <button
                 onClick={fetchBreaches}
@@ -3318,6 +3327,107 @@ export function App() {
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
+          </div>
+        ) : activeTab === 'malware' ? (
+          /* Malware Scanner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Heuristic Malware & Threat Scanner ({malwareResult?.threats.length || 0} Detections)
+                  </h2>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                    (malwareResult?.threats.length || 0) > 0
+                      ? 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse'
+                      : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {(malwareResult?.threats.length || 0) > 0 ? 'Threats Found' : 'System Secure'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {malwareStatus || `Scanned ${malwareResult?.files_scanned || 0} critical binaries & persistence hooks in ${malwareResult?.duration_ms || 0}ms.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleRunMalwareScan('quick')}
+                  disabled={malwareScanning}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${malwareScanning ? 'animate-spin' : ''}`} />
+                  {malwareScanning ? 'Scanning...' : 'Quick Scan'}
+                </button>
+                <button
+                  onClick={() => handleRunMalwareScan('full')}
+                  disabled={malwareScanning}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  Full System Scan
+                </button>
+                <button
+                  onClick={handleQuarantineThreats}
+                  disabled={selectedThreatPaths.size === 0}
+                  className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 font-semibold text-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  Quarantine Selected ({selectedThreatPaths.size})
+                </button>
+                <button
+                  onClick={handleDeleteThreats}
+                  disabled={selectedThreatPaths.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Permanently
+                </button>
+              </div>
+            </div>
+
+            {/* Threats List */}
+            {malwareResult && malwareResult.threats.length > 0 ? (
+              <div className="space-y-3">
+                {malwareResult.threats.map((threat) => (
+                  <div
+                    key={threat.id}
+                    className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedThreatPaths.has(threat.path)}
+                        onChange={(e) => {
+                          const next = new Set(selectedThreatPaths)
+                          if (e.target.checked) next.add(threat.path)
+                          else next.delete(threat.path)
+                          setSelectedThreatPaths(next)
+                        }}
+                        className="rounded border-zinc-700 text-red-500 focus:ring-red-500 cursor-pointer"
+                      />
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-sm font-bold text-red-400">{threat.detection_name}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-red-500/20 text-red-300">
+                            {threat.severity}
+                          </span>
+                          <span className="text-xs font-mono text-zinc-400">({formatBytes(threat.size)})</span>
+                        </div>
+                        <p className="text-xs text-zinc-300 font-mono">{threat.path}</p>
+                        <p className="text-[11px] text-zinc-400">{threat.details}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {malwareScanning ? 'Inspecting memory locations and critical system executables...' : 'No masquerading system binaries or deceptive executables detected.'}
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="p-8 text-xs text-zinc-400">Section active</div>

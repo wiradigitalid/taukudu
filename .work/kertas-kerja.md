@@ -48,10 +48,16 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-37** | **Threat Intelligence Blacklist Store** | Persistent JSON store for C2 CIDRs, Tor exit nodes, and malicious domains | `ThreatBlacklistStore`, Threat Monitor tab UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-38** | **About & Open Source Identity** | App metadata, architectural concepts, zero-telemetry guarantee, license & repo links | `AboutPage` view in `App.tsx` | ✅ COMPLETED | 2026-08-26 |
 | **AREA-39** | **Diagnostic & Activity App Logger** | Local file logging with 5MB auto-rotation, level filters & viewer | `AppLoggerEngine`, Diagnostic Logs tab UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-40** | **Malware Scanner UI & Threat Isolation** | Interactive Quick/Full scan UI, detection cards, quarantine and purge actions | `MalwareScannerEngine`, Malware Scanner Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 40 — Malware Scanner UI & Threat Isolation Integration (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Frontend Malware Scanner UI (`src/App.tsx`):** Integrasi antarmuka *Malware Scanner* interaktif lengkap dengan trigger Quick Scan (Downloads, Desktop, Startup, User Temp) & Full System Scan, kartu deteksi ancaman dengan badge severity (Critical, High, Medium, Low), detail rule heurisik, checkbox seleksi, aksi karantina massal (*Quarantine Selected* ke folder isolasi terenkripsi/aman), dan aksi pembersihan permanen (*Delete Permanently*).
+  2. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 39 — Application Diagnostic & Activity Logging (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
