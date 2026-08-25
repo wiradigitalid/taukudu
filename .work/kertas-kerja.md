@@ -23,14 +23,15 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-12** | **Settings, i18n & Updates** | 30+ Bahasa (i18next), Theme Dark/Light, Auto-updater | `i18next`, Dark/Light switch, Settings UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-13** | **CLI Mode & Headless** | Scriptable command-line interface (`taukudu clean --all`) | `clap`, subcommands `clean`, `duplicates`, `malware`, `privacy` | ✅ COMPLETED | 2026-08-26 |
 | **AREA-14** | **Network & Socket Optimizer** | DNS cache flush, ARP table purge, Winsock reset, Netstat monitoring | Native Win32 CLI / Netstat, `NetworkPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-15** | **Windows Registry Orphan Fixer**| Shared DLLs, App Paths, MUI Cache scanning & repair | `winreg`, `RegistryCleanerPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
 
-### Area 14 — Network & TCP/IP Socket Optimizer (Selesai: 2026-08-26)
+### Area 15 — Windows Registry Orphan Cleaner (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **Network Engine (`src-tauri/src/network_tools.rs`):** Utilitas flushing cache DNS resolver (`ipconfig /flushdns`), pembersihan tabel ARP protocol (`netsh interface ip delete arpcache`), reset Winsock TCP/IP stack (`netsh winsock reset`), dan inspeksi koneksi aktif (`netstat -ano -p tcp`).
-  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_network_cleanup_items`, `flush_dns_cache`, `flush_arp_cache`, `reset_tcp_stack`, dan `get_active_connections`.
-  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Network Optimizer* dengan tombol flushing instan dan tabel daftar koneksi TCP aktif.
+  1. **Registry Cleaner Engine (`src-tauri/src/registry_cleaner.rs`):** Menggunakan `winreg` untuk memindai: (a) Shared DLLs yang hilang dari disk di `HKLM\...\SharedDLLs`, (b) Invalid App Paths executable di `HKLM\...\App Paths`, dan (c) Stale MUI Cache entries di `HKCU\...\MuiCache`.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_registry_issues` dan `fix_registry_targets`.
+  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Registry Fixer* dengan daftar issue, target file path yang rusak, deskripsi error, dan tombol *Fix Selected*.
   4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

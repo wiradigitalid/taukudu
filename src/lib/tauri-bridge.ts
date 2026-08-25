@@ -236,6 +236,28 @@ export interface ActiveConnectionInfo {
   pid: number
 }
 
+export interface RegistryIssue {
+  id: string
+  category: string
+  key_path: string
+  value_name: string
+  issue_description: string
+  target_file: string
+  is_selected: boolean
+}
+
+export interface RegistryScanResult {
+  issues: RegistryIssue[]
+  total_found: number
+  duration_ms: number
+}
+
+export interface RegistryFixResult {
+  fixed_count: number
+  failed_count: number
+  errors: string[]
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -335,5 +357,11 @@ export const tauriApi = {
   },
   getActiveConnections: async (): Promise<ActiveConnectionInfo[]> => {
     return await invoke('get_active_connections')
+  },
+  scanRegistryIssues: async (): Promise<RegistryScanResult> => {
+    return await invoke('scan_registry_issues')
+  },
+  fixRegistryTargets: async (targets: [string, string][]): Promise<RegistryFixResult> => {
+    return await invoke('fix_registry_targets', { targets })
   },
 }

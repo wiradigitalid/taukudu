@@ -7,6 +7,7 @@ pub mod malware_scanner;
 pub mod network_tools;
 pub mod perf_monitor;
 pub mod privacy;
+pub mod registry_cleaner;
 pub mod rules;
 pub mod service_driver;
 pub mod startup_debloat;
@@ -28,6 +29,7 @@ pub use malware_scanner::{
 pub use network_tools::{ActiveConnectionInfo, NetworkItemInfo, NetworkToolsEngine};
 pub use perf_monitor::{PerfMonitorEngine, PerformanceSnapshot, ProcessItem};
 pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};
+pub use registry_cleaner::{RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult};
 pub use service_driver::{DriverPackageInfo, ServiceDriverEngine, ServiceItemInfo};
 pub use startup_debloat::{BloatwareApp, StartupDebloatEngine, StartupItem};
 pub use uninstaller_shredder::{

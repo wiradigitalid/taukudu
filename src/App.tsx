@@ -17,6 +17,7 @@ import {
   HistoryRecord,
   NetworkItemInfo,
   ActiveConnectionInfo,
+  RegistryIssue,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -50,13 +51,14 @@ import {
   Moon,
   Sun,
   Wifi,
+  Database,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -84,6 +86,13 @@ export function App() {
   const [selectedDrivePath, setSelectedDrivePath] = useState<string>('D:\\')
   const [analyzingDisk, setAnalyzingDisk] = useState(false)
   const [diskAnalysis, setDiskAnalysis] = useState<DiskAnalysisResult | null>(null)
+
+  // Registry state
+  const [registryIssues, setRegistryIssues] = useState<RegistryIssue[]>([])
+  const [selectedRegistryIds, setSelectedRegistryIds] = useState<Set<string>>(new Set())
+  const [scanningRegistry, setScanningRegistry] = useState(false)
+  const [fixingRegistry, setFixingRegistry] = useState(false)
+  const [registryFeedback, setRegistryFeedback] = useState<string | null>(null)
 
   // Startup state
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
@@ -240,6 +249,41 @@ export function App() {
       console.error('Disk analysis error:', err)
     } finally {
       setAnalyzingDisk(false)
+    }
+  }
+
+  const handleScanRegistry = async () => {
+    setScanningRegistry(true)
+    setRegistryFeedback(null)
+    setSelectedRegistryIds(new Set())
+    try {
+      const res = await tauriApi.scanRegistryIssues()
+      setRegistryIssues(res.issues)
+      const ids = new Set(res.issues.map((i) => i.id))
+      setSelectedRegistryIds(ids)
+      setRegistryFeedback(`Found ${res.total_found} registry issues in ${res.duration_ms}ms`)
+    } catch (err) {
+      setRegistryFeedback(`Registry scan error: ${String(err)}`)
+    } finally {
+      setScanningRegistry(false)
+    }
+  }
+
+  const handleFixSelectedRegistry = async () => {
+    if (selectedRegistryIds.size === 0) return
+    setFixingRegistry(true)
+    try {
+      const targets: [string, string][] = registryIssues
+        .filter((i) => selectedRegistryIds.has(i.id))
+        .map((i) => [i.key_path, i.value_name])
+
+      const res = await tauriApi.fixRegistryTargets(targets)
+      setRegistryFeedback(`Fixed ${res.fixed_count} registry entries successfully.`)
+      await handleScanRegistry()
+    } catch (err) {
+      setRegistryFeedback(`Fix registry error: ${String(err)}`)
+    } finally {
+      setFixingRegistry(false)
     }
   }
 
@@ -629,6 +673,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('registry')
+                if (registryIssues.length === 0 && !scanningRegistry) handleScanRegistry()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'registry'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Database className="w-4 h-4" />
+              Registry Fixer
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('network')
                 if (networkItems.length === 0) fetchNetwork()
               }}
@@ -810,6 +868,8 @@ export function App() {
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'disk'
               ? 'Disk Space & Treemap Analyzer'
+              : activeTab === 'registry'
+              ? 'Windows Registry Orphan Cleaner'
               : activeTab === 'network'
               ? 'Network Cache & TCP/IP Stack Optimizer'
               : activeTab === 'perf'
@@ -835,21 +895,32 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'network' ? (
-              <button
-                onClick={fetchNetwork}
-                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Refresh Network
-              </button>
+            {activeTab === 'registry' ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={handleScanRegistry}
+                  disabled={scanningRegistry || fixingRegistry}
+                  className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanningRegistry ? 'animate-spin' : ''}`} />
+                  Scan Registry
+                </button>
+                <button
+                  onClick={handleFixSelectedRegistry}
+                  disabled={scanningRegistry || fixingRegistry || selectedRegistryIds.size === 0}
+                  className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-black font-semibold transition cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Fix Selected ({selectedRegistryIds.size})
+                </button>
+              </div>
             ) : (
               <button
                 onClick={fetchOverview}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                Refresh Stats
+                Refresh
               </button>
             )}
           </div>
@@ -921,58 +992,62 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'network' ? (
-          /* Network Optimizer Page */
+        ) : activeTab === 'registry' ? (
+          /* Registry Fixer Page */
           <div className="p-8 max-w-6xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-white">Network Cache & TCP/IP Optimization</h2>
+                <h2 className="text-lg font-bold text-white">Windows Registry Orphan Fixer</h2>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {networkFeedback || 'Flush DNS/ARP caches and reset corrupted network sockets to restore full connection speed.'}
+                  {registryFeedback || 'Scan and safely purge broken Shared DLL references, invalid App Paths, and stale MUI cache keys.'}
                 </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleFlushDns}
-                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition cursor-pointer"
-                >
-                  Flush DNS Cache
-                </button>
-                <button
-                  onClick={handleFlushArp}
-                  className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-200 text-xs font-semibold transition cursor-pointer"
-                >
-                  Flush ARP
-                </button>
-                <button
-                  onClick={handleResetWinsock}
-                  className="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 text-xs font-semibold transition cursor-pointer"
-                >
-                  Reset Winsock
-                </button>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
-                Active Established TCP Connections ({activeConns.length})
-              </div>
-              <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] max-h-[450px] overflow-y-auto space-y-2">
-                {activeConns.slice(0, 30).map((c, i) => (
-                  <div
-                    key={i}
-                    className="p-2.5 rounded-lg bg-black/20 border border-white/[0.03] flex items-center justify-between text-xs font-mono"
-                  >
-                    <span className="text-zinc-300 w-48 truncate">{c.local_address}</span>
-                    <span className="text-zinc-500">→</span>
-                    <span className="text-amber-400 w-48 truncate">{c.foreign_address}</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      {c.state}
-                    </span>
-                    <span className="text-zinc-400 text-[11px]">PID {c.pid}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="space-y-3">
+              {registryIssues.length > 0 ? (
+                registryIssues.map((issue) => {
+                  const isSelected = selectedRegistryIds.has(issue.id)
+                  return (
+                    <div
+                      key={issue.id}
+                      className={`p-4 rounded-xl border transition flex justify-between items-start ${
+                        isSelected ? 'bg-amber-500/10 border-amber-500/30' : 'bg-[#16161a] border-[#2a2a36]'
+                      }`}
+                    >
+                      <label className="flex items-start gap-3 cursor-pointer mr-4">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const next = new Set(selectedRegistryIds)
+                            if (e.target.checked) next.add(issue.id)
+                            else next.delete(issue.id)
+                            setSelectedRegistryIds(next)
+                          }}
+                          className="mt-1 rounded border-zinc-700 text-amber-500 focus:ring-0 cursor-pointer"
+                        />
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-white">{issue.target_file}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 uppercase font-mono">
+                              {issue.category}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-500 font-mono">{issue.key_path}</p>
+                          <p className="text-xs text-amber-400/80">{issue.issue_description}</p>
+                        </div>
+                      </label>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="p-12 rounded-xl bg-[#16161a] border border-[#2a2a36] flex flex-col items-center justify-center text-zinc-500">
+                  <CheckCircle2 className="w-8 h-8 mb-2 text-zinc-600" />
+                  <p className="text-sm font-semibold text-zinc-300">No orphaned registry issues found</p>
+                  <p className="text-xs text-zinc-500 mt-1">Your Windows registry configuration is clean and valid.</p>
+                </div>
+              )}
             </div>
           </div>
         ) : (

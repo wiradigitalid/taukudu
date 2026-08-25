@@ -12,7 +12,8 @@ use taukudu_lib::{
     HistoryRecord, InstalledProgramInfo, LargeFileScanResult, MalwareActionResult,
     MalwareScanResult, MalwareScannerEngine, NetworkItemInfo, NetworkToolsEngine,
     PerfMonitorEngine, PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine,
-    PrivacyShieldState, ScanResult, ServiceDriverEngine, ServiceItemInfo, ShredderResult,
+    PrivacyShieldState, RegistryCleanerEngine, RegistryFixResult, RegistryIssue,
+    RegistryScanResult, ScanResult, ServiceDriverEngine, ServiceItemInfo, ShredderResult,
     StartupDebloatEngine, StartupItem, UninstallerShredderEngine, GLOBAL_HISTORY,
 };
 
@@ -238,6 +239,16 @@ fn get_active_connections() -> Vec<ActiveConnectionInfo> {
     NetworkToolsEngine::list_active_connections()
 }
 
+#[tauri::command]
+fn scan_registry_issues() -> RegistryScanResult {
+    RegistryCleanerEngine::scan_registry()
+}
+
+#[tauri::command]
+fn fix_registry_targets(targets: Vec<(String, String)>) -> RegistryFixResult {
+    RegistryCleanerEngine::fix_registry_issues(&targets)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -285,7 +296,9 @@ fn main() {
             flush_dns_cache,
             flush_arp_cache,
             reset_tcp_stack,
-            get_active_connections
+            get_active_connections,
+            scan_registry_issues,
+            fix_registry_targets
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
