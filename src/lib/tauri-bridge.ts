@@ -654,6 +654,23 @@ export interface SecurityPostureSummary {
   windows_hello_enrolled: boolean
 }
 
+export interface ThreatBlacklistData {
+  version: string
+  updated_at: string
+  domains: string[]
+  ips: string[]
+  cidrs: string[]
+}
+
+export interface ThreatBlacklistSummary {
+  version: string
+  updated_at: string
+  total_domains: number
+  total_ips: number
+  total_cidrs: number
+  file_path: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -920,5 +937,17 @@ export const tauriApi = {
   },
   checkIsAdmin: async (): Promise<boolean> => {
     return await invoke('check_is_admin')
+  },
+  getThreatBlacklistSummary: async (): Promise<ThreatBlacklistSummary> => {
+    return await invoke('get_threat_blacklist_summary')
+  },
+  getThreatBlacklistData: async (): Promise<ThreatBlacklistData> => {
+    return await invoke('get_threat_blacklist_data')
+  },
+  updateThreatBlacklistData: async (data: ThreatBlacklistData): Promise<ThreatBlacklistSummary> => {
+    return await invoke('update_threat_blacklist_data', { data })
+  },
+  addThreatBlacklistDomain: async (domain: string): Promise<ThreatBlacklistSummary> => {
+    return await invoke('add_threat_blacklist_domain', { domain })
   },
 }

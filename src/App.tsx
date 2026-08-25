@@ -51,6 +51,8 @@ import {
   PrometheusMetricsSummary,
   MetricLine,
   SecurityPostureSummary,
+  ThreatBlacklistSummary,
+  ThreatBlacklistData,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -146,10 +148,12 @@ export function App() {
 
   // Threat Monitor state
   const [threatSummary, setThreatSummary] = useState<ThreatMonitorSummary | null>(null)
+  const [threatBlacklistSummary, setThreatBlacklistSummary] = useState<ThreatBlacklistSummary | null>(null)
   const [loadingThreats, setLoadingThreats] = useState(false)
   const [threatFeedback, setThreatFeedback] = useState<string | null>(null)
   const [newBlacklistCidr, setNewBlacklistCidr] = useState('')
   const [newBlacklistCat, setNewBlacklistCat] = useState('Suspicious Staging')
+  const [newBlacklistDomain, setNewBlacklistDomain] = useState('')
 
   // Duplicates state
   const [dupDir, setDupDir] = useState<string>('D:\\Developer\\wiradigital.id\\taukudu')
@@ -406,6 +410,8 @@ export function App() {
     try {
       const res = await tauriApi.auditActiveThreats()
       setThreatSummary(res)
+      const blSummary = await tauriApi.getThreatBlacklistSummary()
+      setThreatBlacklistSummary(blSummary)
     } catch (err) {
       console.error('Audit threats error:', err)
     } finally {
@@ -422,6 +428,18 @@ export function App() {
       await fetchThreats()
     } catch (err) {
       setThreatFeedback(`Add CIDR error: ${String(err)}`)
+    }
+  }
+
+  const handleAddBlacklistDomain = async () => {
+    if (!newBlacklistDomain) return
+    try {
+      const sum = await tauriApi.addThreatBlacklistDomain(newBlacklistDomain)
+      setThreatBlacklistSummary(sum)
+      setNewBlacklistDomain('')
+      setThreatFeedback(`Added ${newBlacklistDomain} to monitored blacklist.`)
+    } catch (err) {
+      setThreatFeedback(`Add domain error: ${String(err)}`)
     }
   }
 

@@ -29,6 +29,7 @@ pub mod service_driver;
 pub mod settings_store;
 pub mod software_updater;
 pub mod startup_debloat;
+pub mod threat_blacklist;
 pub mod threat_monitor;
 pub mod trim_history;
 pub mod uninstaller_shredder;
@@ -89,6 +90,9 @@ pub use settings_store::{
 };
 pub use software_updater::{SoftwareUpdateSummary, SoftwareUpdaterEngine, UpdatablePackage, UpdateExecutionResult};
 pub use startup_debloat::{BloatwareApp, StartupDebloatEngine, StartupItem};
+pub use threat_blacklist::{
+    ThreatBlacklistData, ThreatBlacklistStore, ThreatBlacklistSummary, GLOBAL_THREAT_BLACKLIST,
+};
 pub use threat_monitor::{
     FlaggedConnection, ThreatMonitorEngine, ThreatMonitorSummary, GLOBAL_THREAT_MONITOR,
 };

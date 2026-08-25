@@ -45,10 +45,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-34** | **Prometheus OpenMetrics Exporter** | Standardized observability telemetry exporter for hardware & cleaning stats | `MetricsEngine`, MetricsPage UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-35** | **Window State & Geometry Manager** | Frameless window bounds persistence, display reachability sanitization | `WindowStateEngine`, Tauri IPC window restore | ✅ COMPLETED | 2026-08-26 |
 | **AREA-36** | **Security Posture & Compliance Collector** | Antivirus WMI detection, BitLocker encryption, Hotfix audit & admin elevation | `SecurityPostureEngine`, Dashboard security card UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-37** | **Threat Intelligence Blacklist Store** | Persistent JSON store for C2 CIDRs, Tor exit nodes, and malicious domains | `ThreatBlacklistStore`, Threat Monitor tab UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 37 — Threat Intelligence Blacklist Store (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Threat Blacklist Store (`src-tauri/src/threat_blacklist.rs`):** Penyimpanan database blacklist intelijen ancaman secara persisten (`%LOCALAPPDATA%/TauKudu/threat_blacklist.json`) mencakup daftar domain berbahaya, IP publik mencurigakan, dan subnet CIDR C2/Tor. Menyediakan fungsi mutasi, penambahan domain kustom, validasi batas array (maks 500k entri), dan query metadata.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_threat_blacklist_summary`, `get_threat_blacklist_data`, `update_threat_blacklist_data`, dan `add_threat_blacklist_domain`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `ThreatBlacklistData`, `ThreatBlacklistSummary`, serta method `tauriApi.getThreatBlacklistSummary`, `tauriApi.getThreatBlacklistData`, `tauriApi.updateThreatBlacklistData`, dan `tauriApi.addThreatBlacklistDomain`.
+  4. **Frontend UI (`src/App.tsx`):** Menghubungkan pembaharuan data intelijen ancaman pada tab *Live Threat Monitor*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 36 — Security Posture & Compliance Collector (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

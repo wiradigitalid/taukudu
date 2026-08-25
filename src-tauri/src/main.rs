@@ -25,12 +25,13 @@ use taukudu_lib::{
     RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
     ScheduleSummary, SecurityPostureEngine, SecurityPostureSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
     AppSettings, CleanerConfig, SettingsStoreEngine,
-    SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatMonitorEngine,
+    SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatBlacklistData,
+    ThreatBlacklistStore, ThreatBlacklistSummary, ThreatMonitorEngine,
     ThreatMonitorSummary, TrimDriveStatus, TrimHistoryStore, TrimHistorySummary, TrimRecord,
     UninstallerShredderEngine, UpdateExecutionResult, WindowGeometryState, WindowStateEngine,
     GLOBAL_BREACH_MONITOR, GLOBAL_DELETION_LOGGER, GLOBAL_GAME_MODE, GLOBAL_HISTORY,
-    GLOBAL_SCHEDULER, GLOBAL_SETTINGS, GLOBAL_THREAT_MONITOR, GLOBAL_TRIM_HISTORY,
-    GLOBAL_WINDOW_STATE,
+    GLOBAL_SCHEDULER, GLOBAL_SETTINGS, GLOBAL_THREAT_BLACKLIST, GLOBAL_THREAT_MONITOR,
+    GLOBAL_TRIM_HISTORY, GLOBAL_WINDOW_STATE,
 };
 
 #[tauri::command]
@@ -573,6 +574,26 @@ fn check_is_admin() -> bool {
     SecurityPostureEngine::is_admin()
 }
 
+#[tauri::command]
+fn get_threat_blacklist_summary() -> ThreatBlacklistSummary {
+    GLOBAL_THREAT_BLACKLIST.get_summary()
+}
+
+#[tauri::command]
+fn get_threat_blacklist_data() -> ThreatBlacklistData {
+    GLOBAL_THREAT_BLACKLIST.get_data()
+}
+
+#[tauri::command]
+fn update_threat_blacklist_data(data: ThreatBlacklistData) -> Result<ThreatBlacklistSummary, String> {
+    GLOBAL_THREAT_BLACKLIST.update_data(data)
+}
+
+#[tauri::command]
+fn add_threat_blacklist_domain(domain: String) -> ThreatBlacklistSummary {
+    GLOBAL_THREAT_BLACKLIST.add_threat_domain(domain)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -674,7 +695,11 @@ fn main() {
             get_window_state,
             save_window_state,
             collect_security_posture,
-            check_is_admin
+            check_is_admin,
+            get_threat_blacklist_summary,
+            get_threat_blacklist_data,
+            update_threat_blacklist_data,
+            add_threat_blacklist_domain
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
