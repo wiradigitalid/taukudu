@@ -16,8 +16,9 @@ use taukudu_lib::{
     MalwareScannerEngine, NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine,
     PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState,
     RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult,
-    ServiceDriverEngine, ServiceItemInfo, ShredderResult, StartupDebloatEngine, StartupItem,
-    TrimDriveStatus, UninstallerShredderEngine, GLOBAL_HISTORY,
+    ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
+    SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, TrimDriveStatus,
+    UninstallerShredderEngine, UpdateExecutionResult, GLOBAL_HISTORY,
 };
 
 #[tauri::command]
@@ -321,6 +322,21 @@ fn scan_cves() -> CveScanSummary {
     CveScannerEngine::scan_system_vulnerabilities()
 }
 
+#[tauri::command]
+fn check_software_updates() -> SoftwareUpdateSummary {
+    SoftwareUpdaterEngine::check_updates()
+}
+
+#[tauri::command]
+fn upgrade_software_package(package_id: String) -> Result<UpdateExecutionResult, String> {
+    SoftwareUpdaterEngine::upgrade_package(&package_id)
+}
+
+#[tauri::command]
+fn upgrade_all_software_packages() -> Result<UpdateExecutionResult, String> {
+    SoftwareUpdaterEngine::upgrade_all_packages()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -383,7 +399,10 @@ fn main() {
             toggle_context_menu_entry,
             audit_firewall,
             toggle_firewall_rule,
-            scan_cves
+            scan_cves,
+            check_software_updates,
+            upgrade_software_package,
+            upgrade_all_software_packages
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

@@ -15,6 +15,7 @@ pub mod privacy;
 pub mod registry_cleaner;
 pub mod rules;
 pub mod service_driver;
+pub mod software_updater;
 pub mod startup_debloat;
 pub mod uninstaller_shredder;
 
@@ -41,6 +42,7 @@ pub use perf_monitor::{PerfMonitorEngine, PerformanceSnapshot, ProcessItem};
 pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};
 pub use registry_cleaner::{RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult};
 pub use service_driver::{DriverPackageInfo, ServiceDriverEngine, ServiceItemInfo};
+pub use software_updater::{SoftwareUpdateSummary, SoftwareUpdaterEngine, UpdatablePackage, UpdateExecutionResult};
 pub use startup_debloat::{BloatwareApp, StartupDebloatEngine, StartupItem};
 pub use uninstaller_shredder::{
     InstalledProgramInfo, ShredderResult, UninstallerShredderEngine,

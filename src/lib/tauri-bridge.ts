@@ -345,6 +345,29 @@ export interface CveScanSummary {
   high_count: number
 }
 
+export interface UpdatablePackage {
+  id: string
+  name: string
+  current_version: string
+  available_version: string
+  source: string
+  severity: string
+}
+
+export interface SoftwareUpdateSummary {
+  packages: UpdatablePackage[]
+  total_outdated: number
+  major_count: number
+  manager_name: string
+  is_manager_available: boolean
+}
+
+export interface UpdateExecutionResult {
+  success: boolean
+  updated_count: number
+  output: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -489,5 +512,14 @@ export const tauriApi = {
   },
   scanCves: async (): Promise<CveScanSummary> => {
     return await invoke('scan_cves')
+  },
+  checkSoftwareUpdates: async (): Promise<SoftwareUpdateSummary> => {
+    return await invoke('check_software_updates')
+  },
+  upgradeSoftwarePackage: async (package_id: string): Promise<UpdateExecutionResult> => {
+    return await invoke('upgrade_software_package', { packageId: package_id })
+  },
+  upgradeAllSoftwarePackages: async (): Promise<UpdateExecutionResult> => {
+    return await invoke('upgrade_all_software_packages')
   },
 }

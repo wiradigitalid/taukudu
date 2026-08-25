@@ -29,16 +29,17 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-18** | **Context Menu Cleaner** | Explorer right-click shell extensions & handlers cleaner | `winreg`, PowerShell registry toggle, `ContextMenuPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-19** | **Windows Firewall Security Audit**| Inbound open ports audit, broad rule risk assessment | NetFirewallRule PowerShell, `FirewallAuditPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-20** | **CVE Vulnerability Audit Scanner**| Client library and runtime memory-safety CVE advisory checks | `CveScannerEngine`, `CveScannerPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-21** | **Multi-Package Software Updater** | Winget/Choco package manager inspection & bulk update runner | `winget` upgrade CLI parser, `SoftwareUpdaterPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
 
-### Area 20 — CVE Vulnerability Scanner (Selesai: 2026-08-26)
+### Area 21 — Multi-Package Software Updater (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **CVE Scanner Engine (`src-tauri/src/cve_scanner.rs`):**
-     - Audit kerentanan keamanan dan advisory memori (*heap buffer overflow, remote code execution*) untuk komponen runtime desktop (libwebp, V8 engine, Outlook moniker link).
-     - Status remediasi dan verifikasi versi aman pada aplikasi native.
-  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan command `scan_cves`.
-  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *CVE Scanner* lengkap dengan detail severity, paket terdampak, tanggal publikasi, dan status remediasi.
+  1. **Software Updater Engine (`src-tauri/src/software_updater.rs`):**
+     - Eksekusi dan parsing pembaruan software terinstal via `winget upgrade --include-unknown` memuat package ID, nama aplikasi, versi terpasang, versi terbaru yang tersedia, dan tingkat keparahan (*major, minor, patch*).
+     - Fungsi eksekusi pembaruan paket satuan (`upgrade_package`) dan pembaruan massal (`upgrade_all_packages`) secara senyap/background.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `check_software_updates`, `upgrade_software_package`, dan `upgrade_all_software_packages`.
+  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Software Updater* lengkap dengan tombol *Update All Packages*, daftar paket kadaluwarsa, dan tombol update per aplikasi.
   4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

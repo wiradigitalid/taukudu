@@ -25,6 +25,7 @@ import {
   ContextMenuEntryInfo,
   FirewallAuditSummary,
   CveScanSummary,
+  SoftwareUpdateSummary,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -65,13 +66,14 @@ import {
   ShieldCheck,
   Flame,
   AlertOctagon,
+  ArrowUpCircle,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'firewall' | 'cve' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'repair' | 'firewall' | 'cve' | 'updater' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -114,6 +116,11 @@ export function App() {
   // CVE Vulnerability Scanner state
   const [cveSummary, setCveSummary] = useState<CveScanSummary | null>(null)
   const [loadingCve, setLoadingCve] = useState(false)
+
+  // Software Updater state
+  const [updateSummary, setUpdateSummary] = useState<SoftwareUpdateSummary | null>(null)
+  const [loadingUpdates, setLoadingUpdates] = useState(false)
+  const [updateFeedback, setUpdateFeedback] = useState<string | null>(null)
 
   // Context Menu state
   const [ctxEntries, setCtxEntries] = useState<ContextMenuEntryInfo[]>([])
@@ -376,6 +383,40 @@ export function App() {
       console.error('CVE scan error:', err)
     } finally {
       setLoadingCve(false)
+    }
+  }
+
+  const fetchSoftwareUpdates = async () => {
+    setLoadingUpdates(true)
+    try {
+      const sum = await tauriApi.checkSoftwareUpdates()
+      setUpdateSummary(sum)
+    } catch (err) {
+      console.error('Update check error:', err)
+    } finally {
+      setLoadingUpdates(false)
+    }
+  }
+
+  const handleUpgradeAll = async () => {
+    try {
+      setUpdateFeedback('Triggering bulk upgrade via winget...')
+      const res = await tauriApi.upgradeAllSoftwarePackages()
+      setUpdateFeedback(`Updated ${res.updated_count} packages successfully!`)
+      await fetchSoftwareUpdates()
+    } catch (err) {
+      setUpdateFeedback(`Upgrade error: ${String(err)}`)
+    }
+  }
+
+  const handleUpgradeSingle = async (pkgId: string) => {
+    try {
+      setUpdateFeedback(`Upgrading ${pkgId}...`)
+      await tauriApi.upgradeSoftwarePackage(pkgId)
+      setUpdateFeedback(`Upgraded ${pkgId} successfully.`)
+      await fetchSoftwareUpdates()
+    } catch (err) {
+      setUpdateFeedback(`Upgrade error: ${String(err)}`)
     }
   }
 
@@ -888,6 +929,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('updater')
+                if (!updateSummary && !loadingUpdates) fetchSoftwareUpdates()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'updater'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <ArrowUpCircle className="w-4 h-4" />
+              Software Updater
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('contextmenu')
                 if (ctxEntries.length === 0 && !loadingCtx) fetchContextMenu()
               }}
@@ -1117,6 +1172,8 @@ export function App() {
               ? 'Windows Firewall & Open Port Security Audit'
               : activeTab === 'cve'
               ? 'System Vulnerability (CVE) Audit'
+              : activeTab === 'updater'
+              ? 'Bulk Desktop Software Updater (Winget/Choco/Scoop)'
               : activeTab === 'contextmenu'
               ? 'Explorer Right-Click Context Menu Manager'
               : activeTab === 'game'
@@ -1148,14 +1205,14 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'cve' ? (
+            {activeTab === 'updater' ? (
               <button
-                onClick={fetchCveScan}
-                disabled={loadingCve}
+                onClick={fetchSoftwareUpdates}
+                disabled={loadingUpdates}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingCve ? 'animate-spin' : ''}`} />
-                Audit CVEs
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingUpdates ? 'animate-spin' : ''}`} />
+                Check Updates
               </button>
             ) : (
               <button
@@ -1235,56 +1292,69 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'cve' ? (
-          /* CVE Scanner Page */
+        ) : activeTab === 'updater' ? (
+          /* Software Updater Page */
           <div className="p-8 max-w-6xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
                 <div className="flex items-center gap-3">
                   <h2 className="text-lg font-bold text-white">
-                    Vulnerability Audit ({cveSummary?.total_cves || 0} Known Signatures Inspected)
+                    Outdated Software: {updateSummary?.total_outdated || 0} Packages Available
                   </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    All Remediated in v0.1.0
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    Source: {updateSummary?.manager_name || 'winget'}
                   </span>
                 </div>
                 <p className="text-xs text-zinc-400 mt-1">
-                  Evaluates runtime binaries and libraries against critical memory safety CVE advisories.
+                  {updateFeedback || 'Bulk upgrade outdated desktop software packages with silent background installer.'}
                 </p>
               </div>
+
+              <button
+                onClick={handleUpgradeAll}
+                disabled={!updateSummary || updateSummary.total_outdated === 0}
+                className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-semibold text-xs shadow-lg shadow-amber-500/20 transition flex items-center gap-2 cursor-pointer"
+              >
+                <ArrowUpCircle className="w-4 h-4" />
+                Update All Packages
+              </button>
             </div>
 
+            {/* Packages list */}
             <div className="space-y-3">
-              {cveSummary?.vulnerabilities.map((cve) => (
+              {updateSummary?.packages.map((pkg) => (
                 <div
-                  key={cve.cve_id}
-                  className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-start"
+                  key={pkg.id}
+                  className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
                 >
-                  <div className="space-y-1 mr-4">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold font-mono text-white">{cve.cve_id}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
-                        {cve.package_name}
+                      <span className="text-sm font-semibold text-white">{pkg.name}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
+                        {pkg.id}
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                          cve.severity === 'critical'
+                          pkg.severity === 'major'
                             ? 'bg-red-500/20 text-red-400'
                             : 'bg-amber-500/20 text-amber-400'
                         }`}
                       >
-                        {cve.severity}
+                        {pkg.severity} upgrade
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-400">{cve.description}</p>
-                    <p className="text-[11px] text-zinc-500 font-mono">
-                      Installed: {cve.installed_version} • Patched in: {cve.fixed_version} • Date: {cve.published_date}
+                    <p className="text-xs font-mono text-zinc-400">
+                      Current: <span className="text-zinc-500">{pkg.current_version}</span> → Available:{' '}
+                      <span className="text-emerald-400 font-bold">{pkg.available_version}</span>
                     </p>
                   </div>
 
-                  <span className="px-2.5 py-1 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                    Remediated
-                  </span>
+                  <button
+                    onClick={() => handleUpgradeSingle(pkg.id)}
+                    className="px-4 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-white transition cursor-pointer"
+                  >
+                    Update
+                  </button>
                 </div>
               ))}
             </div>
