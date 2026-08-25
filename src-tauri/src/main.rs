@@ -27,9 +27,10 @@ use taukudu_lib::{
     AppSettings, CleanerConfig, SettingsStoreEngine,
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatMonitorEngine,
     ThreatMonitorSummary, TrimDriveStatus, TrimHistoryStore, TrimHistorySummary, TrimRecord,
-    UninstallerShredderEngine, UpdateExecutionResult,
+    UninstallerShredderEngine, UpdateExecutionResult, WindowGeometryState, WindowStateEngine,
     GLOBAL_BREACH_MONITOR, GLOBAL_DELETION_LOGGER, GLOBAL_GAME_MODE, GLOBAL_HISTORY,
     GLOBAL_SCHEDULER, GLOBAL_SETTINGS, GLOBAL_THREAT_MONITOR, GLOBAL_TRIM_HISTORY,
+    GLOBAL_WINDOW_STATE,
 };
 
 #[tauri::command]
@@ -552,6 +553,16 @@ fn collect_prometheus_metrics() -> taukudu_lib::PrometheusMetricsSummary {
     MetricsEngine::get_summary()
 }
 
+#[tauri::command]
+fn get_window_state() -> WindowGeometryState {
+    GLOBAL_WINDOW_STATE.get_window_state()
+}
+
+#[tauri::command]
+fn save_window_state(state: WindowGeometryState) -> WindowGeometryState {
+    GLOBAL_WINDOW_STATE.save_window_state(state)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -649,7 +660,9 @@ fn main() {
             update_app_settings,
             add_exclusion_path,
             remove_exclusion_path,
-            collect_prometheus_metrics
+            collect_prometheus_metrics,
+            get_window_state,
+            save_window_state
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

@@ -31,6 +31,7 @@ pub mod startup_debloat;
 pub mod threat_monitor;
 pub mod trim_history;
 pub mod uninstaller_shredder;
+pub mod window_state;
 
 pub use breach_monitor::{BreachIncident, BreachMonitorEngine, BreachMonitorSummary, MonitoredEmailStatus, GLOBAL_BREACH_MONITOR};
 pub use chromium_cache::{BrowserCacheScanSummary, BrowserProfileCacheTarget, ChromiumCacheEngine};
@@ -91,4 +92,8 @@ pub use trim_history::{
 };
 pub use uninstaller_shredder::{
     InstalledProgramInfo, ShredderResult, UninstallerShredderEngine,
+};
+pub use window_state::{
+    WindowGeometryState, WindowStateEngine, GLOBAL_WINDOW_STATE, MIN_WINDOW_HEIGHT,
+    MIN_WINDOW_WIDTH,
 };

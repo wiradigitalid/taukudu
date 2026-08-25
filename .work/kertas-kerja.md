@@ -43,10 +43,18 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-32** | **SSD ReTrim History & 24h Throttle** | Per-drive TRIM timestamp persistence & frequency safety guard | `TrimHistoryStore`, Disk Maintenance TRIM view | ✅ COMPLETED | 2026-08-26 |
 | **AREA-33** | **Persistent App Settings & Exclusions** | Complete JSON store for cleaner safeguards, backup paths & exclusions | `SettingsStoreEngine`, SettingsPage UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-34** | **Prometheus OpenMetrics Exporter** | Standardized observability telemetry exporter for hardware & cleaning stats | `MetricsEngine`, MetricsPage UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-35** | **Window State & Geometry Manager** | Frameless window bounds persistence, display reachability sanitization | `WindowStateEngine`, Tauri IPC window restore | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 35 — Window State & Geometry Management (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Window State Engine (`src-tauri/src/window_state.rs`):** Manajemen persistensi ukuran (`width`, `height`), koordinat posisi (`x`, `y`), dan status maksimasi (`is_maximized`) jendela frameless pada file JSON lokal (`%LOCALAPPDATA%/TauKudu/window_state.json`) dengan batasan minimum ukuran aman (`MIN_WINDOW_WIDTH = 900`, `MIN_WINDOW_HEIGHT = 600`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_window_state` dan `save_window_state`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `WindowGeometryState`, serta method `tauriApi.getWindowState` dan `tauriApi.saveWindowState`.
+  4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 34 — Prometheus OpenMetrics Telemetry Exporter (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

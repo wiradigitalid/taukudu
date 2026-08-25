@@ -613,6 +613,14 @@ export interface PrometheusMetricsSummary {
   raw_prometheus_text: string
 }
 
+export interface WindowGeometryState {
+  x?: number
+  y?: number
+  width: number
+  height: number
+  is_maximized: boolean
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -867,5 +875,11 @@ export const tauriApi = {
   },
   collectPrometheusMetrics: async (): Promise<PrometheusMetricsSummary> => {
     return await invoke('collect_prometheus_metrics')
+  },
+  getWindowState: async (): Promise<WindowGeometryState> => {
+    return await invoke('get_window_state')
+  },
+  saveWindowState: async (state: WindowGeometryState): Promise<WindowGeometryState> => {
+    return await invoke('save_window_state', { state })
   },
 }
