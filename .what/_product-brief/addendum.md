@@ -6,13 +6,13 @@ Dokumen ini melengkapi `brief.md` dengan rangkuman riset komparatif berdasarkan 
 
 ### Sinergi Arsitektur & Penentuan Fokus
 
-| Pilar / Komponen | Sumber Inspirasi / Basis | Peran & Tingkat Fokus dalam TauKudu |
+| Pilar / Komponen | Sumber Inspirasi / Basis & Repositori | Peran & Tingkat Fokus dalam TauKudu |
 |---|---|---|
-| **Pembersihan Residu & Sistem** | **BleachBit** + **Kudu** | **FOKUS UTAMA**: Aturan pembersihan menyeluruh lintas OS (Windows, macOS, Linux), *browser cache*, *app cache*, *shader cache*, *database vacuuming*, dan *registry cleaning*. |
-| **Deduplikasi & Analisis File** | **Czkawka** | **FOKUS UTAMA**: Algoritma deteksi file duplikat berkecepatan tinggi via *multi-stage hashing*, pencarian file besar, folder kosong, dan *broken symlinks*. |
-| **Mesin Pemindaian & Traversal** | **ripgrep** | **FOKUS UTAMA**: Algoritma *parallel directory traversal* dan *regex pattern matching* untuk pemindaian ratusan ribu file tanpa *I/O lag*. |
-| **Keamanan & Malware Scanning** | **Kudu** (Bawaan) | **SEKUNDER (ADOPTI AS-IS)**: Pemindai malware *on-demand* berbasis mesin YARA-X (`@litko/yara-x`) dan *secure multi-pass shredder* tanpa penambahan modul EDR/real-time kompleks. |
-| **Pengaturan Privasi OS** | **Kudu** (Bawaan) | **SEKUNDER (ADOPTI AS-IS)**: *Privacy Shield* untuk 30+ setelan privasi dan telemetri Windows dasar. |
+| **Pembersihan Residu & Sistem** | [BleachBit](https://github.com/bleachbit/bleachbit) + [Kudu](https://github.com/adventdevinc/kudu) | **FOKUS UTAMA**: Aturan pembersihan menyeluruh lintas OS (Windows, macOS, Linux), *browser cache*, *app cache*, *shader cache*, *database vacuuming*, dan *registry cleaning*. |
+| **Deduplikasi & Analisis File** | [Czkawka](https://github.com/qarmin/czkawka) | **FOKUS UTAMA**: Algoritma deteksi file duplikat berkecepatan tinggi via *multi-stage hashing*, pencarian file besar, folder kosong, dan *broken symlinks*. |
+| **Mesin Pemindaian & Traversal** | [ripgrep](https://github.com/burntsushi/ripgrep) | **FOKUS UTAMA**: Algoritma *parallel directory traversal* dan *regex pattern matching* untuk pemindaian ratusan ribu file tanpa *I/O lag*. |
+| **Keamanan & Malware Scanning** | [Kudu](https://github.com/adventdevinc/kudu) (Bawaan) | **SEKUNDER (ADOPTI AS-IS)**: Pemindai malware *on-demand* berbasis mesin YARA-X (`@litko/yara-x`) dan *secure multi-pass shredder* tanpa penambahan modul EDR/real-time kompleks. |
+| **Pengaturan Privasi OS** | [Kudu](https://github.com/adventdevinc/kudu) (Bawaan) | **SEKUNDER (ADOPTI AS-IS)**: *Privacy Shield* untuk 30+ setelan privasi dan telemetri Windows dasar. |
 
 ---
 
