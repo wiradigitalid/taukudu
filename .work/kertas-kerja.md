@@ -17,8 +17,8 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-07** | **System Tools: Startup & Debloat** | Startup Manager & Windows Debloater (UWP purge) + Pages | `winreg`, AppX PowerShell, Startup & Debloat UI | ✅ COMPLETED | 2026-08-25 |
 | **AREA-06** | **Malware Scanner (YARA-X)** | On-demand YARA scan + MalwareScannerPage, ThreatMonitor | Heuristic scanner, quarantine isolation, `MalwareScannerPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-08** | **System Tools: Services & Drivers** | Service Manager & DriverStore Purge + Pages | CIM/WMI service manager, pnputil driver cleaner, UI tabs | ✅ COMPLETED | 2026-08-26 |
-| **AREA-09** | **Uninstaller & Secure Shredder** | Clean Uninstaller + Multi-pass cryptographic file shredder | `zeroize`, `rand`, `windows-rs` | ⏳ NEXT UP | — |
-| **AREA-10** | **Performance Monitor** | Live CPU, RAM, Disk I/O, Network, S.M.A.R.T. health + Page | `sysinfo` | ⬜ PENDING | — |
+| **AREA-09** | **Uninstaller & Secure Shredder** | Clean Uninstaller + Multi-pass cryptographic file shredder | `zeroize`, `rand`, Uninstaller & Shredder UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-10** | **Performance Monitor** | Live CPU, RAM, Disk I/O, Network, S.M.A.R.T. health + Page | `sysinfo` | ⏳ NEXT UP | — |
 | **AREA-11** | **History & SQLite Store** | Audit trail & history logging + HistoryPage | `rusqlite` (SQLite 3) | ⬜ PENDING | — |
 | **AREA-12** | **Settings, i18n & Updates** | 30+ Bahasa (i18next), Theme Dark/Light, Auto-updater | `i18next`, Tauri updater plugin | ⬜ PENDING | — |
 | **AREA-13** | **CLI Mode & Headless** | Scriptable command-line interface (`taukudu clean --all`) | `clap` | ⬜ PENDING | — |
@@ -49,9 +49,12 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 - Heuristic malware scanner, masquerading detection, double-extension hunter, dan quarantine utilities.
 
 ### Area 08 — Services & Driver Cleaner (Selesai: 2026-08-26)
+- Windows Services manager & DriverStore obsolete driver purge.
+
+### Area 09 — Program Uninstaller & Cryptographic File Shredder (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **Windows Services Manager (`src-tauri/src/service_driver.rs`):** Inspeksi status service, klasifikasi rekomendasi optimasi (`safe_to_disable`), dan pengaturan startup type (Automatic/Manual/Disabled).
-  2. **DriverStore Purge Engine:** Parsing dan enumerasi paket driver OEM (`pnputil /enum-drivers`) serta penghapusan paket driver kedaluwarsa/superseded (`pnputil /delete-driver /force`).
-  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_services`, `set_service_start_mode`, `get_driver_packages`, dan `delete_driver`.
-  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman Services Manager dan Driver Cleaner dengan badge rekomendasi dan tombol aksi cepat.
+  1. **Program Uninstaller (`src-tauri/src/uninstaller_shredder.rs`):** Membaca daftar software terinstal dari Registry `HKLM/HKCU/Uninstall` lengkap dengan publisher, versi, ukuran estimasi, dan eksekusi uninstaller.
+  2. **Cryptographic File Shredder:** Implementasi multi-pass overwrite (DoD 5220.22-M 3-pass pseudo-random + zero pass via crate `rand` dan `zeroize`) sebelum melakukan *filesystem unlink*.
+  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_installed_programs`, `uninstall_program`, dan `shred_files`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka Uninstaller dan Cryptographic File Shredder.
   5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

@@ -6,6 +6,7 @@ pub mod privacy;
 pub mod rules;
 pub mod service_driver;
 pub mod startup_debloat;
+pub mod uninstaller_shredder;
 
 pub use cleaner::{CleanExecutionResult, CleanerEngine, ScanResult};
 pub use deduplication::{
@@ -21,3 +22,6 @@ pub use malware_scanner::{
 pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};
 pub use service_driver::{DriverPackageInfo, ServiceDriverEngine, ServiceItemInfo};
 pub use startup_debloat::{BloatwareApp, StartupDebloatEngine, StartupItem};
+pub use uninstaller_shredder::{
+    InstalledProgramInfo, ShredderResult, UninstallerShredderEngine,
+};

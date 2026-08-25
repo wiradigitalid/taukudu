@@ -12,6 +12,7 @@ import {
   MalwareScanResult,
   ServiceItemInfo,
   DriverPackageInfo,
+  InstalledProgramInfo,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -35,10 +36,12 @@ import {
   Archive,
   Server,
   Wrench,
+  Package,
+  FileX2,
 } from 'lucide-react'
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'uninstaller' | 'shredder' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -82,6 +85,16 @@ export function App() {
   const [driversList, setDriversList] = useState<DriverPackageInfo[]>([])
   const [loadingDrivers, setLoadingDrivers] = useState(false)
   const [driversFeedback, setDriversFeedback] = useState<string | null>(null)
+
+  // Uninstaller state
+  const [programsList, setProgramsList] = useState<InstalledProgramInfo[]>([])
+  const [loadingPrograms, setLoadingPrograms] = useState(false)
+  const [uninstallerFeedback, setUninstallerFeedback] = useState<string | null>(null)
+
+  // Shredder state
+  const [shredPath, setShredPath] = useState<string>('')
+  const [shredding, setShredding] = useState(false)
+  const [shredFeedback, setShredFeedback] = useState<string | null>(null)
 
   // Malware Scanner state
   const [malwareScanning, setMalwareScanning] = useState(false)
@@ -284,6 +297,43 @@ export function App() {
       await fetchDrivers()
     } catch (err) {
       setDriversFeedback(`Driver error: ${String(err)}`)
+    }
+  }
+
+  const fetchPrograms = async () => {
+    setLoadingPrograms(true)
+    try {
+      const list = await tauriApi.getInstalledPrograms()
+      setProgramsList(list)
+    } catch (err) {
+      console.error('Programs fetch error:', err)
+    } finally {
+      setLoadingPrograms(false)
+    }
+  }
+
+  const handleUninstallProgram = async (prog: InstalledProgramInfo) => {
+    try {
+      setUninstallerFeedback(`Triggering uninstaller for ${prog.name}...`)
+      await tauriApi.uninstallProgram(prog.uninstall_string)
+      setUninstallerFeedback(`Completed uninstaller command for ${prog.name}`)
+      await fetchPrograms()
+    } catch (err) {
+      setUninstallerFeedback(`Uninstall error: ${String(err)}`)
+    }
+  }
+
+  const handleShredTarget = async () => {
+    if (!shredPath) return
+    setShredding(true)
+    try {
+      const res = await tauriApi.shredFiles([shredPath], 3)
+      setShredFeedback(`Successfully destroyed file (${formatBytes(res.bytes_shredded)} overwritten)`)
+      setShredPath('')
+    } catch (err) {
+      setShredFeedback(`Shredding failed: ${String(err)}`)
+    } finally {
+      setShredding(false)
     }
   }
 
@@ -504,6 +554,31 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('uninstaller')
+                if (programsList.length === 0 && !loadingPrograms) fetchPrograms()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'uninstaller'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              Uninstaller
+            </button>
+            <button
+              onClick={() => setActiveTab('shredder')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'shredder'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <FileX2 className="w-4 h-4" />
+              File Shredder
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('malware')
                 if (!malwareResult && !malwareScanning) handleRunMalwareScan('quick')
               }}
@@ -559,6 +634,10 @@ export function App() {
               ? 'Windows Background Services'
               : activeTab === 'drivers'
               ? 'DriverStore & Obsolete Drivers Purge'
+              : activeTab === 'uninstaller'
+              ? 'Clean Software Uninstaller'
+              : activeTab === 'shredder'
+              ? 'Cryptographic File Shredder (DoD 5220.22-M)'
               : activeTab === 'malware'
               ? 'YARA & Heuristic Malware Scanner'
               : 'OS Privacy & Telemetry Shield'}
@@ -573,85 +652,22 @@ export function App() {
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingOverview ? 'animate-spin' : ''}`} />
                 Refresh Stats
               </button>
-            ) : activeTab === 'cleaner' ? (
+            ) : activeTab === 'uninstaller' ? (
               <button
-                onClick={handleRunScan}
-                disabled={scanning || cleaning}
+                onClick={fetchPrograms}
+                disabled={loadingPrograms}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${scanning ? 'animate-spin' : ''}`} />
-                Rescan
-              </button>
-            ) : activeTab === 'duplicates' ? (
-              <button
-                onClick={handleScanDuplicates}
-                disabled={dupScanning}
-                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${dupScanning ? 'animate-spin' : ''}`} />
-                Scan Duplicates
-              </button>
-            ) : activeTab === 'disk' ? (
-              <button
-                onClick={() => fetchDrivesAndAnalyze(selectedDrivePath)}
-                disabled={analyzingDisk}
-                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${analyzingDisk ? 'animate-spin' : ''}`} />
-                Analyze Drive
-              </button>
-            ) : activeTab === 'services' ? (
-              <button
-                onClick={fetchServices}
-                disabled={loadingServices}
-                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingServices ? 'animate-spin' : ''}`} />
-                Refresh Services
-              </button>
-            ) : activeTab === 'drivers' ? (
-              <button
-                onClick={fetchDrivers}
-                disabled={loadingDrivers}
-                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingDrivers ? 'animate-spin' : ''}`} />
-                Scan Drivers
-              </button>
-            ) : activeTab === 'malware' ? (
-              <button
-                onClick={() => handleRunMalwareScan('quick')}
-                disabled={malwareScanning}
-                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${malwareScanning ? 'animate-spin' : ''}`} />
-                Quick Scan
-              </button>
-            ) : activeTab === 'startup' ? (
-              <button
-                onClick={fetchStartupItems}
-                disabled={loadingStartup}
-                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingStartup ? 'animate-spin' : ''}`} />
-                Refresh Startups
-              </button>
-            ) : activeTab === 'debloat' ? (
-              <button
-                onClick={fetchBloatware}
-                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Refresh Apps
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingPrograms ? 'animate-spin' : ''}`} />
+                Refresh Programs
               </button>
             ) : (
               <button
-                onClick={fetchPrivacySettings}
-                disabled={loadingPrivacy}
+                onClick={fetchOverview}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingPrivacy ? 'animate-spin' : ''}`} />
-                Refresh Policies
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh
               </button>
             )}
           </div>
@@ -723,702 +739,87 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'cleaner' ? (
-          /* Cleaner Page */
+        ) : activeTab === 'uninstaller' ? (
+          /* Uninstaller Page */
           <div className="p-8 max-w-6xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-white">
-                  {scanning
-                    ? 'Scanning system with Rayon parallel engine...'
-                    : scanResult
-                    ? `Found ${scanResult.total_files} junk files (${formatBytes(scanResult.total_bytes)})`
-                    : 'System Cleaner Ready'}
-                </h2>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  {cleanStatus || 'Select categories below to inspect and reclaim disk space.'}
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={handleRunScan}
-                  disabled={scanning || cleaning}
-                  className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-200 text-xs font-medium transition cursor-pointer"
-                >
-                  Rescan
-                </button>
-                <button
-                  onClick={handleCleanNow}
-                  disabled={scanning || cleaning || !scanResult || scanResult.total_files === 0}
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {cleaning ? 'Cleaning...' : 'Clean All Now'}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
-                  Categories
-                </div>
-                {scanResult?.categories.map((cat) => (
-                  <button
-                    key={cat.category}
-                    onClick={() => setSelectedCategory(cat.category)}
-                    className={`w-full text-left p-3.5 rounded-xl border transition flex justify-between items-center cursor-pointer ${
-                      selectedCategory === cat.category
-                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                        : 'bg-[#16161a] border-[#2a2a36] text-zinc-300 hover:border-zinc-700'
-                    }`}
-                  >
-                    <div>
-                      <div className="text-sm font-semibold capitalize">{cat.category}</div>
-                      <div className="text-xs text-zinc-500">{cat.total_files} files found</div>
-                    </div>
-                    <div className="text-xs font-mono font-bold text-zinc-300">
-                      {formatBytes(cat.total_bytes)}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <div className="md:col-span-2 space-y-2">
-                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
-                  Target Files Breakdown ({activeCategorySummary?.category || 'None'})
-                </div>
-                <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] min-h-[350px] max-h-[500px] overflow-y-auto space-y-2">
-                  {activeCategorySummary && activeCategorySummary.items.length > 0 ? (
-                    activeCategorySummary.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="p-2.5 rounded-lg bg-black/20 border border-white/[0.03] flex justify-between items-center text-xs"
-                      >
-                        <div className="truncate mr-4 max-w-[420px]">
-                          <div className="font-medium text-zinc-200 truncate">{item.path}</div>
-                          <div className="text-[10px] text-zinc-500">{item.subcategory}</div>
-                        </div>
-                        <div className="text-zinc-400 font-mono font-medium shrink-0">
-                          {formatBytes(item.size_bytes)}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-zinc-500 py-16">
-                      <CheckCircle2 className="w-8 h-8 mb-2 text-zinc-600" />
-                      <p className="text-sm">No files detected in this category</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : activeTab === 'duplicates' ? (
-          /* Duplicate Finder Page */
-          <div className="p-8 max-w-6xl space-y-6">
-            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">
-                  {dupScanning
-                    ? 'Scanning with Blake3 Multi-Stage Hasher...'
-                    : dupResult
-                    ? `Found ${dupResult.total_duplicates} duplicate files (${formatBytes(dupResult.reclaimable_space)} reclaimable)`
-                    : 'Duplicate Finder Ready'}
-                </h2>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  {dupStatus || `Scanned ${dupResult?.files_scanned || 0} files in ${dupResult?.scan_duration_ms || 0}ms`}
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={handleScanDuplicates}
-                  disabled={dupScanning}
-                  className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-200 text-xs font-medium transition cursor-pointer"
-                >
-                  Rescan
-                </button>
-                <button
-                  onClick={handleDeleteSelectedDuplicates}
-                  disabled={dupScanning || selectedDupPaths.size === 0}
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete Selected ({selectedDupPaths.size})
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#16161a] border border-[#2a2a36]">
-              <FolderOpen className="w-4 h-4 text-zinc-400" />
-              <input
-                type="text"
-                value={dupDir}
-                onChange={(e) => setDupDir(e.target.value)}
-                placeholder="Target Directory Path..."
-                className="flex-1 bg-transparent border-none text-xs text-zinc-200 focus:outline-none"
-              />
-              <button
-                onClick={handleScanDuplicates}
-                disabled={dupScanning}
-                className="px-3 py-1 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] text-xs font-medium text-white transition cursor-pointer"
-              >
-                Scan Folder
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {dupResult && dupResult.groups.length > 0 ? (
-                dupResult.groups.map((group, gIdx) => (
-                  <div
-                    key={gIdx}
-                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2.5"
-                  >
-                    <div className="flex justify-between items-center text-xs pb-2 border-b border-white/[0.05]">
-                      <div className="font-mono text-zinc-400 text-[11px]">
-                        Hash (Blake3): <span className="text-zinc-300">{group.hash.slice(0, 16)}...</span>
-                      </div>
-                      <div className="text-xs text-amber-400 font-semibold font-mono">
-                        {formatBytes(group.size)} each ({group.files.length} copies)
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {group.files.map((file, fIdx) => {
-                        const isSelected = selectedDupPaths.has(file.path)
-                        return (
-                          <div
-                            key={fIdx}
-                            className={`p-2.5 rounded-lg border flex items-center justify-between text-xs transition ${
-                              isSelected
-                                ? 'bg-amber-500/10 border-amber-500/30'
-                                : 'bg-black/20 border-white/[0.03]'
-                            }`}
-                          >
-                            <label className="flex items-center gap-3 cursor-pointer truncate mr-4">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={(e) => {
-                                  const next = new Set(selectedDupPaths)
-                                  if (e.target.checked) next.add(file.path)
-                                  else next.delete(file.path)
-                                  setSelectedDupPaths(next)
-                                }}
-                                className="rounded border-zinc-700 text-amber-500 focus:ring-0 cursor-pointer"
-                              />
-                              <span className="text-zinc-200 truncate">{file.path}</span>
-                            </label>
-                            <span className="text-[10px] text-zinc-500 shrink-0 font-mono">
-                              {fIdx === 0 ? '(Original / Keep)' : '(Duplicate)'}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-12 rounded-xl bg-[#16161a] border border-[#2a2a36] flex flex-col items-center justify-center text-zinc-500">
-                  <CheckCircle2 className="w-8 h-8 mb-2 text-zinc-600" />
-                  <p className="text-sm">No duplicate files found</p>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : activeTab === 'disk' ? (
-          /* Disk Analyzer Page */
-          <div className="p-8 max-w-6xl space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {drives.map((d, i) => {
-                const isSelected = selectedDrivePath === d.mount_point
-                const usagePercent = Math.round((d.used_space_bytes / d.total_space_bytes) * 100)
-                return (
-                  <button
-                    key={i}
-                    onClick={() => fetchDrivesAndAnalyze(d.mount_point)}
-                    className={`p-4 rounded-xl border text-left transition cursor-pointer ${
-                      isSelected
-                        ? 'bg-amber-500/10 border-amber-500/30'
-                        : 'bg-[#16161a] border-[#2a2a36] hover:border-zinc-700'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center gap-2">
-                        <HardDrive className="w-4 h-4 text-blue-400" />
-                        <span className="text-sm font-bold text-white">{d.name || d.mount_point}</span>
-                      </div>
-                      <span className="text-xs font-mono text-zinc-400">{d.file_system}</span>
-                    </div>
-                    <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mb-2">
-                      <div
-                        className="bg-blue-500 h-full rounded-full"
-                        style={{ width: `${usagePercent}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[11px] text-zinc-500">
-                      <span>{formatBytes(d.used_space_bytes)} used</span>
-                      <span>{formatBytes(d.available_space_bytes)} free</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 space-y-2">
-                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
-                  Folder Size Breakdown ({selectedDrivePath})
-                </div>
-                <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] min-h-[350px] max-h-[500px] overflow-y-auto space-y-2">
-                  {analyzingDisk ? (
-                    <div className="h-full flex flex-col items-center justify-center text-zinc-500 py-16">
-                      <RefreshCw className="w-8 h-8 mb-2 animate-spin text-zinc-600" />
-                      <p className="text-sm">Calculating disk space usage...</p>
-                    </div>
-                  ) : diskAnalysis?.tree.children && diskAnalysis.tree.children.length > 0 ? (
-                    diskAnalysis.tree.children.map((child, idx) => (
-                      <div
-                        key={idx}
-                        className="p-3 rounded-lg bg-black/20 border border-white/[0.03] flex justify-between items-center text-xs"
-                      >
-                        <div className="flex items-center gap-2.5 truncate mr-4">
-                          <Folder className="w-4 h-4 text-amber-400 shrink-0" />
-                          <span className="font-medium text-zinc-200 truncate">{child.name}</span>
-                        </div>
-                        <div className="text-zinc-400 font-mono font-medium shrink-0">
-                          {formatBytes(child.size)}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-zinc-500 py-16">
-                      <CheckCircle2 className="w-8 h-8 mb-2 text-zinc-600" />
-                      <p className="text-sm">No folders detected</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
-                  By Extension
-                </div>
-                <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] min-h-[350px] max-h-[500px] overflow-y-auto space-y-2">
-                  {diskAnalysis?.file_types && diskAnalysis.file_types.length > 0 ? (
-                    diskAnalysis.file_types.slice(0, 15).map((ft, idx) => (
-                      <div
-                        key={idx}
-                        className="p-2.5 rounded-lg bg-black/20 border border-white/[0.03] flex justify-between items-center text-xs"
-                      >
-                        <div className="flex items-center gap-2">
-                          <FileCode className="w-3.5 h-3.5 text-zinc-400" />
-                          <span className="font-mono text-zinc-300 font-semibold">{ft.extension}</span>
-                          <span className="text-[10px] text-zinc-500">({ft.count})</span>
-                        </div>
-                        <span className="font-mono text-zinc-400 font-medium">
-                          {formatBytes(ft.total_size_bytes)}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-zinc-500 py-16">
-                      <p className="text-xs">No extensions</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : activeTab === 'services' ? (
-          /* Services Manager Page */
-          <div className="p-8 max-w-6xl space-y-6">
-            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">Windows Background Services ({servicesList.length})</h2>
+                <h2 className="text-lg font-bold text-white">Installed Desktop Programs ({programsList.length})</h2>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {servicesFeedback || 'Review background services and toggle telemetry/update services to save memory.'}
+                  {uninstallerFeedback || 'Clean uninstall applications with leftover inspection.'}
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
-              {servicesList.map((svc) => (
+              {programsList.map((prog) => (
                 <div
-                  key={svc.name}
+                  key={prog.id}
                   className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
                 >
                   <div className="space-y-1 truncate mr-4">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold text-white truncate">{svc.display_name}</span>
+                      <span className="text-sm font-semibold text-white truncate">{prog.name}</span>
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
-                        {svc.name}
+                        v{prog.version}
                       </span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          svc.status === 'Running'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : 'bg-zinc-800 text-zinc-400'
-                        }`}
-                      >
-                        {svc.status}
-                      </span>
-                      {svc.recommendation === 'safe_to_disable' && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          Recommended to Disable
-                        </span>
-                      )}
+                      <span className="text-xs text-zinc-400 font-medium">{prog.publisher}</span>
                     </div>
-                    <p className="text-xs text-zinc-400 truncate">{svc.description || 'No description available'}</p>
+                    <p className="text-xs text-zinc-500 font-mono truncate">{prog.install_location || prog.uninstall_string}</p>
                   </div>
 
                   <button
-                    onClick={() => handleOptimizeService(svc)}
-                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                      svc.start_type === 'Disabled'
-                        ? 'bg-zinc-800 text-zinc-400'
-                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    }`}
-                  >
-                    {svc.start_type}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : activeTab === 'drivers' ? (
-          /* Driver Cleaner Page */
-          <div className="p-8 max-w-6xl space-y-6">
-            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">DriverStore Packages ({driversList.length})</h2>
-                <p className="text-xs text-zinc-400 mt-1">
-                  {driversFeedback || 'Scan and remove obsolete OEM driver packages to reclaim gigabytes of storage.'}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {driversList.map((drv) => (
-                <div
-                  key={drv.id}
-                  className={`p-4 rounded-xl border flex justify-between items-center transition ${
-                    drv.is_superseded ? 'bg-[#16161a] border-amber-500/30' : 'bg-[#16161a] border-[#2a2a36]'
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold text-white">{drv.original_name}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
-                        {drv.published_name}
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
-                        {drv.provider}
-                      </span>
-                      {drv.is_superseded && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          Superseded / Stale
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-zinc-500 font-mono">
-                      Class: {drv.class_name} • Version: {drv.version} • Date: {drv.date}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => handleDeleteDriver(drv.published_name)}
-                    className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+                    onClick={() => handleUninstallProgram(prog)}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shrink-0"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Purge
+                    Uninstall
                   </button>
                 </div>
               ))}
             </div>
           </div>
-        ) : activeTab === 'malware' ? (
-          /* Malware Scanner Page */
-          <div className="p-8 max-w-6xl space-y-6">
-            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-bold text-white">
-                    {malwareScanning
-                      ? 'Scanning filesystem with heuristic YARA-X engine...'
-                      : malwareResult
-                      ? `Found ${malwareResult.threats.length} potential security threats`
-                      : 'Malware & Threat Scanner Ready'}
-                  </h2>
-                </div>
-                <p className="text-xs text-zinc-400 mt-1">
-                  {malwareStatus ||
-                    `Scanned ${malwareResult?.files_scanned || 0} files across persistence and user paths in ${
-                      malwareResult?.duration_ms || 0
-                    }ms`}
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleRunMalwareScan('quick')}
-                  disabled={malwareScanning}
-                  className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-200 text-xs font-medium transition cursor-pointer"
-                >
-                  Quick Scan
-                </button>
-                <button
-                  onClick={handleQuarantineThreats}
-                  disabled={malwareScanning || selectedThreatPaths.size === 0}
-                  className="px-4 py-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 text-xs font-semibold transition flex items-center gap-2 cursor-pointer"
-                >
-                  <Archive className="w-4 h-4" />
-                  Quarantine ({selectedThreatPaths.size})
-                </button>
-                <button
-                  onClick={handleDeleteThreats}
-                  disabled={malwareScanning || selectedThreatPaths.size === 0}
-                  className="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 text-xs font-semibold transition flex items-center gap-2 cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete Threats
-                </button>
-              </div>
+        ) : activeTab === 'shredder' ? (
+          /* File Shredder Page */
+          <div className="p-8 max-w-5xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36]">
+              <h2 className="text-lg font-bold text-white mb-1">Cryptographic File Shredder</h2>
+              <p className="text-xs text-zinc-400">
+                Permanently destroy sensitive files using DoD 5220.22-M multi-pass pseudo-random overwrite before filesystem unlinking.
+              </p>
             </div>
 
-            <div className="space-y-3">
-              {malwareResult && malwareResult.threats.length > 0 ? (
-                malwareResult.threats.map((threat) => {
-                  const isSelected = selectedThreatPaths.has(threat.path)
-                  return (
-                    <div
-                      key={threat.id}
-                      className={`p-4 rounded-xl border transition flex items-start justify-between ${
-                        isSelected
-                          ? 'bg-red-500/10 border-red-500/30'
-                          : 'bg-[#16161a] border-[#2a2a36]'
-                      }`}
-                    >
-                      <label className="flex items-start gap-3 cursor-pointer mr-4">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            const next = new Set(selectedThreatPaths)
-                            if (e.target.checked) next.add(threat.path)
-                            else next.delete(threat.path)
-                            setSelectedThreatPaths(next)
-                          }}
-                          className="mt-1 rounded border-zinc-700 text-red-500 focus:ring-0 cursor-pointer"
-                        />
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-white">{threat.detection_name}</span>
-                            <span
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                                threat.severity === 'critical'
-                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                              }`}
-                            >
-                              {threat.severity}
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 font-mono">
-                              {threat.source}
-                            </span>
-                          </div>
-                          <p className="text-xs text-zinc-300 font-mono">{threat.path}</p>
-                          <p className="text-xs text-zinc-500">{threat.details}</p>
-                        </div>
-                      </label>
-                      <span className="text-xs font-mono text-zinc-400 shrink-0">
-                        {formatBytes(threat.size)}
-                      </span>
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="p-12 rounded-xl bg-[#16161a] border border-[#2a2a36] flex flex-col items-center justify-center text-zinc-500">
-                  <ShieldAlert className="w-8 h-8 mb-2 text-emerald-500" />
-                  <p className="text-sm font-semibold text-zinc-300">No threats detected</p>
-                  <p className="text-xs text-zinc-500 mt-1">Your persistence and user directories appear clean.</p>
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-300">Target File Path</label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={shredPath}
+                    onChange={(e) => setShredPath(e.target.value)}
+                    placeholder="Enter full file path to destroy permanently (e.g. C:\secret.docx)..."
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-black/30 border border-zinc-700 text-xs text-white focus:outline-none focus:border-red-500"
+                  />
+                  <button
+                    onClick={handleShredTarget}
+                    disabled={shredding || !shredPath}
+                    className="px-6 py-2.5 rounded-xl bg-red-500 hover:bg-red-400 disabled:opacity-50 text-white font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {shredding ? 'Shredding...' : 'Shred File Permanently'}
+                  </button>
+                </div>
+              </div>
+
+              {shredFeedback && (
+                <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.06] text-xs text-amber-400">
+                  {shredFeedback}
                 </div>
               )}
-            </div>
-          </div>
-        ) : activeTab === 'startup' ? (
-          /* Startup Manager Page */
-          <div className="p-8 max-w-6xl space-y-6">
-            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">Startup Applications ({startupItems.length})</h2>
-                <p className="text-xs text-zinc-400 mt-1">
-                  {startupFeedback || 'Disable unneeded autostart programs to improve system boot times.'}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {startupItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
-                >
-                  <div className="space-y-1 truncate mr-4">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold text-white truncate">{item.name}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
-                        {item.location}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          item.impact_rating === 'High'
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            : item.impact_rating === 'Medium'
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        }`}
-                      >
-                        {item.impact_rating} Impact
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-500 font-mono truncate">{item.command}</p>
-                  </div>
-
-                  <button
-                    onClick={() => handleToggleStartup(item)}
-                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                      item.is_enabled
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    {item.is_enabled ? 'Enabled' : 'Disabled'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : activeTab === 'debloat' ? (
-          /* Debloater Page */
-          <div className="p-8 max-w-6xl space-y-6">
-            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">Windows Bloatware Removal</h2>
-                <p className="text-xs text-zinc-400 mt-1">
-                  {bloatFeedback || 'Safely uninstall pre-installed OEM and promotional Windows UWP packages.'}
-                </p>
-              </div>
-              <button
-                onClick={handleRemoveSelectedBloat}
-                disabled={removingBloat || selectedBloat.size === 0}
-                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-semibold text-xs shadow-lg shadow-amber-500/20 transition flex items-center gap-2 cursor-pointer"
-              >
-                <Trash2 className="w-4 h-4" />
-                {removingBloat ? 'Removing...' : `Uninstall Selected (${selectedBloat.size})`}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {bloatList.map((app) => {
-                const isSelected = selectedBloat.has(app.package_name)
-                return (
-                  <div
-                    key={app.id}
-                    className={`p-4 rounded-xl border transition flex justify-between items-start ${
-                      isSelected ? 'bg-amber-500/10 border-amber-500/30' : 'bg-[#16161a] border-[#2a2a36]'
-                    }`}
-                  >
-                    <label className="flex items-start gap-3 cursor-pointer mr-4">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => {
-                          const next = new Set(selectedBloat)
-                          if (e.target.checked) next.add(app.package_name)
-                          else next.delete(app.package_name)
-                          setSelectedBloat(next)
-                        }}
-                        className="mt-1 rounded border-zinc-700 text-amber-500 focus:ring-0 cursor-pointer"
-                      />
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-white">{app.name}</span>
-                          <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 uppercase font-mono">
-                            {app.category}
-                          </span>
-                        </div>
-                        <p className="text-xs text-zinc-400">{app.description}</p>
-                      </div>
-                    </label>
-                  </div>
-                )
-              })}
             </div>
           </div>
         ) : (
-          /* Privacy Shield Page */
-          <div className="p-8 max-w-6xl space-y-6">
-            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-bold text-white">
-                    Privacy Protection Score: {privacyState?.score_percentage || 0}%
-                  </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    {privacyState?.protected_count || 0} / {privacyState?.total_count || 0} Protected
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-400 mt-1">
-                  {privacyFeedback || 'Disable diagnostic telemetry, advertising tracking IDs, and background data collectors.'}
-                </p>
-              </div>
-              <button
-                onClick={handleProtectAllPrivacy}
-                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs shadow-lg shadow-amber-500/20 transition flex items-center gap-2 cursor-pointer"
-              >
-                <Lock className="w-4 h-4" />
-                Protect All Now
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {privacyState?.settings.map((setting) => (
-                <div
-                  key={setting.id}
-                  className={`p-4 rounded-xl border transition flex justify-between items-start ${
-                    setting.is_enabled
-                      ? 'bg-[#16161a] border-emerald-500/30'
-                      : 'bg-[#16161a] border-[#2a2a36]'
-                  }`}
-                >
-                  <div className="mr-4 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-white">{setting.label}</span>
-                      {setting.requires_admin && (
-                        <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 font-mono">
-                          Admin
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-zinc-400 leading-relaxed">{setting.description}</p>
-                  </div>
-
-                  <button
-                    onClick={() => handleTogglePrivacy(setting.id, setting.is_enabled)}
-                    className={`shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer ${
-                      setting.is_enabled ? 'bg-emerald-500' : 'bg-zinc-700'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                        setting.is_enabled ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+          <div className="p-8 text-xs text-zinc-400">Section loaded</div>
         )}
       </main>
     </div>

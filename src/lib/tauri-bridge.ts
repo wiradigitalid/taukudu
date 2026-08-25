@@ -176,6 +176,23 @@ export interface DriverPackageInfo {
   is_superseded: boolean
 }
 
+export interface InstalledProgramInfo {
+  id: string
+  name: string
+  publisher: string
+  version: string
+  install_location: string
+  uninstall_string: string
+  estimated_size_bytes: number
+}
+
+export interface ShredderResult {
+  files_shredded: number
+  bytes_shredded: number
+  failed_files: number
+  errors: string[]
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -239,5 +256,14 @@ export const tauriApi = {
   },
   deleteDriver: async (published_name: string): Promise<void> => {
     return await invoke('delete_driver', { publishedName: published_name })
+  },
+  getInstalledPrograms: async (): Promise<InstalledProgramInfo[]> => {
+    return await invoke('get_installed_programs')
+  },
+  uninstallProgram: async (cmd: string): Promise<void> => {
+    return await invoke('uninstall_program', { cmd })
+  },
+  shredFiles: async (paths: string[], passes: number = 3): Promise<ShredderResult> => {
+    return await invoke('shred_files', { paths, passes })
   },
 }

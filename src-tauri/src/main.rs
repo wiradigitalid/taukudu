@@ -6,9 +6,10 @@ use tauri::Manager;
 use taukudu_lib::{
     BloatwareApp, CleanExecutionResult, CleanerEngine, DeduplicationEngine, DiskAnalysisResult,
     DiskAnalyzerEngine, DiskDriveInfo, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
-    EmptyFolderScanResult, LargeFileScanResult, MalwareActionResult, MalwareScanResult,
-    MalwareScannerEngine, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, ScanResult,
-    ServiceDriverEngine, ServiceItemInfo, StartupDebloatEngine, StartupItem,
+    EmptyFolderScanResult, InstalledProgramInfo, LargeFileScanResult, MalwareActionResult,
+    MalwareScanResult, MalwareScannerEngine, PrivacyApplyResult, PrivacyShieldEngine,
+    PrivacyShieldState, ScanResult, ServiceDriverEngine, ServiceItemInfo, ShredderResult,
+    StartupDebloatEngine, StartupItem, UninstallerShredderEngine,
 };
 
 #[tauri::command]
@@ -149,6 +150,21 @@ fn delete_driver(published_name: String) -> Result<(), String> {
     ServiceDriverEngine::delete_driver_package(&published_name)
 }
 
+#[tauri::command]
+fn get_installed_programs() -> Vec<InstalledProgramInfo> {
+    UninstallerShredderEngine::list_installed_programs()
+}
+
+#[tauri::command]
+fn uninstall_program(cmd: String) -> Result<(), String> {
+    UninstallerShredderEngine::execute_uninstall(&cmd)
+}
+
+#[tauri::command]
+fn shred_files(paths: Vec<String>, passes: usize) -> ShredderResult {
+    UninstallerShredderEngine::shred_targets(&paths, passes)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -175,7 +191,10 @@ fn main() {
             get_services,
             set_service_start_mode,
             get_driver_packages,
-            delete_driver
+            delete_driver,
+            get_installed_programs,
+            uninstall_program,
+            shred_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
