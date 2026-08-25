@@ -6,19 +6,20 @@ use std::env;
 use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
-    handle_cli_mode, ActiveConnectionInfo, BloatwareApp, CleanExecutionResult, CleanerEngine,
-    CliArgs, ContextMenuEngine, ContextMenuEntryInfo, ContextMenuScanResult, CveItem,
-    CveScanSummary, CveScannerEngine, DeduplicationEngine, DiskAnalysisResult, DiskAnalyzerEngine,
-    DiskDriveInfo, DiskMaintenanceEngine, DiskRepairOutput, DriverPackageInfo,
-    DuplicateScanOptions, DuplicateScanResult, EmptyFolderScanResult, FirewallAuditEngine,
-    FirewallAuditSummary, GameModeEngine, GameModeStatus, GameOptimizationItem, HistoryRecord,
-    InstalledProgramInfo, LargeFileScanResult, MalwareActionResult, MalwareScanResult,
-    MalwareScannerEngine, NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine,
-    PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState,
-    RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult,
-    ScheduleItem, ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult,
-    SoftwareUpdateSummary, SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem,
-    TrimDriveStatus, UninstallerShredderEngine, UpdateExecutionResult, GLOBAL_HISTORY,
+    handle_cli_mode, ActiveConnectionInfo, BloatwareApp, BreachMonitorSummary,
+    CleanExecutionResult, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
+    ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DeduplicationEngine,
+    DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
+    DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
+    EmptyFolderScanResult, FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
+    GameModeStatus, GameOptimizationItem, HistoryRecord, InstalledProgramInfo,
+    LargeFileScanResult, MalwareActionResult, MalwareScanResult, MalwareScannerEngine,
+    NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot,
+    PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RegistryCleanerEngine,
+    RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult, ScheduleItem,
+    ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
+    SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, TrimDriveStatus,
+    UninstallerShredderEngine, UpdateExecutionResult, GLOBAL_BREACH_MONITOR, GLOBAL_HISTORY,
     GLOBAL_SCHEDULER,
 };
 
@@ -348,6 +349,26 @@ fn toggle_schedule(id: String, enable: bool) -> Result<(), String> {
     GLOBAL_SCHEDULER.toggle_schedule(&id, enable)
 }
 
+#[tauri::command]
+fn get_breach_summary() -> BreachMonitorSummary {
+    GLOBAL_BREACH_MONITOR.get_summary()
+}
+
+#[tauri::command]
+fn add_breach_email(email: String) -> Result<BreachMonitorSummary, String> {
+    GLOBAL_BREACH_MONITOR.add_email(email)
+}
+
+#[tauri::command]
+fn remove_breach_email(email: String) -> Result<BreachMonitorSummary, String> {
+    GLOBAL_BREACH_MONITOR.remove_email(&email)
+}
+
+#[tauri::command]
+fn acknowledge_breach_incident(breach_id: String) -> Result<BreachMonitorSummary, String> {
+    GLOBAL_BREACH_MONITOR.acknowledge_breach(&breach_id)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -415,7 +436,11 @@ fn main() {
             upgrade_software_package,
             upgrade_all_software_packages,
             get_schedules,
-            toggle_schedule
+            toggle_schedule,
+            get_breach_summary,
+            add_breach_email,
+            remove_breach_email,
+            acknowledge_breach_incident
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

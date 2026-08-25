@@ -389,6 +389,29 @@ export interface ScheduleSummary {
   next_scheduled_run?: string
 }
 
+export interface BreachIncident {
+  id: string
+  title: string
+  domain: string
+  breach_date: string
+  compromised_accounts: number
+  compromised_data: string[]
+  is_acknowledged: boolean
+}
+
+export interface MonitoredEmailStatus {
+  email: string
+  breaches: BreachIncident[]
+  added_at: string
+}
+
+export interface BreachMonitorSummary {
+  monitored_emails: MonitoredEmailStatus[]
+  total_emails: number
+  total_breaches: number
+  unacknowledged_count: number
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -548,5 +571,17 @@ export const tauriApi = {
   },
   toggleSchedule: async (id: string, enable: boolean): Promise<void> => {
     return await invoke('toggle_schedule', { id, enable })
+  },
+  getBreachSummary: async (): Promise<BreachMonitorSummary> => {
+    return await invoke('get_breach_summary')
+  },
+  addBreachEmail: async (email: string): Promise<BreachMonitorSummary> => {
+    return await invoke('add_breach_email', { email })
+  },
+  removeBreachEmail: async (email: string): Promise<BreachMonitorSummary> => {
+    return await invoke('remove_breach_email', { email })
+  },
+  acknowledgeBreachIncident: async (breach_id: string): Promise<BreachMonitorSummary> => {
+    return await invoke('acknowledge_breach_incident', { breachId: breach_id })
   },
 }

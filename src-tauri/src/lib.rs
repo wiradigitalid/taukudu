@@ -1,3 +1,4 @@
+pub mod breach_monitor;
 pub mod cleaner;
 pub mod cli;
 pub mod context_menu;
@@ -20,6 +21,7 @@ pub mod software_updater;
 pub mod startup_debloat;
 pub mod uninstaller_shredder;
 
+pub use breach_monitor::{BreachIncident, BreachMonitorEngine, BreachMonitorSummary, MonitoredEmailStatus, GLOBAL_BREACH_MONITOR};
 pub use cleaner::{CleanExecutionResult, CleanerEngine, ScanResult};
 pub use cli::{handle_cli_mode, CliArgs, Commands};
 pub use context_menu::{ContextMenuEngine, ContextMenuEntryInfo, ContextMenuScanResult};
