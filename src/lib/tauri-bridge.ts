@@ -111,6 +111,25 @@ export interface DiskAnalysisResult {
   total_size_bytes: number
 }
 
+export interface StartupItem {
+  id: string
+  name: string
+  command: string
+  location: string
+  is_enabled: boolean
+  impact_rating: string
+}
+
+export interface BloatwareApp {
+  id: string
+  name: string
+  package_name: string
+  publisher: string
+  category: string
+  description: string
+  is_installed: boolean
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -141,5 +160,17 @@ export const tauriApi = {
   },
   analyzeDiskDirectory: async (dir_path: string, max_depth: number = 3): Promise<DiskAnalysisResult> => {
     return await invoke('analyze_disk_directory', { dirPath: dir_path, maxDepth: max_depth })
+  },
+  getStartupItems: async (): Promise<StartupItem[]> => {
+    return await invoke('get_startup_items')
+  },
+  toggleStartupItem: async (id: string, enable: boolean): Promise<void> => {
+    return await invoke('toggle_startup_item', { id, enable })
+  },
+  getBloatwareList: async (): Promise<BloatwareApp[]> => {
+    return await invoke('get_bloatware_list')
+  },
+  removeBloatware: async (package_names: string[]): Promise<string[]> => {
+    return await invoke('remove_bloatware', { packageNames: package_names })
   },
 }

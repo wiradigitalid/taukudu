@@ -14,8 +14,8 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-03** | **Deduplication & Disk Tools** | Multi-stage hash (Czkawka concept) + DuplicateFinderPage, LargeFile, EmptyFolder | `blake3`, `rayon`, `walkdir`, `DuplicateFinderPage` UI | ✅ COMPLETED | 2026-08-25 |
 | **AREA-04** | **Disk Analyzer (Treemap)** | Visualisasi Treemap penggunaan disk + DiskAnalyzerPage | `sysinfo::Disks`, `walkdir`, `DiskAnalyzerPage` UI | ✅ COMPLETED | 2026-08-25 |
 | **AREA-05** | **Privacy Shield** | 30+ Windows privacy & telemetry policies + PrivacyShieldPage | `winreg`, `windows-rs`, `PrivacyShieldPage` UI | ✅ COMPLETED | 2026-08-25 |
+| **AREA-07** | **System Tools: Startup & Debloat** | Startup Manager & Windows Debloater (UWP purge) + Pages | `winreg`, AppX PowerShell, Startup & Debloat UI | ✅ COMPLETED | 2026-08-25 |
 | **AREA-06** | **Malware Scanner (YARA-X)** | On-demand YARA scan + MalwareScannerPage, ThreatMonitor | `yara-x` / `yara-sys` | ⏳ NEXT UP | — |
-| **AREA-07** | **System Tools: Startup & Debloat** | Startup Manager & Windows Debloater (UWP purge) + Pages | `winreg`, `windows-rs` | ⬜ PENDING | — |
 | **AREA-08** | **System Tools: Services & Drivers** | Service Manager & DriverStore Purge + Pages | `windows-service`, `windows-rs` | ⬜ PENDING | — |
 | **AREA-09** | **Uninstaller & Secure Shredder** | Clean Uninstaller + Multi-pass cryptographic file shredder | `zeroize`, `rand`, `windows-rs` | ⬜ PENDING | — |
 | **AREA-10** | **Performance Monitor** | Live CPU, RAM, Disk I/O, Network, S.M.A.R.T. health + Page | `sysinfo` | ⬜ PENDING | — |
@@ -36,12 +36,16 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 ### Area 03 — Deduplication & Disk Tools (Selesai: 2026-08-25)
 - Multi-stage hasher Blake3, disk anomaly scanners, dan Duplicate Finder UI.
 
+### Area 04 — Disk Analyzer (Selesai: 2026-08-25)
+- Drive Enumerator via `sysinfo::Disks` dan Folder/Extension breakdown UI.
+
 ### Area 05 — Privacy Shield (Selesai: 2026-08-25)
 - Win32 Privacy Registry Engine & Privacy Shield UI.
 
-### Area 04 — Disk Analyzer (Selesai: 2026-08-25)
+### Area 07 — System Tools: Startup & Debloat (Selesai: 2026-08-25)
 - **Yang telah dikerjakan:**
-  1. **Drive Enumerator & Subtree Analyzer (`src-tauri/src/disk_analyzer.rs`):** Menggunakan `sysinfo::Disks` untuk mendeteksi semua partisi disk/mount point dan kalkulasi rekursif ukuran folder & distribusi ekstensi berkas.
-  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_drives` dan `analyze_disk_directory`.
-  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka Disk Analyzer lengkap dengan kartu partisi drive, progress bar utilisasi, hierarki ukuran folder, dan statistik pemakaian berdasarkan ekstensi file.
-  4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
+  1. **Startup Manager Engine (`src-tauri/src/startup_debloat.rs`):** Menggunakan `winreg` untuk menginspeksi `HKCU\Run`, `HKLM\Run`, dan folder Startup Windows beserta estimasi dampak boot.
+  2. **Windows Debloater Engine:** Katalog 22 bloatware/UWP umum (Bing, Cortana, Telemetry hubs, OEM, games) dan fungsi penghapusan batch aman.
+  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_startup_items`, `toggle_startup_item`, `get_bloatware_list`, dan `remove_bloatware`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka Startup Manager & Windows Debloater lengkap dengan status switch, badge dampak, dan batch uninstaller.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

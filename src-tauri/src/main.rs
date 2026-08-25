@@ -4,10 +4,10 @@
 use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
-    CleanExecutionResult, CleanerEngine, DeduplicationEngine, DiskAnalysisResult,
+    BloatwareApp, CleanExecutionResult, CleanerEngine, DeduplicationEngine, DiskAnalysisResult,
     DiskAnalyzerEngine, DiskDriveInfo, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, LargeFileScanResult, PrivacyApplyResult, PrivacyShieldEngine,
-    PrivacyShieldState, ScanResult,
+    PrivacyShieldState, ScanResult, StartupDebloatEngine, StartupItem,
 };
 
 #[tauri::command]
@@ -93,6 +93,26 @@ fn analyze_disk_directory(dir_path: String, max_depth: usize) -> DiskAnalysisRes
     DiskAnalyzerEngine::analyze_directory(&dir_path, max_depth)
 }
 
+#[tauri::command]
+fn get_startup_items() -> Vec<StartupItem> {
+    StartupDebloatEngine::list_startup_items()
+}
+
+#[tauri::command]
+fn toggle_startup_item(id: String, enable: bool) -> Result<(), String> {
+    StartupDebloatEngine::toggle_startup_item(&id, enable)
+}
+
+#[tauri::command]
+fn get_bloatware_list() -> Vec<BloatwareApp> {
+    StartupDebloatEngine::list_known_bloatware()
+}
+
+#[tauri::command]
+fn remove_bloatware(package_names: Vec<String>) -> Vec<String> {
+    StartupDebloatEngine::remove_bloatware_packages(&package_names)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -108,7 +128,11 @@ fn main() {
             get_privacy_shield_state,
             apply_privacy_setting,
             get_drives,
-            analyze_disk_directory
+            analyze_disk_directory,
+            get_startup_items,
+            toggle_startup_item,
+            get_bloatware_list,
+            remove_bloatware
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

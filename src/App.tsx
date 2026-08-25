@@ -7,6 +7,8 @@ import {
   PrivacyShieldState,
   DiskDriveInfo,
   DiskAnalysisResult,
+  StartupItem,
+  BloatwareApp,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -23,10 +25,13 @@ import {
   PieChart,
   Folder,
   FileCode,
+  Zap,
+  PackageMinus,
+  Check,
 } from 'lucide-react'
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'privacy' | 'disk'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -44,16 +49,27 @@ export function App() {
   const [selectedDupPaths, setSelectedDupPaths] = useState<Set<string>>(new Set())
   const [dupStatus, setDupStatus] = useState<string | null>(null)
 
-  // Privacy Shield state
-  const [privacyState, setPrivacyState] = useState<PrivacyShieldState | null>(null)
-  const [loadingPrivacy, setLoadingPrivacy] = useState(false)
-  const [privacyFeedback, setPrivacyFeedback] = useState<string | null>(null)
-
   // Disk Analyzer state
   const [drives, setDrives] = useState<DiskDriveInfo[]>([])
   const [selectedDrivePath, setSelectedDrivePath] = useState<string>('D:\\')
   const [analyzingDisk, setAnalyzingDisk] = useState(false)
   const [diskAnalysis, setDiskAnalysis] = useState<DiskAnalysisResult | null>(null)
+
+  // Startup state
+  const [startupItems, setStartupItems] = useState<StartupItem[]>([])
+  const [loadingStartup, setLoadingStartup] = useState(false)
+  const [startupFeedback, setStartupFeedback] = useState<string | null>(null)
+
+  // Debloater state
+  const [bloatList, setBloatList] = useState<BloatwareApp[]>([])
+  const [selectedBloat, setSelectedBloat] = useState<Set<string>>(new Set())
+  const [removingBloat, setRemovingBloat] = useState(false)
+  const [bloatFeedback, setBloatFeedback] = useState<string | null>(null)
+
+  // Privacy Shield state
+  const [privacyState, setPrivacyState] = useState<PrivacyShieldState | null>(null)
+  const [loadingPrivacy, setLoadingPrivacy] = useState(false)
+  const [privacyFeedback, setPrivacyFeedback] = useState<string | null>(null)
 
   const fetchOverview = async () => {
     setLoadingOverview(true)
@@ -140,6 +156,69 @@ export function App() {
     }
   }
 
+  const fetchDrivesAndAnalyze = async (targetPath?: string) => {
+    setAnalyzingDisk(true)
+    try {
+      const driveList = await tauriApi.getDrives()
+      setDrives(driveList)
+      const path = targetPath || (driveList.length > 0 ? driveList[0].mount_point : 'D:\\')
+      setSelectedDrivePath(path)
+      const res = await tauriApi.analyzeDiskDirectory(path, 3)
+      setDiskAnalysis(res)
+    } catch (err) {
+      console.error('Disk analysis error:', err)
+    } finally {
+      setAnalyzingDisk(false)
+    }
+  }
+
+  const fetchStartupItems = async () => {
+    setLoadingStartup(true)
+    try {
+      const items = await tauriApi.getStartupItems()
+      setStartupItems(items)
+    } catch (err) {
+      console.error('Startup items error:', err)
+    } finally {
+      setLoadingStartup(false)
+    }
+  }
+
+  const handleToggleStartup = async (item: StartupItem) => {
+    try {
+      await tauriApi.toggleStartupItem(item.id, !item.is_enabled)
+      setStartupFeedback(`Updated startup state for ${item.name}`)
+      await fetchStartupItems()
+    } catch (err) {
+      setStartupFeedback(`Error: ${String(err)}`)
+    }
+  }
+
+  const fetchBloatware = async () => {
+    try {
+      const list = await tauriApi.getBloatwareList()
+      setBloatList(list)
+    } catch (err) {
+      console.error('Bloatware fetch error:', err)
+    }
+  }
+
+  const handleRemoveSelectedBloat = async () => {
+    if (selectedBloat.size === 0) return
+    setRemovingBloat(true)
+    try {
+      const pkgs = Array.from(selectedBloat)
+      await tauriApi.removeBloatware(pkgs)
+      setBloatFeedback(`Removed ${pkgs.length} bloatware packages.`)
+      setSelectedBloat(new Set())
+      await fetchBloatware()
+    } catch (err) {
+      setBloatFeedback(`Removal error: ${String(err)}`)
+    } finally {
+      setRemovingBloat(false)
+    }
+  }
+
   const fetchPrivacySettings = async () => {
     setLoadingPrivacy(true)
     try {
@@ -158,7 +237,6 @@ export function App() {
       setPrivacyFeedback(`Updated policy for ${id}`)
       await fetchPrivacySettings()
     } catch (err) {
-      console.error(`Failed to apply privacy setting ${id}:`, err)
       setPrivacyFeedback(`Error: ${String(err)}`)
     }
   }
@@ -174,24 +252,7 @@ export function App() {
       setPrivacyFeedback('All privacy shields successfully applied!')
       await fetchPrivacySettings()
     } catch (err) {
-      console.error('Batch protect failed:', err)
-      setPrivacyFeedback(`Error applying all: ${String(err)}`)
-    }
-  }
-
-  const fetchDrivesAndAnalyze = async (targetPath?: string) => {
-    setAnalyzingDisk(true)
-    try {
-      const driveList = await tauriApi.getDrives()
-      setDrives(driveList)
-      const path = targetPath || (driveList.length > 0 ? driveList[0].mount_point : 'D:\\')
-      setSelectedDrivePath(path)
-      const res = await tauriApi.analyzeDiskDirectory(path, 3)
-      setDiskAnalysis(res)
-    } catch (err) {
-      console.error('Disk analysis error:', err)
-    } finally {
-      setAnalyzingDisk(false)
+      setPrivacyFeedback(`Error: ${String(err)}`)
     }
   }
 
@@ -280,6 +341,34 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('startup')
+                if (startupItems.length === 0 && !loadingStartup) fetchStartupItems()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'startup'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Zap className="w-4 h-4" />
+              Startup Manager
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('debloat')
+                if (bloatList.length === 0) fetchBloatware()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'debloat'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <PackageMinus className="w-4 h-4" />
+              Debloater
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('privacy')
                 if (!privacyState && !loadingPrivacy) fetchPrivacySettings()
               }}
@@ -313,6 +402,10 @@ export function App() {
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'disk'
               ? 'Disk Space & Treemap Analyzer'
+              : activeTab === 'startup'
+              ? 'Windows Startup Programs'
+              : activeTab === 'debloat'
+              ? 'Windows OEM & Bloatware Removal'
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
@@ -351,6 +444,23 @@ export function App() {
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${analyzingDisk ? 'animate-spin' : ''}`} />
                 Analyze Drive
+              </button>
+            ) : activeTab === 'startup' ? (
+              <button
+                onClick={fetchStartupItems}
+                disabled={loadingStartup}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingStartup ? 'animate-spin' : ''}`} />
+                Refresh Startups
+              </button>
+            ) : activeTab === 'debloat' ? (
+              <button
+                onClick={fetchBloatware}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Apps
               </button>
             ) : (
               <button
@@ -637,7 +747,6 @@ export function App() {
         ) : activeTab === 'disk' ? (
           /* Disk Analyzer Page */
           <div className="p-8 max-w-6xl space-y-6">
-            {/* Drive selector cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {drives.map((d, i) => {
                 const isSelected = selectedDrivePath === d.mount_point
@@ -674,9 +783,7 @@ export function App() {
               })}
             </div>
 
-            {/* Folder and Extension Breakdown */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Directory Subtree List */}
               <div className="md:col-span-2 space-y-2">
                 <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
                   Folder Size Breakdown ({selectedDrivePath})
@@ -711,7 +818,6 @@ export function App() {
                 </div>
               </div>
 
-              {/* File Type Distribution */}
               <div className="space-y-2">
                 <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
                   By Extension
@@ -740,6 +846,116 @@ export function App() {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        ) : activeTab === 'startup' ? (
+          /* Startup Manager Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Startup Applications ({startupItems.length})</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {startupFeedback || 'Disable unneeded autostart programs to improve system boot times.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {startupItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                >
+                  <div className="space-y-1 truncate mr-4">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-sm font-semibold text-white truncate">{item.name}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
+                        {item.location}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          item.impact_rating === 'High'
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            : item.impact_rating === 'Medium'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        }`}
+                      >
+                        {item.impact_rating} Impact
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 font-mono truncate">{item.command}</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleToggleStartup(item)}
+                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                      item.is_enabled
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-zinc-800 text-zinc-400'
+                    }`}
+                  >
+                    {item.is_enabled ? 'Enabled' : 'Disabled'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : activeTab === 'debloat' ? (
+          /* Debloater Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Windows Bloatware Removal</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {bloatFeedback || 'Safely uninstall pre-installed OEM and promotional Windows UWP packages.'}
+                </p>
+              </div>
+              <button
+                onClick={handleRemoveSelectedBloat}
+                disabled={removingBloat || selectedBloat.size === 0}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-semibold text-xs shadow-lg shadow-amber-500/20 transition flex items-center gap-2 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                {removingBloat ? 'Removing...' : `Uninstall Selected (${selectedBloat.size})`}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {bloatList.map((app) => {
+                const isSelected = selectedBloat.has(app.package_name)
+                return (
+                  <div
+                    key={app.id}
+                    className={`p-4 rounded-xl border transition flex justify-between items-start ${
+                      isSelected ? 'bg-amber-500/10 border-amber-500/30' : 'bg-[#16161a] border-[#2a2a36]'
+                    }`}
+                  >
+                    <label className="flex items-start gap-3 cursor-pointer mr-4">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          const next = new Set(selectedBloat)
+                          if (e.target.checked) next.add(app.package_name)
+                          else next.delete(app.package_name)
+                          setSelectedBloat(next)
+                        }}
+                        className="mt-1 rounded border-zinc-700 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{app.name}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 uppercase font-mono">
+                            {app.category}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-400">{app.description}</p>
+                      </div>
+                    </label>
+                  </div>
+                )
+              })}
             </div>
           </div>
         ) : (
