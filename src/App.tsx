@@ -40,6 +40,8 @@ import {
   FlaggedConnection,
   BrowserCacheScanSummary,
   BrowserProfileCacheTarget,
+  DeleteProbeSummary,
+  DeletePathProbeResult,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -116,6 +118,8 @@ export function App() {
   const [cleanStatus, setCleanStatus] = useState<string | null>(null)
   const [blockerSummary, setBlockerSummary] = useState<BlockerSummary | null>(null)
   const [checkingBlockers, setCheckingBlockers] = useState(false)
+  const [probeSummary, setProbeSummary] = useState<DeleteProbeSummary | null>(null)
+  const [probingAccess, setProbingAccess] = useState(false)
 
   // Browser Profile Caches state
   const [browserCaches, setBrowserCaches] = useState<BrowserCacheScanSummary | null>(null)
@@ -311,6 +315,21 @@ export function App() {
       }
     } catch (err) {
       setCleanStatus(`Failed to close blocker: ${String(err)}`)
+    }
+  }
+
+  const handleProbeAccess = async () => {
+    if (!scanResult) return
+    setProbingAccess(true)
+    try {
+      const allPaths = scanResult.categories.flatMap((c) => c.items.map((i) => i.path))
+      const res = await tauriApi.probeDeleteAccess(allPaths)
+      setProbeSummary(res)
+      setCleanStatus(`Probed ${res.total_probed} paths: ${res.accessible_count} accessible, ${res.in_use_count} in-use, ${res.permission_denied_count} permission-denied`)
+    } catch (err) {
+      setCleanStatus(`Probe error: ${String(err)}`)
+    } finally {
+      setProbingAccess(false)
     }
   }
 
@@ -1805,6 +1824,14 @@ export function App() {
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${scanning ? 'animate-spin' : ''}`} />
                   {scanning ? 'Scanning...' : 'Rescan System'}
+                </button>
+                <button
+                  onClick={handleProbeAccess}
+                  disabled={probingAccess || !scanResult || scanResult.total_files === 0}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-amber-400 font-semibold text-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <ShieldCheck className={`w-3.5 h-3.5 ${probingAccess ? 'animate-spin' : ''}`} />
+                  {probingAccess ? 'Probing Locks...' : 'Probe Access'}
                 </button>
                 <button
                   onClick={handleCleanNow}

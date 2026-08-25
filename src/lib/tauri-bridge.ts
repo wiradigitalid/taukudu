@@ -533,6 +533,22 @@ export interface BrowserCacheScanSummary {
   total_targets: number
 }
 
+export interface DeletePathProbeResult {
+  path: string
+  status: string
+  error_code: number
+  is_deletable: boolean
+  reason: string
+}
+
+export interface DeleteProbeSummary {
+  total_probed: number
+  accessible_count: number
+  in_use_count: number
+  permission_denied_count: number
+  results: DeletePathProbeResult[]
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -551,6 +567,9 @@ export const tauriApi = {
   },
   closeCleanerBlocker: async (pid: number): Promise<void> => {
     return await invoke('close_cleaner_blocker', { pid })
+  },
+  probeDeleteAccess: async (paths: string[]): Promise<DeleteProbeSummary> => {
+    return await invoke('probe_delete_access', { paths })
   },
   scanDuplicates: async (options: DuplicateScanOptions): Promise<DuplicateScanResult> => {
     return await invoke('scan_duplicates', { options })

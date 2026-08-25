@@ -38,10 +38,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-27** | **Cleaner Process Blockers Detector** | Real-time file lock & blocking browser/process detector & closer | `CleanerBlockersEngine`, Cleaner blocker alert UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-28** | **Live Outbound Threat Monitor** | Network socket C2 & malicious CIDR blacklist auditor and process killer | `ThreatMonitorEngine`, `ThreatMonitorPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-29** | **Chromium & Gecko Multi-Profile Caches** | Shared shader/Vulkan caches & multi-profile cache discovery | `ChromiumCacheEngine`, `BrowserCachesPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-30** | **Windows Delete Access & Lock Probe** | Non-destructive Win32 CreateFileW sharing violation & permission probe | `DeleteFailureProbeEngine`, System Cleaner Probe UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 30 — Windows Delete Access & Lock Probe Engine (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Delete Probe Engine (`src-tauri/src/delete_failure_probe.rs`):** Evaluasi akses penghapusan file/direktori tanpa mengubah atau menghapus konten fisik menggunakan Win32 `CreateFileW` dengan bendera `DELETE_ACCESS` dan `FILE_FLAG_BACKUP_SEMANTICS`. Mengklasifikasikan error secara presisi menjadi *Accessible*, *InUse (Error 32/33 Sharing Violation)*, dan *PermissionDenied (Error 5 Access Denied)*.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `probe_delete_access`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `DeletePathProbeResult`, `DeleteProbeSummary`, serta method `tauriApi.probeDeleteAccess`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan tombol *Probe Access* pada antarmuka *System Cleaner* yang mengevaluasi status keterkuncian berkas sampah sebelum pembersihan dieksekusi.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 29 — Chromium & Gecko Multi-Profile Browser Caches (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

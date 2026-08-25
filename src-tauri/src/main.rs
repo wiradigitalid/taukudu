@@ -10,6 +10,7 @@ use taukudu_lib::{
     BrowserCacheScanSummary, BrowserProfileCacheTarget, ChromiumCacheEngine,
     CleanExecutionResult, CleanerBlockersEngine, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
     ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DeduplicationEngine,
+    DeleteFailureProbeEngine, DeletePathProbeResult, DeleteProbeSummary,
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
     DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
@@ -95,6 +96,11 @@ fn check_cleaner_blockers(target_paths: Vec<String>) -> taukudu_lib::BlockerSumm
 #[tauri::command]
 fn close_cleaner_blocker(pid: u32) -> Result<(), String> {
     CleanerBlockersEngine::close_blocker(pid)
+}
+
+#[tauri::command]
+fn probe_delete_access(paths: Vec<String>) -> DeleteProbeSummary {
+    DeleteFailureProbeEngine::probe_paths(&paths)
 }
 
 #[tauri::command]
@@ -483,6 +489,7 @@ fn main() {
             clean_targets,
             check_cleaner_blockers,
             close_cleaner_blocker,
+            probe_delete_access,
             scan_duplicates,
             scan_empty_folders,
             scan_large_files,

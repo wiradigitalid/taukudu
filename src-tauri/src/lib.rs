@@ -6,6 +6,7 @@ pub mod cli;
 pub mod context_menu;
 pub mod cve_scanner;
 pub mod deduplication;
+pub mod delete_failure_probe;
 pub mod disk_analyzer;
 pub mod disk_maintenance;
 pub mod firewall_audit;
@@ -37,6 +38,9 @@ pub use cve_scanner::{CveItem, CveScanSummary, CveScannerEngine};
 pub use deduplication::{
     DeduplicationEngine, DuplicateFile, DuplicateGroup, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, LargeFileScanResult,
+};
+pub use delete_failure_probe::{
+    DeleteFailureProbeEngine, DeletePathProbeResult, DeleteProbeStatus, DeleteProbeSummary,
 };
 pub use disk_analyzer::{
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskTreemapNode, FileTypeBreakdown,
