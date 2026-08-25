@@ -6,13 +6,14 @@ use std::env;
 use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
-    handle_cli_mode, BloatwareApp, CleanExecutionResult, CleanerEngine, CliArgs,
-    DeduplicationEngine, DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DriverPackageInfo,
-    DuplicateScanOptions, DuplicateScanResult, EmptyFolderScanResult, HistoryRecord,
-    InstalledProgramInfo, LargeFileScanResult, MalwareActionResult, MalwareScanResult,
-    MalwareScannerEngine, PerfMonitorEngine, PerformanceSnapshot, PrivacyApplyResult,
-    PrivacyShieldEngine, PrivacyShieldState, ScanResult, ServiceDriverEngine, ServiceItemInfo,
-    ShredderResult, StartupDebloatEngine, StartupItem, UninstallerShredderEngine, GLOBAL_HISTORY,
+    handle_cli_mode, ActiveConnectionInfo, BloatwareApp, CleanExecutionResult, CleanerEngine,
+    CliArgs, DeduplicationEngine, DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo,
+    DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult, EmptyFolderScanResult,
+    HistoryRecord, InstalledProgramInfo, LargeFileScanResult, MalwareActionResult,
+    MalwareScanResult, MalwareScannerEngine, NetworkItemInfo, NetworkToolsEngine,
+    PerfMonitorEngine, PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine,
+    PrivacyShieldState, ScanResult, ServiceDriverEngine, ServiceItemInfo, ShredderResult,
+    StartupDebloatEngine, StartupItem, UninstallerShredderEngine, GLOBAL_HISTORY,
 };
 
 #[tauri::command]
@@ -212,6 +213,31 @@ fn clear_history_records() -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn get_network_cleanup_items() -> Vec<NetworkItemInfo> {
+    NetworkToolsEngine::get_network_items()
+}
+
+#[tauri::command]
+fn flush_dns_cache() -> Result<(), String> {
+    NetworkToolsEngine::flush_dns()
+}
+
+#[tauri::command]
+fn flush_arp_cache() -> Result<(), String> {
+    NetworkToolsEngine::flush_arp()
+}
+
+#[tauri::command]
+fn reset_tcp_stack() -> Result<(), String> {
+    NetworkToolsEngine::reset_winsock()
+}
+
+#[tauri::command]
+fn get_active_connections() -> Vec<ActiveConnectionInfo> {
+    NetworkToolsEngine::list_active_connections()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -254,7 +280,12 @@ fn main() {
             get_performance_snapshot,
             kill_perf_process,
             get_history_records,
-            clear_history_records
+            clear_history_records,
+            get_network_cleanup_items,
+            flush_dns_cache,
+            flush_arp_cache,
+            reset_tcp_stack,
+            get_active_connections
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

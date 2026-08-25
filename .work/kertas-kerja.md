@@ -22,46 +22,15 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-11** | **History & SQLite Store** | Audit trail & history logging + HistoryPage | `rusqlite` (SQLite 3), `HistoryPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-12** | **Settings, i18n & Updates** | 30+ Bahasa (i18next), Theme Dark/Light, Auto-updater | `i18next`, Dark/Light switch, Settings UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-13** | **CLI Mode & Headless** | Scriptable command-line interface (`taukudu clean --all`) | `clap`, subcommands `clean`, `duplicates`, `malware`, `privacy` | ✅ COMPLETED | 2026-08-26 |
+| **AREA-14** | **Network & Socket Optimizer** | DNS cache flush, ARP table purge, Winsock reset, Netstat monitoring | Native Win32 CLI / Netstat, `NetworkPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
 
-### Area 00 — App Shell & Scaffolding (Selesai: 2026-08-25)
-- Inisialisasi Tauri v2 + React 18 + Tailwind v4 dan IPC basic bridge.
-
-### Area 01 & 02 — Cleaner Core Engine, Rules Parser & Cleaner UI (Selesai: 2026-08-25 / Diperluas: 2026-08-26)
-- Rules parser deklaratif, parallel scanner rayon + walkdir, scan & clean IPC commands, Cleaner split-view UI, dan integrasi 100+ aturan XML CleanerML dari **BleachBit** (`src-tauri/bleachbit_cleaners/`).
-
-### Area 03 — Deduplication & Disk Tools (Selesai: 2026-08-25)
-- Multi-stage hasher Blake3, disk anomaly scanners, dan Duplicate Finder UI.
-
-### Area 04 — Disk Analyzer (Selesai: 2026-08-25)
-- Drive Enumerator via `sysinfo::Disks` dan Folder/Extension breakdown UI.
-
-### Area 05 — Privacy Shield (Selesai: 2026-08-25)
-- Win32 Privacy Registry Engine & Privacy Shield UI.
-
-### Area 07 — System Tools: Startup & Debloat (Selesai: 2026-08-25)
-- Startup Manager & Windows Debloater UI & IPC commands.
-
-### Area 06 — Malware Scanner & Quarantine (Selesai: 2026-08-26)
-- Heuristic malware scanner, masquerading detection, double-extension hunter, dan quarantine utilities.
-
-### Area 08 — Services & Driver Cleaner (Selesai: 2026-08-26)
-- Windows Services manager & DriverStore obsolete driver purge.
-
-### Area 09 — Program Uninstaller & Cryptographic File Shredder (Selesai: 2026-08-26)
-- Program uninstaller dari registry dan DoD 5220.22-M multi-pass cryptographic file shredder.
-
-### Area 10 — Hardware & Performance Monitor (Selesai: 2026-08-26)
-- Real-time CPU/RAM metrics, process manager, dan terminate process capability.
-
-### Area 11 — Cleaning History & SQLite Audit Store (Selesai: 2026-08-26)
-- SQLite history store via `rusqlite`, automated session logging, dan History UI.
-
-### Area 12 — App Settings & Multi-Language i18n (Selesai: 2026-08-26)
-- i18next engine dengan 30 bahasa, toggle Dark/Light theme, dan Settings UI.
-
-### Area 13 — Scriptable Headless CLI Interface (Selesai: 2026-08-26)
-- CLI parser berbasis `clap` dengan subcommands `clean`, `duplicates`, `malware`, `privacy` dan output JSON/quiet.
+### Area 14 — Network & TCP/IP Socket Optimizer (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Network Engine (`src-tauri/src/network_tools.rs`):** Utilitas flushing cache DNS resolver (`ipconfig /flushdns`), pembersihan tabel ARP protocol (`netsh interface ip delete arpcache`), reset Winsock TCP/IP stack (`netsh winsock reset`), dan inspeksi koneksi aktif (`netstat -ano -p tcp`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_network_cleanup_items`, `flush_dns_cache`, `flush_arp_cache`, `reset_tcp_stack`, dan `get_active_connections`.
+  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Network Optimizer* dengan tombol flushing instan dan tabel daftar koneksi TCP aktif.
+  4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

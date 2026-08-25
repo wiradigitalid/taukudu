@@ -15,6 +15,8 @@ import {
   InstalledProgramInfo,
   PerformanceSnapshot,
   HistoryRecord,
+  NetworkItemInfo,
+  ActiveConnectionInfo,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -47,13 +49,14 @@ import {
   Globe,
   Moon,
   Sun,
+  Wifi,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -102,6 +105,11 @@ export function App() {
   const [driversList, setDriversList] = useState<DriverPackageInfo[]>([])
   const [loadingDrivers, setLoadingDrivers] = useState(false)
   const [driversFeedback, setDriversFeedback] = useState<string | null>(null)
+
+  // Network state
+  const [networkItems, setNetworkItems] = useState<NetworkItemInfo[]>([])
+  const [activeConns, setActiveConns] = useState<ActiveConnectionInfo[]>([])
+  const [networkFeedback, setNetworkFeedback] = useState<string | null>(null)
 
   // Uninstaller state
   const [programsList, setProgramsList] = useState<InstalledProgramInfo[]>([])
@@ -324,6 +332,44 @@ export function App() {
       await fetchDrivers()
     } catch (err) {
       setDriversFeedback(`Driver error: ${String(err)}`)
+    }
+  }
+
+  const fetchNetwork = async () => {
+    try {
+      const items = await tauriApi.getNetworkItems()
+      setNetworkItems(items)
+      const conns = await tauriApi.getActiveConnections()
+      setActiveConns(conns)
+    } catch (err) {
+      console.error('Network fetch error:', err)
+    }
+  }
+
+  const handleFlushDns = async () => {
+    try {
+      await tauriApi.flushDnsCache()
+      setNetworkFeedback('Successfully flushed DNS Resolver Cache.')
+    } catch (err) {
+      setNetworkFeedback(`Flush DNS error: ${String(err)}`)
+    }
+  }
+
+  const handleFlushArp = async () => {
+    try {
+      await tauriApi.flushArpCache()
+      setNetworkFeedback('Successfully flushed ARP Protocol Table.')
+    } catch (err) {
+      setNetworkFeedback(`Flush ARP error: ${String(err)}`)
+    }
+  }
+
+  const handleResetWinsock = async () => {
+    try {
+      await tauriApi.resetTcpStack()
+      setNetworkFeedback('Successfully reset TCP/IP Stack (Winsock).')
+    } catch (err) {
+      setNetworkFeedback(`Winsock error: ${String(err)}`)
     }
   }
 
@@ -583,6 +629,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('network')
+                if (networkItems.length === 0) fetchNetwork()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'network'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Wifi className="w-4 h-4" />
+              Network Optimizer
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('perf')
                 if (!perfSnapshot && !loadingPerf) fetchPerformanceSnapshot()
               }}
@@ -750,6 +810,8 @@ export function App() {
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'disk'
               ? 'Disk Space & Treemap Analyzer'
+              : activeTab === 'network'
+              ? 'Network Cache & TCP/IP Stack Optimizer'
               : activeTab === 'perf'
               ? 'Real-Time Hardware & Process Performance Monitor'
               : activeTab === 'startup'
@@ -773,15 +835,21 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'settings' ? (
-              <span className="text-xs text-zinc-500 font-mono">TauKudu v0.1.0</span>
+            {activeTab === 'network' ? (
+              <button
+                onClick={fetchNetwork}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Network
+              </button>
             ) : (
               <button
                 onClick={fetchOverview}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                Refresh
+                Refresh Stats
               </button>
             )}
           </div>
@@ -853,90 +921,57 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'settings' ? (
-          /* Settings Page */
-          <div className="p-8 max-w-5xl space-y-6">
+        ) : activeTab === 'network' ? (
+          /* Network Optimizer Page */
+          <div className="p-8 max-w-6xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-white">Preferences & Localization</h2>
+                <h2 className="text-lg font-bold text-white">Network Cache & TCP/IP Optimization</h2>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {settingsFeedback || 'Customize application appearance, interface language (30+ locales), and runtime behavior.'}
+                  {networkFeedback || 'Flush DNS/ARP caches and reset corrupted network sockets to restore full connection speed.'}
                 </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleFlushDns}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition cursor-pointer"
+                >
+                  Flush DNS Cache
+                </button>
+                <button
+                  onClick={handleFlushArp}
+                  className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-200 text-xs font-semibold transition cursor-pointer"
+                >
+                  Flush ARP
+                </button>
+                <button
+                  onClick={handleResetWinsock}
+                  className="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 text-xs font-semibold transition cursor-pointer"
+                >
+                  Reset Winsock
+                </button>
               </div>
             </div>
 
             <div className="space-y-4">
-              {/* Language Selection */}
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-amber-400" />
-                    <span className="text-sm font-semibold text-white">Language (i18n)</span>
-                  </div>
-                  <p className="text-xs text-zinc-400">Choose your preferred desktop interface language</p>
-                </div>
-                <select
-                  value={currentLang}
-                  onChange={(e) => handleChangeLanguage(e.target.value)}
-                  className="px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-xs text-white outline-none focus:border-amber-500 cursor-pointer"
-                >
-                  {LANGUAGES.map((l) => (
-                    <option key={l.code} value={l.code}>
-                      {l.nativeName} ({l.name})
-                    </option>
-                  ))}
-                </select>
+              <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
+                Active Established TCP Connections ({activeConns.length})
               </div>
-
-              {/* Appearance Mode */}
-              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Moon className="w-4 h-4 text-purple-400" />
-                    <span className="text-sm font-semibold text-white">Theme & Appearance</span>
-                  </div>
-                  <p className="text-xs text-zinc-400">Select Dark or Light theme for interface elements</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleToggleTheme('dark')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                      themeMode === 'dark'
-                        ? 'bg-amber-500 text-black'
-                        : 'bg-zinc-800 text-zinc-400 hover:text-white'
-                    }`}
+              <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] max-h-[450px] overflow-y-auto space-y-2">
+                {activeConns.slice(0, 30).map((c, i) => (
+                  <div
+                    key={i}
+                    className="p-2.5 rounded-lg bg-black/20 border border-white/[0.03] flex items-center justify-between text-xs font-mono"
                   >
-                    <Moon className="w-3.5 h-3.5" />
-                    Dark
-                  </button>
-                  <button
-                    onClick={() => handleToggleTheme('light')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                      themeMode === 'light'
-                        ? 'bg-amber-500 text-black'
-                        : 'bg-zinc-800 text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    <Sun className="w-3.5 h-3.5" />
-                    Light
-                  </button>
-                </div>
-              </div>
-
-              {/* Zero Telemetry Guarantee */}
-              <div className="p-5 rounded-xl bg-[#16161a] border border-emerald-500/30 flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-emerald-400" />
-                    <span className="text-sm font-semibold text-white">Zero Telemetry Promise</span>
+                    <span className="text-zinc-300 w-48 truncate">{c.local_address}</span>
+                    <span className="text-zinc-500">→</span>
+                    <span className="text-amber-400 w-48 truncate">{c.foreign_address}</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      {c.state}
+                    </span>
+                    <span className="text-zinc-400 text-[11px]">PID {c.pid}</span>
                   </div>
-                  <p className="text-xs text-zinc-400">
-                    TauKudu does not send usage metrics, telemetry, or file logs to any remote server.
-                  </p>
-                </div>
-                <span className="px-2.5 py-1 rounded text-[11px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  100% Offline
-                </span>
+                ))}
               </div>
             </div>
           </div>

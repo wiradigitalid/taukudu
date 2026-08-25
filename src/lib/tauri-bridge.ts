@@ -220,6 +220,22 @@ export interface HistoryRecord {
   details_summary: string
 }
 
+export interface NetworkItemInfo {
+  id: string
+  item_type: string
+  label: string
+  detail: string
+  is_selected: boolean
+}
+
+export interface ActiveConnectionInfo {
+  protocol: string
+  local_address: string
+  foreign_address: string
+  state: string
+  pid: number
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -304,5 +320,20 @@ export const tauriApi = {
   },
   clearHistoryRecords: async (): Promise<void> => {
     return await invoke('clear_history_records')
+  },
+  getNetworkItems: async (): Promise<NetworkItemInfo[]> => {
+    return await invoke('get_network_cleanup_items')
+  },
+  flushDnsCache: async (): Promise<void> => {
+    return await invoke('flush_dns_cache')
+  },
+  flushArpCache: async (): Promise<void> => {
+    return await invoke('flush_arp_cache')
+  },
+  resetTcpStack: async (): Promise<void> => {
+    return await invoke('reset_tcp_stack')
+  },
+  getActiveConnections: async (): Promise<ActiveConnectionInfo[]> => {
+    return await invoke('get_active_connections')
   },
 }
