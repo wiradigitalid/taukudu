@@ -18,8 +18,8 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-06** | **Malware Scanner (YARA-X)** | On-demand YARA scan + MalwareScannerPage, ThreatMonitor | Heuristic scanner, quarantine isolation, `MalwareScannerPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-08** | **System Tools: Services & Drivers** | Service Manager & DriverStore Purge + Pages | CIM/WMI service manager, pnputil driver cleaner, UI tabs | ✅ COMPLETED | 2026-08-26 |
 | **AREA-09** | **Uninstaller & Secure Shredder** | Clean Uninstaller + Multi-pass cryptographic file shredder | `zeroize`, `rand`, Uninstaller & Shredder UI | ✅ COMPLETED | 2026-08-26 |
-| **AREA-10** | **Performance Monitor** | Live CPU, RAM, Disk I/O, Network, S.M.A.R.T. health + Page | `sysinfo` | ⏳ NEXT UP | — |
-| **AREA-11** | **History & SQLite Store** | Audit trail & history logging + HistoryPage | `rusqlite` (SQLite 3) | ⬜ PENDING | — |
+| **AREA-10** | **Performance Monitor** | Live CPU, RAM, Disk I/O, Network, Process Manager + Page | `sysinfo`, Performance Monitor UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-11** | **History & SQLite Store** | Audit trail & history logging + HistoryPage | `rusqlite` (SQLite 3) | ⏳ NEXT UP | — |
 | **AREA-12** | **Settings, i18n & Updates** | 30+ Bahasa (i18next), Theme Dark/Light, Auto-updater | `i18next`, Tauri updater plugin | ⬜ PENDING | — |
 | **AREA-13** | **CLI Mode & Headless** | Scriptable command-line interface (`taukudu clean --all`) | `clap` | ⬜ PENDING | — |
 
@@ -52,9 +52,12 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 - Windows Services manager & DriverStore obsolete driver purge.
 
 ### Area 09 — Program Uninstaller & Cryptographic File Shredder (Selesai: 2026-08-26)
+- Program uninstaller dari registry dan DoD 5220.22-M multi-pass cryptographic file shredder.
+
+### Area 10 — Hardware & Performance Monitor (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **Program Uninstaller (`src-tauri/src/uninstaller_shredder.rs`):** Membaca daftar software terinstal dari Registry `HKLM/HKCU/Uninstall` lengkap dengan publisher, versi, ukuran estimasi, dan eksekusi uninstaller.
-  2. **Cryptographic File Shredder:** Implementasi multi-pass overwrite (DoD 5220.22-M 3-pass pseudo-random + zero pass via crate `rand` dan `zeroize`) sebelum melakukan *filesystem unlink*.
-  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_installed_programs`, `uninstall_program`, dan `shred_files`.
-  4. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka Uninstaller dan Cryptographic File Shredder.
+  1. **Performance Monitor Engine (`src-tauri/src/perf_monitor.rs`):** Menggunakan `sysinfo` untuk membaca utilisasi global CPU real-time, memory load persentase, total/used memory, process count, uptime sistem, dan pemeringkatan top proses pemakan RAM/CPU.
+  2. **Process Management:** Fungsi terminasi proses aman (`kill_process` / `taskkill`).
+  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_performance_snapshot` dan `kill_perf_process`.
+  4. **Frontend UI (`src/App.tsx`):** Antarmuka *Performance Monitor* dengan kartu utilisasi CPU/RAM real-time, progress bar, daftar top 25 proses, dan tombol terminate per proses.
   5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

@@ -13,6 +13,7 @@ import {
   ServiceItemInfo,
   DriverPackageInfo,
   InstalledProgramInfo,
+  PerformanceSnapshot,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -38,10 +39,12 @@ import {
   Wrench,
   Package,
   FileX2,
+  Gauge,
+  XCircle,
 } from 'lucide-react'
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'uninstaller' | 'shredder' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'uninstaller' | 'shredder' | 'perf' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -95,6 +98,11 @@ export function App() {
   const [shredPath, setShredPath] = useState<string>('')
   const [shredding, setShredding] = useState(false)
   const [shredFeedback, setShredFeedback] = useState<string | null>(null)
+
+  // Performance Monitor state
+  const [perfSnapshot, setPerfSnapshot] = useState<PerformanceSnapshot | null>(null)
+  const [loadingPerf, setLoadingPerf] = useState(false)
+  const [perfFeedback, setPerfFeedback] = useState<string | null>(null)
 
   // Malware Scanner state
   const [malwareScanning, setMalwareScanning] = useState(false)
@@ -337,6 +345,28 @@ export function App() {
     }
   }
 
+  const fetchPerformanceSnapshot = async () => {
+    setLoadingPerf(true)
+    try {
+      const snap = await tauriApi.getPerformanceSnapshot()
+      setPerfSnapshot(snap)
+    } catch (err) {
+      console.error('Performance snapshot error:', err)
+    } finally {
+      setLoadingPerf(false)
+    }
+  }
+
+  const handleKillProcess = async (pid: number, name: string) => {
+    try {
+      await tauriApi.killProcess(pid)
+      setPerfFeedback(`Terminated process ${name} (PID ${pid})`)
+      await fetchPerformanceSnapshot()
+    } catch (err) {
+      setPerfFeedback(`Kill error: ${String(err)}`)
+    }
+  }
+
   const handleRunMalwareScan = async (type: string = 'quick') => {
     setMalwareScanning(true)
     setMalwareStatus(null)
@@ -498,6 +528,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('perf')
+                if (!perfSnapshot && !loadingPerf) fetchPerformanceSnapshot()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'perf'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Gauge className="w-4 h-4" />
+              Performance Monitor
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('startup')
                 if (startupItems.length === 0 && !loadingStartup) fetchStartupItems()
               }}
@@ -626,6 +670,8 @@ export function App() {
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'disk'
               ? 'Disk Space & Treemap Analyzer'
+              : activeTab === 'perf'
+              ? 'Real-Time Hardware & Process Performance Monitor'
               : activeTab === 'startup'
               ? 'Windows Startup Programs'
               : activeTab === 'debloat'
@@ -643,23 +689,14 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'dashboard' ? (
+            {activeTab === 'perf' ? (
               <button
-                onClick={fetchOverview}
-                disabled={loadingOverview}
+                onClick={fetchPerformanceSnapshot}
+                disabled={loadingPerf}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingOverview ? 'animate-spin' : ''}`} />
-                Refresh Stats
-              </button>
-            ) : activeTab === 'uninstaller' ? (
-              <button
-                onClick={fetchPrograms}
-                disabled={loadingPrograms}
-                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingPrograms ? 'animate-spin' : ''}`} />
-                Refresh Programs
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingPerf ? 'animate-spin' : ''}`} />
+                Refresh Processes
               </button>
             ) : (
               <button
@@ -667,7 +704,7 @@ export function App() {
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                Refresh
+                Refresh Stats
               </button>
             )}
           </div>
@@ -739,83 +776,94 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'uninstaller' ? (
-          /* Uninstaller Page */
+        ) : activeTab === 'perf' ? (
+          /* Performance Monitor Page */
           <div className="p-8 max-w-6xl space-y-6">
-            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">Installed Desktop Programs ({programsList.length})</h2>
-                <p className="text-xs text-zinc-400 mt-1">
-                  {uninstallerFeedback || 'Clean uninstall applications with leftover inspection.'}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {programsList.map((prog) => (
-                <div
-                  key={prog.id}
-                  className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
-                >
-                  <div className="space-y-1 truncate mr-4">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold text-white truncate">{prog.name}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
-                        v{prog.version}
-                      </span>
-                      <span className="text-xs text-zinc-400 font-medium">{prog.publisher}</span>
-                    </div>
-                    <p className="text-xs text-zinc-500 font-mono truncate">{prog.install_location || prog.uninstall_string}</p>
-                  </div>
-
-                  <button
-                    onClick={() => handleUninstallProgram(prog)}
-                    className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Uninstall
-                  </button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <div className="flex items-center gap-3 text-zinc-400 text-xs font-medium mb-2">
+                  <Cpu className="w-4 h-4 text-emerald-400" />
+                  Global CPU Usage
                 </div>
-              ))}
-            </div>
-          </div>
-        ) : activeTab === 'shredder' ? (
-          /* File Shredder Page */
-          <div className="p-8 max-w-5xl space-y-6">
-            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36]">
-              <h2 className="text-lg font-bold text-white mb-1">Cryptographic File Shredder</h2>
-              <p className="text-xs text-zinc-400">
-                Permanently destroy sensitive files using DoD 5220.22-M multi-pass pseudo-random overwrite before filesystem unlinking.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-300">Target File Path</label>
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={shredPath}
-                    onChange={(e) => setShredPath(e.target.value)}
-                    placeholder="Enter full file path to destroy permanently (e.g. C:\secret.docx)..."
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-black/30 border border-zinc-700 text-xs text-white focus:outline-none focus:border-red-500"
+                <div className="text-2xl font-bold text-white">
+                  {perfSnapshot ? `${perfSnapshot.cpu_usage_percent.toFixed(1)}%` : '0.0%'}
+                </div>
+                <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
+                  <div
+                    className="bg-emerald-500 h-full rounded-full transition-all"
+                    style={{ width: `${Math.min(perfSnapshot?.cpu_usage_percent || 0, 100)}%` }}
                   />
-                  <button
-                    onClick={handleShredTarget}
-                    disabled={shredding || !shredPath}
-                    className="px-6 py-2.5 rounded-xl bg-red-500 hover:bg-red-400 disabled:opacity-50 text-white font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {shredding ? 'Shredding...' : 'Shred File Permanently'}
-                  </button>
                 </div>
               </div>
 
-              {shredFeedback && (
-                <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.06] text-xs text-amber-400">
-                  {shredFeedback}
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <div className="flex items-center gap-3 text-zinc-400 text-xs font-medium mb-2">
+                  <Activity className="w-4 h-4 text-purple-400" />
+                  Memory Load
                 </div>
-              )}
+                <div className="text-2xl font-bold text-white">
+                  {perfSnapshot ? `${perfSnapshot.memory_usage_percent.toFixed(1)}%` : '0.0%'}
+                </div>
+                <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3">
+                  <div
+                    className="bg-purple-500 h-full rounded-full transition-all"
+                    style={{ width: `${Math.min(perfSnapshot?.memory_usage_percent || 0, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+                <div className="flex items-center gap-3 text-zinc-400 text-xs font-medium mb-2">
+                  <Gauge className="w-4 h-4 text-blue-400" />
+                  Running Processes
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {perfSnapshot ? `${perfSnapshot.process_count} Active` : '0'}
+                </div>
+                <div className="text-xs text-zinc-500 mt-2 font-mono">
+                  Uptime: {perfSnapshot ? Math.round(perfSnapshot.uptime_seconds / 3600) : 0} hours
+                </div>
+              </div>
+            </div>
+
+            {/* Top Processes Table */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-1">
+                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                  Top Resource-Consuming Processes
+                </span>
+                {perfFeedback && <span className="text-xs text-amber-400">{perfFeedback}</span>}
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] max-h-[480px] overflow-y-auto space-y-2">
+                {perfSnapshot?.top_processes.map((p) => (
+                  <div
+                    key={p.pid}
+                    className="p-3 rounded-lg bg-black/20 border border-white/[0.03] flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-3 truncate mr-4">
+                      <span className="font-mono text-[10px] text-zinc-500 w-12">{p.pid}</span>
+                      <span className="font-semibold text-zinc-200 truncate">{p.name}</span>
+                    </div>
+
+                    <div className="flex items-center gap-6 shrink-0">
+                      <span className="font-mono text-zinc-400 text-[11px] w-20 text-right">
+                        CPU: {p.cpu_usage.toFixed(1)}%
+                      </span>
+                      <span className="font-mono text-zinc-300 font-medium text-[11px] w-24 text-right">
+                        {formatBytes(p.memory_bytes)}
+                      </span>
+                      <button
+                        onClick={() => handleKillProcess(p.pid, p.name)}
+                        className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition cursor-pointer"
+                        title="Kill Process"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ) : (

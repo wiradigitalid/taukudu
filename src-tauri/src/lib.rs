@@ -2,6 +2,7 @@ pub mod cleaner;
 pub mod deduplication;
 pub mod disk_analyzer;
 pub mod malware_scanner;
+pub mod perf_monitor;
 pub mod privacy;
 pub mod rules;
 pub mod service_driver;
@@ -19,6 +20,7 @@ pub use disk_analyzer::{
 pub use malware_scanner::{
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MalwareThreat, QuarantinedItem,
 };
+pub use perf_monitor::{PerfMonitorEngine, PerformanceSnapshot, ProcessItem};
 pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};
 pub use service_driver::{DriverPackageInfo, ServiceDriverEngine, ServiceItemInfo};
 pub use startup_debloat::{BloatwareApp, StartupDebloatEngine, StartupItem};

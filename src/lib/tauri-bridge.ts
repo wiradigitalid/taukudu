@@ -193,6 +193,23 @@ export interface ShredderResult {
   errors: string[]
 }
 
+export interface ProcessItem {
+  pid: number
+  name: string
+  cpu_usage: number
+  memory_bytes: number
+}
+
+export interface PerformanceSnapshot {
+  cpu_usage_percent: number
+  total_memory_bytes: number
+  used_memory_bytes: number
+  memory_usage_percent: number
+  top_processes: ProcessItem[]
+  process_count: number
+  uptime_seconds: number
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -265,5 +282,11 @@ export const tauriApi = {
   },
   shredFiles: async (paths: string[], passes: number = 3): Promise<ShredderResult> => {
     return await invoke('shred_files', { paths, passes })
+  },
+  getPerformanceSnapshot: async (): Promise<PerformanceSnapshot> => {
+    return await invoke('get_performance_snapshot')
+  },
+  killProcess: async (pid: number): Promise<void> => {
+    return await invoke('kill_perf_process', { pid })
   },
 }
