@@ -22,8 +22,8 @@ use taukudu_lib::{
     RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
     ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, TrimDriveStatus,
-    UninstallerShredderEngine, UpdateExecutionResult, GLOBAL_BREACH_MONITOR, GLOBAL_HISTORY,
-    GLOBAL_SCHEDULER,
+    UninstallerShredderEngine, UpdateExecutionResult, GLOBAL_BREACH_MONITOR, GLOBAL_GAME_MODE,
+    GLOBAL_HISTORY, GLOBAL_SCHEDULER,
 };
 
 #[tauri::command]
@@ -260,21 +260,36 @@ fn fix_registry_targets(targets: Vec<(String, String)>) -> RegistryFixResult {
 
 #[tauri::command]
 fn get_game_mode_status() -> GameModeStatus {
-    GameModeEngine::get_status()
+    GLOBAL_GAME_MODE.get_status()
 }
 
 #[tauri::command]
 fn toggle_game_mode(activate: bool) -> Result<GameModeStatus, String> {
     if activate {
-        GameModeEngine::activate_game_mode()
+        GLOBAL_GAME_MODE.activate_game_mode()
     } else {
-        GameModeEngine::deactivate_game_mode()
+        GLOBAL_GAME_MODE.deactivate_game_mode()
     }
 }
 
 #[tauri::command]
 fn get_game_optimizations() -> Vec<GameOptimizationItem> {
-    GameModeEngine::get_optimizations()
+    GLOBAL_GAME_MODE.get_optimizations()
+}
+
+#[tauri::command]
+fn toggle_game_auto_detect(enable: bool) -> GameModeStatus {
+    GLOBAL_GAME_MODE.set_auto_detect(enable)
+}
+
+#[tauri::command]
+fn add_custom_game_process(process_name: String) -> Vec<String> {
+    GLOBAL_GAME_MODE.add_custom_game(process_name)
+}
+
+#[tauri::command]
+fn get_custom_game_processes() -> Vec<String> {
+    GLOBAL_GAME_MODE.list_custom_games()
 }
 
 #[tauri::command]
@@ -470,6 +485,9 @@ fn main() {
             get_game_mode_status,
             toggle_game_mode,
             get_game_optimizations,
+            toggle_game_auto_detect,
+            add_custom_game_process,
+            get_custom_game_processes,
             get_trim_info,
             run_disk_trim,
             run_sfc_scan,

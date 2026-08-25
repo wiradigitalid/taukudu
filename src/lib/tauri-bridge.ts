@@ -264,6 +264,8 @@ export interface GameModeStatus {
   game_dvr_disabled: boolean
   background_indexing_paused: boolean
   memory_cleaned_mb: number
+  detected_game?: string | null
+  auto_detect_enabled: boolean
 }
 
 export interface GameOptimizationItem {
@@ -594,6 +596,15 @@ export const tauriApi = {
   },
   getGameOptimizations: async (): Promise<GameOptimizationItem[]> => {
     return await invoke('get_game_optimizations')
+  },
+  toggleGameAutoDetect: async (enable: boolean): Promise<GameModeStatus> => {
+    return await invoke('toggle_game_auto_detect', { enable })
+  },
+  addCustomGameProcess: async (processName: string): Promise<string[]> => {
+    return await invoke('add_custom_game_process', { processName })
+  },
+  getCustomGameProcesses: async (): Promise<string[]> => {
+    return await invoke('get_custom_game_processes')
   },
   getTrimInfo: async (): Promise<TrimDriveStatus[]> => {
     return await invoke('get_trim_info')

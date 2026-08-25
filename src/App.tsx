@@ -175,6 +175,8 @@ export function App() {
   // Game Mode state
   const [gameStatus, setGameStatus] = useState<GameModeStatus | null>(null)
   const [gameOpts, setGameOpts] = useState<GameOptimizationItem[]>([])
+  const [customGames, setCustomGames] = useState<string[]>([])
+  const [newCustomGame, setNewCustomGame] = useState('')
   const [gameFeedback, setGameFeedback] = useState<string | null>(null)
 
   // Registry state
@@ -643,6 +645,8 @@ export function App() {
       setGameStatus(st)
       const opts = await tauriApi.getGameOptimizations()
       setGameOpts(opts)
+      const customs = await tauriApi.getCustomGameProcesses()
+      setCustomGames(customs)
     } catch (err) {
       console.error('Game mode error:', err)
     }
@@ -658,6 +662,30 @@ export function App() {
       await fetchGameMode()
     } catch (err) {
       setGameFeedback(`Game mode error: ${String(err)}`)
+    }
+  }
+
+  const handleToggleAutoDetect = async () => {
+    if (!gameStatus) return
+    try {
+      const res = await tauriApi.toggleGameAutoDetect(!gameStatus.auto_detect_enabled)
+      setGameStatus(res)
+      setGameFeedback(`Auto game detection ${res.auto_detect_enabled ? 'enabled' : 'disabled'}`)
+    } catch (err) {
+      setGameFeedback(`Auto detect error: ${String(err)}`)
+    }
+  }
+
+  const handleAddCustomGame = async () => {
+    if (!newCustomGame) return
+    try {
+      const updated = await tauriApi.addCustomGameProcess(newCustomGame)
+      setCustomGames(updated)
+      setNewCustomGame('')
+      setGameFeedback(`Added ${newCustomGame} to custom games list`)
+      await fetchGameMode()
+    } catch (err) {
+      setGameFeedback(`Add custom game error: ${String(err)}`)
     }
   }
 
@@ -1504,6 +1532,14 @@ export function App() {
                 <RefreshCw className="w-3.5 h-3.5" />
                 Refresh Checkpoints
               </button>
+            ) : activeTab === 'game' ? (
+              <button
+                onClick={fetchGameMode}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Game Status
+              </button>
             ) : activeTab === 'schedules' ? (
               <button
                 onClick={fetchSchedules}
@@ -1974,6 +2010,127 @@ export function App() {
                       No security breach exposures found for this account.
                     </div>
                   )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : activeTab === 'game' ? (
+          /* Game Mode Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Ultimate Game Mode & Latency Optimizer
+                  </h2>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                    gameStatus?.is_active
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse'
+                      : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                  }`}>
+                    {gameStatus?.is_active ? 'Game Mode Active' : 'Normal Desktop Mode'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {gameFeedback || `Power plan: ${gameStatus?.active_power_plan || 'Balanced'}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleToggleGameMode}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-lg ${
+                    gameStatus?.is_active
+                      ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
+                      : 'bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/20'
+                  }`}
+                >
+                  <Gamepad2 className="w-4 h-4" />
+                  {gameStatus?.is_active ? 'Deactivate Game Mode' : 'Activate Ultimate Game Mode'}
+                </button>
+              </div>
+            </div>
+
+            {/* Live Game Detection Status */}
+            <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm font-semibold text-white">Automatic Game Detection</span>
+                  {gameStatus?.detected_game && (
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono">
+                      Running: {gameStatus.detected_game}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-400">
+                  Monitors active foreground games (Steam, Riot, Blizzard, Epic, EA) and automatically tunes latency.
+                </p>
+              </div>
+              <button
+                onClick={handleToggleAutoDetect}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  gameStatus?.auto_detect_enabled
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-zinc-800 text-zinc-400'
+                }`}
+              >
+                {gameStatus?.auto_detect_enabled ? 'Auto-Detect ON' : 'Auto-Detect OFF'}
+              </button>
+            </div>
+
+            {/* Custom Game Process Input */}
+            <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+              <h3 className="text-sm font-semibold text-white">Custom Game Executables</h3>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={newCustomGame}
+                  onChange={(e) => setNewCustomGame(e.target.value)}
+                  placeholder="Add custom game executable (e.g. game.exe)..."
+                  className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                />
+                <button
+                  onClick={handleAddCustomGame}
+                  className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Custom Game
+                </button>
+              </div>
+              {customGames.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {customGames.map((cg) => (
+                    <span key={cg} className="px-2.5 py-1 rounded bg-black/30 border border-zinc-700 text-xs text-zinc-300 font-mono">
+                      {cg}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Applied Optimizations List */}
+            <div className="space-y-3">
+              {gameOpts.map((opt) => (
+                <div
+                  key={opt.id}
+                  className={`p-4 rounded-xl border flex justify-between items-center ${
+                    opt.is_applied ? 'bg-[#16161a] border-amber-500/30' : 'bg-[#16161a] border-[#2a2a36]'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-white">{opt.title}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300">
+                        {opt.category}
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400">{opt.description}</p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                    opt.is_applied ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-zinc-500'
+                  }`}>
+                    {opt.is_applied ? 'Optimized' : 'Inactive'}
+                  </span>
                 </div>
               ))}
             </div>

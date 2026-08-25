@@ -38,7 +38,9 @@ pub use disk_analyzer::{
 };
 pub use disk_maintenance::{DiskMaintenanceEngine, DiskRepairOutput, TrimDriveStatus};
 pub use firewall_audit::{FirewallAuditEngine, FirewallAuditSummary, FirewallRuleInfo};
-pub use game_mode::{GameModeEngine, GameModeStatus, GameOptimizationItem};
+pub use game_mode::{
+    DetectedGameInfo, GameModeEngine, GameModeStatus, GameOptimizationItem, GLOBAL_GAME_MODE,
+};
 pub use history_store::{HistoryRecord, HistoryStore, GLOBAL_HISTORY};
 pub use leftovers_cleaner::{
     LeftoverFolderItem, LeftoversCleanResult, LeftoversCleanerEngine, LeftoversScanResult,

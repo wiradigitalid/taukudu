@@ -1,4 +1,7 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::sync::Mutex;
+use sysinfo::{ProcessRefreshKind, RefreshKind, System};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameModeStatus {
@@ -7,6 +10,8 @@ pub struct GameModeStatus {
     pub game_dvr_disabled: bool,
     pub background_indexing_paused: bool,
     pub memory_cleaned_mb: u64,
+    pub detected_game: Option<String>,
+    pub auto_detect_enabled: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,10 +23,108 @@ pub struct GameOptimizationItem {
     pub is_applied: bool,
 }
 
-pub struct GameModeEngine;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetectedGameInfo {
+    pub process_name: String,
+    pub pid: u32,
+    pub title: String,
+}
+
+pub struct GameModeEngine {
+    custom_games: Mutex<HashSet<String>>,
+    auto_detect: Mutex<bool>,
+}
 
 impl GameModeEngine {
-    pub fn get_status() -> GameModeStatus {
+    pub fn new() -> Self {
+        Self {
+            custom_games: Mutex::new(HashSet::new()),
+            auto_detect: Mutex::new(true),
+        }
+    }
+
+    pub fn get_known_games() -> HashSet<&'static str> {
+        let mut set = HashSet::new();
+        // Valve / Steam
+        set.insert("cs2.exe");
+        set.insert("csgo.exe");
+        set.insert("dota2.exe");
+        set.insert("tf_win64.exe");
+        set.insert("left4dead2.exe");
+        set.insert("portal2.exe");
+        set.insert("rust.exe");
+        set.insert("deadlock.exe");
+
+        // Riot Games
+        set.insert("valorant-win64-shipping.exe");
+        set.insert("league of legends.exe");
+
+        // Blizzard / Activision
+        set.insert("overwatch.exe");
+        set.insert("wow.exe");
+        set.insert("wowclassic.exe");
+        set.insert("diablo iv.exe");
+        set.insert("callofduty.exe");
+        set.insert("cod.exe");
+        set.insert("modernwarfare.exe");
+
+        // Epic / Fortnite / Rocket League
+        set.insert("fortniteclient-win64-shipping.exe");
+        set.insert("rocketleague.exe");
+
+        // EA / Respawn
+        set.insert("apex_legends.exe");
+        set.insert("bf2042.exe");
+
+        // FromSoftware & CDPR
+        set.insert("eldenring.exe");
+        set.insert("darksoulsiii.exe");
+        set.insert("sekiro.exe");
+        set.insert("armoredcore6.exe");
+        set.insert("cyberpunk2077.exe");
+        set.insert("witcher3.exe");
+
+        // Popular titles
+        set.insert("gta5.exe");
+        set.insert("gtav.exe");
+        set.insert("rdr2.exe");
+        set.insert("bg3.exe");
+        set.insert("bg3_dx11.exe");
+        set.insert("helldivers2.exe");
+        set.insert("palworld-win64-shipping.exe");
+        set.insert("starfield.exe");
+        set.insert("escapefromtarkov.exe");
+        set.insert("pubg-win64-shipping.exe");
+        set.insert("minecraft.windows.exe");
+        set.insert("javaw.exe");
+
+        set
+    }
+
+    pub fn scan_running_games(&self) -> Option<DetectedGameInfo> {
+        let mut sys = System::new_with_specifics(
+            RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing()),
+        );
+        sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+
+        let known = Self::get_known_games();
+        let custom = self.custom_games.lock().unwrap();
+
+        for (pid, proc) in sys.processes() {
+            let proc_name = proc.name().to_string_lossy().to_lowercase();
+            if known.contains(proc_name.as_str()) || custom.contains(&proc_name) {
+                return Some(DetectedGameInfo {
+                    process_name: proc_name.clone(),
+                    pid: pid.as_u32(),
+                    title: format!("Running Game ({})", proc_name),
+                });
+            }
+        }
+
+        None
+    }
+
+    pub fn get_status(&self) -> GameModeStatus {
         let mut game_dvr_disabled = false;
         let mut indexing_paused = false;
 
@@ -45,16 +148,37 @@ impl GameModeEngine {
             }
         }
 
+        let detected = self.scan_running_games().map(|g| g.process_name);
+        let auto_enabled = *self.auto_detect.lock().unwrap();
+
         GameModeStatus {
             is_active: game_dvr_disabled && indexing_paused,
             active_power_plan: "Ultimate / High Performance".to_string(),
             game_dvr_disabled,
             background_indexing_paused: indexing_paused,
             memory_cleaned_mb: 450,
+            detected_game: detected,
+            auto_detect_enabled: auto_enabled,
         }
     }
 
-    pub fn activate_game_mode() -> Result<GameModeStatus, String> {
+    pub fn set_auto_detect(&self, enable: bool) -> GameModeStatus {
+        *self.auto_detect.lock().unwrap() = enable;
+        self.get_status()
+    }
+
+    pub fn add_custom_game(&self, proc_name: String) -> Vec<String> {
+        let mut custom = self.custom_games.lock().unwrap();
+        custom.insert(proc_name.trim().to_lowercase());
+        custom.iter().cloned().collect()
+    }
+
+    pub fn list_custom_games(&self) -> Vec<String> {
+        let custom = self.custom_games.lock().unwrap();
+        custom.iter().cloned().collect()
+    }
+
+    pub fn activate_game_mode(&self) -> Result<GameModeStatus, String> {
         #[cfg(windows)]
         {
             use std::process::Command;
@@ -81,10 +205,10 @@ impl GameModeEngine {
                 .output();
         }
 
-        Ok(Self::get_status())
+        Ok(self.get_status())
     }
 
-    pub fn deactivate_game_mode() -> Result<GameModeStatus, String> {
+    pub fn deactivate_game_mode(&self) -> Result<GameModeStatus, String> {
         #[cfg(windows)]
         {
             use std::process::Command;
@@ -111,11 +235,11 @@ impl GameModeEngine {
                 .output();
         }
 
-        Ok(Self::get_status())
+        Ok(self.get_status())
     }
 
-    pub fn get_optimizations() -> Vec<GameOptimizationItem> {
-        let status = Self::get_status();
+    pub fn get_optimizations(&self) -> Vec<GameOptimizationItem> {
+        let status = self.get_status();
         vec![
             GameOptimizationItem {
                 id: "power-plan".to_string(),
@@ -147,4 +271,9 @@ impl GameModeEngine {
             },
         ]
     }
+}
+
+// Global Singleton
+lazy_static::lazy_static! {
+    pub static ref GLOBAL_GAME_MODE: GameModeEngine = GameModeEngine::new();
 }
