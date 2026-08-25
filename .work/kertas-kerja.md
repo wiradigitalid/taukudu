@@ -33,10 +33,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-22** | **Automated Task Scheduler** | Daily, weekly, monthly automated background maintenance jobs | `ScheduleEngine`, `SchedulesPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-23** | **Account Breach & Credential Monitor** | Monitored email exposure audit & compromised breach tracker | `BreachMonitorEngine`, `BreachMonitorPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-24** | **Uninstall Leftovers Cleaner** | Deep orphan AppData/ProgramData leftover directory detector & cleaner | `LeftoversCleanerEngine`, `LeftoversPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-25** | **System Restore Points Manager** | Windows System Protection status & snapshot checkpoint creation | `RestorePointEngine`, `RestorePointPage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 25 — Windows System Restore Points Management (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Restore Point Engine (`src-tauri/src/restore_point.rs`):** Deteksi status *System Protection* pada drive Windows C:, enumerasi daftar restore point yang sudah ada via PowerShell WMI/CIM, dan fungsi pembuatan checkpoint baru (`Checkpoint-Computer`) dengan deskripsi kustom sebelum pembersihan agresif.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_restore_points` dan `create_restore_point`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `RestorePointItem`, `RestorePointSummary`, `RestorePointResult`, serta method `tauriApi.getRestorePoints` dan `tauriApi.createRestorePoint`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan tab *System Restore* lengkap dengan badge status perlindungan, form input pembuatan checkpoint baru, dan daftar restore point tersimpan.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 24 — Uninstalled Software Leftovers Cleaner (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

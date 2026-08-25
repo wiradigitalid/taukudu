@@ -17,7 +17,8 @@ use taukudu_lib::{
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine,
     NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot,
     PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RegistryCleanerEngine,
-    RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult, ScheduleItem,
+    RegistryFixResult, RegistryIssue, RegistryScanResult, RestorePointEngine,
+    RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
     ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, TrimDriveStatus,
     UninstallerShredderEngine, UpdateExecutionResult, GLOBAL_BREACH_MONITOR, GLOBAL_HISTORY,
@@ -380,6 +381,16 @@ fn delete_uninstall_leftovers(paths: Vec<String>) -> LeftoversCleanResult {
     LeftoversCleanerEngine::delete_leftover_folders(&paths)
 }
 
+#[tauri::command]
+fn get_restore_points() -> RestorePointSummary {
+    RestorePointEngine::list_restore_points()
+}
+
+#[tauri::command]
+fn create_restore_point(description: String) -> RestorePointResult {
+    RestorePointEngine::create_restore_point(&description)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -453,7 +464,9 @@ fn main() {
             remove_breach_email,
             acknowledge_breach_incident,
             scan_uninstall_leftovers,
-            delete_uninstall_leftovers
+            delete_uninstall_leftovers,
+            get_restore_points,
+            create_restore_point
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

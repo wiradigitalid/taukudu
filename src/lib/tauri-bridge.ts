@@ -437,6 +437,25 @@ export interface LeftoversCleanResult {
   errors: string[]
 }
 
+export interface RestorePointItem {
+  sequence_number: number
+  description: string
+  restore_point_type: string
+  creation_time: string
+}
+
+export interface RestorePointSummary {
+  is_protection_enabled: boolean
+  restore_points: RestorePointItem[]
+  total_count: number
+  last_created_time?: string
+}
+
+export interface RestorePointResult {
+  success: boolean
+  message: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -614,5 +633,11 @@ export const tauriApi = {
   },
   deleteUninstallLeftovers: async (paths: string[]): Promise<LeftoversCleanResult> => {
     return await invoke('delete_uninstall_leftovers', { paths })
+  },
+  getRestorePoints: async (): Promise<RestorePointSummary> => {
+    return await invoke('get_restore_points')
+  },
+  createRestorePoint: async (description: string): Promise<RestorePointResult> => {
+    return await invoke('create_restore_point', { description })
   },
 }

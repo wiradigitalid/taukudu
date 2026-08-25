@@ -15,6 +15,7 @@ pub mod network_tools;
 pub mod perf_monitor;
 pub mod privacy;
 pub mod registry_cleaner;
+pub mod restore_point;
 pub mod rules;
 pub mod scheduler;
 pub mod service_driver;
@@ -48,6 +49,9 @@ pub use network_tools::{ActiveConnectionInfo, NetworkItemInfo, NetworkToolsEngin
 pub use perf_monitor::{PerfMonitorEngine, PerformanceSnapshot, ProcessItem};
 pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};
 pub use registry_cleaner::{RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult};
+pub use restore_point::{
+    RestorePointEngine, RestorePointItem, RestorePointResult, RestorePointSummary,
+};
 pub use scheduler::{ScheduleEngine, ScheduleItem, ScheduleSummary, GLOBAL_SCHEDULER};
 pub use service_driver::{DriverPackageInfo, ServiceDriverEngine, ServiceItemInfo};
 pub use software_updater::{SoftwareUpdateSummary, SoftwareUpdaterEngine, UpdatablePackage, UpdateExecutionResult};

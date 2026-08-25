@@ -30,6 +30,8 @@ import {
   BreachMonitorSummary,
   LeftoversScanResult,
   LeftoverFolderItem,
+  RestorePointSummary,
+  RestorePointItem,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -77,13 +79,15 @@ import {
   UserCheck,
   Plus,
   FolderSearch,
+  RotateCcw,
+  BookmarkCheck,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'leftovers' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -112,6 +116,13 @@ export function App() {
   const [selectedLeftoverPaths, setSelectedLeftoverPaths] = useState<Set<string>>(new Set())
   const [leftoversFeedback, setLeftoversFeedback] = useState<string | null>(null)
   const [cleaningLeftovers, setCleaningLeftovers] = useState(false)
+
+  // Restore Point state
+  const [restoreSummary, setRestoreSummary] = useState<RestorePointSummary | null>(null)
+  const [loadingRestore, setLoadingRestore] = useState(false)
+  const [newRestoreDesc, setNewRestoreDesc] = useState('TauKudu System Optimization Checkpoint')
+  const [creatingRestore, setCreatingRestore] = useState(false)
+  const [restoreFeedback, setRestoreFeedback] = useState<string | null>(null)
 
   // Disk Analyzer state
   const [drives, setDrives] = useState<DiskDriveInfo[]>([])
@@ -338,6 +349,35 @@ export function App() {
       setLeftoversFeedback('Deletion failed: ' + String(err))
     } finally {
       setCleaningLeftovers(false)
+    }
+  }
+
+  const fetchRestorePoints = async () => {
+    setLoadingRestore(true)
+    try {
+      const res = await tauriApi.getRestorePoints()
+      setRestoreSummary(res)
+    } catch (err) {
+      console.error('Fetch restore points error:', err)
+    } finally {
+      setLoadingRestore(false)
+    }
+  }
+
+  const handleCreateRestorePoint = async () => {
+    if (!newRestoreDesc) return
+    setCreatingRestore(true)
+    setRestoreFeedback(null)
+    try {
+      const res = await tauriApi.createRestorePoint(newRestoreDesc)
+      setRestoreFeedback(res.message)
+      if (res.success) {
+        await fetchRestorePoints()
+      }
+    } catch (err) {
+      setRestoreFeedback(`Failed to create restore point: ${String(err)}`)
+    } finally {
+      setCreatingRestore(false)
     }
   }
 
@@ -1007,6 +1047,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('restore')
+                if (!restoreSummary && !loadingRestore) fetchRestorePoints()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'restore'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <RotateCcw className="w-4 h-4" />
+              System Restore
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('disk')
                 if (drives.length === 0 && !analyzingDisk) fetchDrivesAndAnalyze()
               }}
@@ -1328,6 +1382,8 @@ export function App() {
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'leftovers'
               ? 'Uninstalled Software Leftovers Cleaner'
+              : activeTab === 'restore'
+              ? 'Windows System Restore Points Management'
               : activeTab === 'disk'
               ? 'Disk Space & Treemap Analyzer'
               : activeTab === 'repair'
@@ -1380,6 +1436,14 @@ export function App() {
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Rescan Leftovers
+              </button>
+            ) : activeTab === 'restore' ? (
+              <button
+                onClick={fetchRestorePoints}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Checkpoints
               </button>
             ) : activeTab === 'schedules' ? (
               <button
@@ -1553,6 +1617,86 @@ export function App() {
                 <FolderSearch className="w-8 h-8 text-zinc-600 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {leftoversScanning ? 'Scanning system directories for orphaned leftover folders...' : 'No uninstall leftover folders found.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'restore' ? (
+          /* System Restore Points Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Windows System Restore Points ({restoreSummary?.total_count || 0})
+                  </h2>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                    restoreSummary?.is_protection_enabled
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                  }`}>
+                    {restoreSummary?.is_protection_enabled ? 'Protection Active' : 'Protection Check Required'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {restoreFeedback || 'Create snapshot recovery checkpoints before aggressive system optimization, deep cleaning, or driver purges.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Create Restore Point Form */}
+            <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <BookmarkCheck className="w-4 h-4 text-amber-500" />
+                Create New Checkpoint
+              </h3>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={newRestoreDesc}
+                  onChange={(e) => setNewRestoreDesc(e.target.value)}
+                  placeholder="Enter restore point description..."
+                  className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                />
+                <button
+                  onClick={handleCreateRestorePoint}
+                  disabled={creatingRestore || !newRestoreDesc}
+                  className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold flex items-center gap-2 transition cursor-pointer disabled:opacity-50"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${creatingRestore ? 'animate-spin' : ''}`} />
+                  {creatingRestore ? 'Creating Checkpoint...' : 'Create Restore Point'}
+                </button>
+              </div>
+            </div>
+
+            {/* Existing restore points */}
+            {restoreSummary && restoreSummary.restore_points.length > 0 ? (
+              <div className="space-y-2">
+                {restoreSummary.restore_points.map((pt) => (
+                  <div
+                    key={pt.sequence_number}
+                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xs font-mono text-zinc-500">#{pt.sequence_number}</span>
+                        <span className="text-sm font-semibold text-white">{pt.description}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300">
+                          {pt.restore_point_type}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 font-mono">
+                        Created: {pt.creation_time || 'System Checkpoint'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <RotateCcw className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingRestore ? 'Querying Windows System Restore points...' : 'No system restore points recorded yet.'}
                 </p>
               </div>
             )}
