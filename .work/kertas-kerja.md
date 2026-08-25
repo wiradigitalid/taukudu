@@ -39,10 +39,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-28** | **Live Outbound Threat Monitor** | Network socket C2 & malicious CIDR blacklist auditor and process killer | `ThreatMonitorEngine`, `ThreatMonitorPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-29** | **Chromium & Gecko Multi-Profile Caches** | Shared shader/Vulkan caches & multi-profile cache discovery | `ChromiumCacheEngine`, `BrowserCachesPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-30** | **Windows Delete Access & Lock Probe** | Non-destructive Win32 CreateFileW sharing violation & permission probe | `DeleteFailureProbeEngine`, System Cleaner Probe UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-31** | **Granular Deletion Audit Ledger** | JSONL append-only audit trail with rotation & keyword search | `DeletionLoggerEngine`, HistoryPage ledger view | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 31 — Granular File Deletion Audit Ledger (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Deletion Logger Engine (`src-tauri/src/deletion_logger.rs`):** Pencatatan append-only (format JSONL) setiap entitas file yang dibersihkan/dihapus dengan rotasi otomatis saat log mencapai 8MB. Menyediakan pencarian cepat (*keyword filtering*), filter sesi, dan kalkulasi statistik ukuran audit file.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `query_deletion_log`, `get_deletion_log_stats`, dan `clear_deletion_log` serta mengaitkan pencatatan otomatis saat `clean_targets` berjalan.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `GranularDeletedFileEntry`, `DeletionLogStats`, serta method `tauriApi.queryDeletionLog`, `tauriApi.getDeletionLogStats`, dan `tauriApi.clearDeletionLog`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan sub-tab *Granular File Ledger* pada tab *Cleaning History* lengkap dengan live search bar, path berkas terhapus, ID sesi, dan timestamp penghapusan.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 30 — Windows Delete Access & Lock Probe Engine (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

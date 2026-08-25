@@ -7,6 +7,7 @@ pub mod context_menu;
 pub mod cve_scanner;
 pub mod deduplication;
 pub mod delete_failure_probe;
+pub mod deletion_logger;
 pub mod disk_analyzer;
 pub mod disk_maintenance;
 pub mod firewall_audit;
@@ -41,6 +42,10 @@ pub use deduplication::{
 };
 pub use delete_failure_probe::{
     DeleteFailureProbeEngine, DeletePathProbeResult, DeleteProbeStatus, DeleteProbeSummary,
+};
+pub use deletion_logger::{
+    DeletionLogQueryOptions, DeletionLogStats, DeletionLoggerEngine, GranularDeletedFileEntry,
+    GLOBAL_DELETION_LOGGER,
 };
 pub use disk_analyzer::{
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskTreemapNode, FileTypeBreakdown,

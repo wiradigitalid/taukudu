@@ -42,6 +42,8 @@ import {
   BrowserProfileCacheTarget,
   DeleteProbeSummary,
   DeletePathProbeResult,
+  GranularDeletedFileEntry,
+  DeletionLogStats,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -255,10 +257,14 @@ export function App() {
   const [loadingPerf, setLoadingPerf] = useState(false)
   const [perfFeedback, setPerfFeedback] = useState<string | null>(null)
 
-  // History state
+  // History & Deletion Log state
   const [historyList, setHistoryList] = useState<HistoryRecord[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [historyFeedback, setHistoryFeedback] = useState<string | null>(null)
+  const [granularLogs, setGranularLogs] = useState<GranularDeletedFileEntry[]>([])
+  const [deletionLogStats, setDeletionLogStats] = useState<DeletionLogStats | null>(null)
+  const [logSearchQuery, setLogSearchQuery] = useState('')
+  const [activeHistoryView, setActiveHistoryView] = useState<'sessions' | 'files'>('sessions')
 
   // Malware Scanner state
   const [malwareScanning, setMalwareScanning] = useState(false)
@@ -1035,6 +1041,10 @@ export function App() {
     try {
       const records = await tauriApi.getHistoryRecords()
       setHistoryList(records)
+      const stats = await tauriApi.getDeletionLogStats()
+      setDeletionLogStats(stats)
+      const logs = await tauriApi.queryDeletionLog(undefined, logSearchQuery, undefined, 200)
+      setGranularLogs(logs)
     } catch (err) {
       console.error('History fetch error:', err)
     } finally {
@@ -1045,10 +1055,21 @@ export function App() {
   const handleClearHistory = async () => {
     try {
       await tauriApi.clearHistoryRecords()
-      setHistoryFeedback('History records cleared.')
+      await tauriApi.clearDeletionLog()
+      setHistoryFeedback('All cleaning history and granular deletion audit logs cleared.')
       await fetchHistory()
     } catch (err) {
       setHistoryFeedback(`Clear error: ${String(err)}`)
+    }
+  }
+
+  const handleSearchGranularLogs = async (query: string) => {
+    setLogSearchQuery(query)
+    try {
+      const logs = await tauriApi.queryDeletionLog(undefined, query, undefined, 200)
+      setGranularLogs(logs)
+    } catch (err) {
+      console.error('Search log error:', err)
     }
   }
 
@@ -1704,6 +1725,14 @@ export function App() {
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Refresh Game Status
+              </button>
+            ) : activeTab === 'history' ? (
+              <button
+                onClick={fetchHistory}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Logs
               </button>
             ) : activeTab === 'schedules' ? (
               <button
@@ -2581,6 +2610,138 @@ export function App() {
                 </div>
               ))}
             </div>
+          </div>
+        ) : activeTab === 'history' ? (
+          /* Cleaning History & Granular Deletion Log Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Cleaning History & File Deletion Ledger
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {historyList.length} Sessions Logged ({deletionLogStats?.total_logged_files || 0} Files)
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {historyFeedback || `SQLite Audit Store + JSONL ledger (${formatBytes(deletionLogStats?.log_file_size_bytes || 0)} audit file size).`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleClearHistory}
+                  disabled={historyList.length === 0 && (deletionLogStats?.total_logged_files === 0)}
+                  className="px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold text-xs transition flex items-center gap-2 border border-red-500/30 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear All History & Logs
+                </button>
+              </div>
+            </div>
+
+            {/* View Switcher Tabs */}
+            <div className="flex border-b border-[#2a2a36] gap-6 text-sm font-semibold">
+              <button
+                onClick={() => setActiveHistoryView('sessions')}
+                className={`pb-3 transition cursor-pointer flex items-center gap-2 ${
+                  activeHistoryView === 'sessions'
+                    ? 'text-amber-400 border-b-2 border-amber-400'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                <History className="w-4 h-4" />
+                Session History ({historyList.length})
+              </button>
+              <button
+                onClick={() => setActiveHistoryView('files')}
+                className={`pb-3 transition cursor-pointer flex items-center gap-2 ${
+                  activeHistoryView === 'files'
+                    ? 'text-amber-400 border-b-2 border-amber-400'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                <FileCode className="w-4 h-4" />
+                Granular File Ledger ({granularLogs.length})
+              </button>
+            </div>
+
+            {activeHistoryView === 'sessions' ? (
+              /* Session Cards */
+              historyList.length > 0 ? (
+                <div className="space-y-3">
+                  {historyList.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-sm font-bold text-white">{rec.details_summary}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300">
+                            {rec.action_type}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-400">
+                          Timestamp: {rec.timestamp} • Duration: {rec.duration_ms}ms
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-amber-400 font-mono">
+                          {formatBytes(rec.total_space_saved_bytes)}
+                        </span>
+                        <p className="text-[10px] text-zinc-500">{rec.total_items_cleaned} items deleted</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                  <History className="w-8 h-8 text-zinc-600 mx-auto" />
+                  <p className="text-xs text-zinc-400">
+                    {loadingHistory ? 'Loading session records from SQLite store...' : 'No cleaning history records found.'}
+                  </p>
+                </div>
+              )
+            ) : (
+              /* Granular Files Ledger */
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={logSearchQuery}
+                  onChange={(e) => handleSearchGranularLogs(e.target.value)}
+                  placeholder="Search deleted file path or category in audit ledger..."
+                  className="w-full px-3 py-2 rounded-lg bg-black/40 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                />
+
+                {granularLogs.length > 0 ? (
+                  <div className="space-y-2">
+                    {granularLogs.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="p-3 rounded-lg bg-[#16161a] border border-white/[0.04] flex justify-between items-center text-xs"
+                      >
+                        <div className="space-y-0.5 truncate max-w-2xl">
+                          <div className="flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] font-mono text-zinc-300">
+                              {entry.cleaner_category}
+                            </span>
+                            <span className="font-mono text-zinc-300 truncate">{entry.path}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-500 font-mono">Session: {entry.session_id}</p>
+                        </div>
+                        <span className="text-[10px] text-zinc-500 font-mono shrink-0">{entry.timestamp}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                    <FileCode className="w-8 h-8 text-zinc-600 mx-auto" />
+                    <p className="text-xs text-zinc-400">No granular file deletion entries matched the query.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div className="p-8 text-xs text-zinc-400">Section active</div>

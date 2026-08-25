@@ -10,7 +10,8 @@ use taukudu_lib::{
     BrowserCacheScanSummary, BrowserProfileCacheTarget, ChromiumCacheEngine,
     CleanExecutionResult, CleanerBlockersEngine, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
     ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DeduplicationEngine,
-    DeleteFailureProbeEngine, DeletePathProbeResult, DeleteProbeSummary,
+    DeleteFailureProbeEngine, DeletePathProbeResult, DeleteProbeSummary, DeletionLogQueryOptions,
+    DeletionLogStats, DeletionLoggerEngine, GranularDeletedFileEntry,
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
     DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
@@ -25,8 +26,8 @@ use taukudu_lib::{
     ScheduleSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatMonitorEngine,
     ThreatMonitorSummary, TrimDriveStatus, UninstallerShredderEngine, UpdateExecutionResult,
-    GLOBAL_BREACH_MONITOR, GLOBAL_GAME_MODE, GLOBAL_HISTORY, GLOBAL_SCHEDULER,
-    GLOBAL_THREAT_MONITOR,
+    GLOBAL_BREACH_MONITOR, GLOBAL_DELETION_LOGGER, GLOBAL_GAME_MODE, GLOBAL_HISTORY,
+    GLOBAL_SCHEDULER, GLOBAL_THREAT_MONITOR,
 };
 
 #[tauri::command]
@@ -71,10 +72,11 @@ fn scan_cleaners(app_handle: tauri::AppHandle) -> ScanResult {
 fn clean_targets(paths: Vec<String>) -> CleanExecutionResult {
     let res = CleanerEngine::clean_files(&paths);
 
-    // Save to history SQLite
+    // Save to history SQLite and Granular Deletion Log
     if res.deleted_files > 0 {
+        let session_id = format!("clean-{}", chrono::Utc::now().timestamp_millis());
         let rec = HistoryRecord {
-            id: format!("clean-{}", chrono::Utc::now().timestamp_millis()),
+            id: session_id.clone(),
             timestamp: chrono::Utc::now().to_rfc3339(),
             action_type: "cleaner".to_string(),
             total_space_saved_bytes: res.deleted_bytes,
@@ -83,6 +85,20 @@ fn clean_targets(paths: Vec<String>) -> CleanExecutionResult {
             details_summary: format!("Cleaned {} temporary files", res.deleted_files),
         };
         let _ = GLOBAL_HISTORY.lock().unwrap().add_record(&rec);
+
+        // Record granular log
+        let granular_entries: Vec<GranularDeletedFileEntry> = paths
+            .iter()
+            .map(|p| GranularDeletedFileEntry {
+                id: format!("del-{}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)),
+                session_id: session_id.clone(),
+                path: p.clone(),
+                size_bytes: 0,
+                cleaner_category: "General Junk".to_string(),
+                timestamp: chrono::Utc::now().to_rfc3339(),
+            })
+            .collect();
+        let _ = GLOBAL_DELETION_LOGGER.append_entries(&granular_entries);
     }
 
     res
@@ -470,6 +486,31 @@ fn discover_browser_cache_targets() -> BrowserCacheScanSummary {
     ChromiumCacheEngine::discover_browser_cache_targets()
 }
 
+#[tauri::command]
+fn query_deletion_log(
+    session_id: Option<String>,
+    search_query: Option<String>,
+    category_filter: Option<String>,
+    limit: Option<usize>,
+) -> Vec<GranularDeletedFileEntry> {
+    GLOBAL_DELETION_LOGGER.query_entries(&DeletionLogQueryOptions {
+        session_id,
+        search_query,
+        category_filter,
+        limit: limit.unwrap_or(200),
+    })
+}
+
+#[tauri::command]
+fn get_deletion_log_stats() -> DeletionLogStats {
+    GLOBAL_DELETION_LOGGER.get_stats()
+}
+
+#[tauri::command]
+fn clear_deletion_log() -> Result<(), String> {
+    GLOBAL_DELETION_LOGGER.clear_logs()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -557,7 +598,10 @@ fn main() {
             audit_active_threats,
             add_threat_blacklist_cidr,
             terminate_threat_process,
-            discover_browser_cache_targets
+            discover_browser_cache_targets,
+            query_deletion_log,
+            get_deletion_log_stats,
+            clear_deletion_log
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

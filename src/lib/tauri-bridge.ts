@@ -549,6 +549,22 @@ export interface DeleteProbeSummary {
   results: DeletePathProbeResult[]
 }
 
+export interface GranularDeletedFileEntry {
+  id: string
+  session_id: string
+  path: string
+  size_bytes: number
+  cleaner_category: string
+  timestamp: string
+}
+
+export interface DeletionLogStats {
+  total_logged_files: number
+  total_bytes_logged: number
+  log_file_size_bytes: number
+  log_file_path: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -768,5 +784,19 @@ export const tauriApi = {
   },
   discoverBrowserCacheTargets: async (): Promise<BrowserCacheScanSummary> => {
     return await invoke('discover_browser_cache_targets')
+  },
+  queryDeletionLog: async (
+    sessionId?: string,
+    searchQuery?: string,
+    categoryFilter?: string,
+    limit?: number
+  ): Promise<GranularDeletedFileEntry[]> => {
+    return await invoke('query_deletion_log', { sessionId, searchQuery, categoryFilter, limit })
+  },
+  getDeletionLogStats: async (): Promise<DeletionLogStats> => {
+    return await invoke('get_deletion_log_stats')
+  },
+  clearDeletionLog: async (): Promise<void> => {
+    return await invoke('clear_deletion_log')
   },
 }
