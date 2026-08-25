@@ -11,8 +11,8 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-00** | **App Shell & Scaffolding** | Kerangka Tauri v2 + Vite + React 18 + Tailwind v4 + Lucide + IPC Bridge | `tauri v2`, `tauri-build`, `sysinfo`, Vite, React 18, Tailwind v4 | ✅ COMPLETED | 2026-08-25 |
 | **AREA-01** | **Cleaner Core Engine & UI** | Pemindaian berkas sampah (System, Browser, App, Gaming, Registry) + CleanerPage | `walkdir`, `rayon`, `serde_json`, `CleanerPage` split-view | ✅ COMPLETED | 2026-08-25 |
 | **AREA-02** | **Rules Registry & Importer** | Parser rules JSON Kudu + integrasi CleanerML BleachBit | `serde_json`, `rules.rs`, path resolver | ✅ COMPLETED | 2026-08-25 |
-| **AREA-03** | **Deduplication & Disk Tools** | Multi-stage hash (Czkawka concept) + DuplicateFinderPage, LargeFile, EmptyFolder | `blake3`, `xxhash-rust`, `rayon` | ⏳ NEXT UP | — |
-| **AREA-04** | **Disk Analyzer (Treemap)** | Visualisasi Treemap penggunaan disk + DiskAnalyzerPage | `jwalk`, `rayon`, Canvas / D3 Treemap | ⬜ PENDING | — |
+| **AREA-03** | **Deduplication & Disk Tools** | Multi-stage hash (Czkawka concept) + DuplicateFinderPage, LargeFile, EmptyFolder | `blake3`, `rayon`, `walkdir`, `DuplicateFinderPage` UI | ✅ COMPLETED | 2026-08-25 |
+| **AREA-04** | **Disk Analyzer (Treemap)** | Visualisasi Treemap penggunaan disk + DiskAnalyzerPage | `jwalk`, `rayon`, Canvas / D3 Treemap | ⏳ NEXT UP | — |
 | **AREA-05** | **Privacy Shield** | 30+ Windows privacy & telemetry policies + PrivacyShieldPage | `winreg`, `windows-rs` | ⬜ PENDING | — |
 | **AREA-06** | **Malware Scanner (YARA-X)** | On-demand YARA scan + MalwareScannerPage, ThreatMonitor | `yara-x` / `yara-sys` | ⬜ PENDING | — |
 | **AREA-07** | **System Tools: Startup & Debloat** | Startup Manager & Windows Debloater (UWP purge) + Pages | `winreg`, `windows-rs` | ⬜ PENDING | — |
@@ -31,9 +31,12 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 - Inisialisasi Tauri v2 + React 18 + Tailwind v4 dan IPC basic bridge.
 
 ### Area 01 & 02 — Cleaner Core Engine, Rules Parser & Cleaner UI (Selesai: 2026-08-25)
+- Rules parser deklaratif, parallel scanner rayon + walkdir, scan & clean IPC commands, dan Cleaner split-view UI.
+
+### Area 03 — Deduplication & Disk Tools (Selesai: 2026-08-25)
 - **Yang telah dikerjakan:**
-  1. **Rules Parser (`src-tauri/src/rules.rs`):** Membaca format JSON rules Kudu untuk Windows, macOS, dan Linux dengan dukungan environment variable resolver (`%LOCALAPPDATA%`, `%WINDIR%`, `%TEMP%`, dll.).
-  2. **Cleaner Engine (`src-tauri/src/cleaner.rs`):** Implementasi pemindaian multi-threaded berbasis `rayon` + `walkdir` (mengadopsi kecepatan ripgrep traversal) dan fungsi eksekusi penghapusan aman.
-  3. **Tauri IPC Commands (`src-tauri/src/main.rs`):** Menambahkan handler `scan_cleaners` dan `clean_targets`.
-  4. **Frontend Cleaner UI (`src/App.tsx`):** Menambahkan tampilan Cleaner split-view (Categories list + itemized file breakdown + One-Click Clean execution + dynamic size formatting).
+  1. **Multi-Stage Hasher (`src-tauri/src/deduplication.rs`):** Mengadopsi algoritma Czkawka (Exact File Size grouping $\rightarrow$ 4KB partial hash $\rightarrow$ Full cryptographic Blake3 hash) untuk pencarian duplikat instan tanpa full read I/O di muka.
+  2. **Disk Anomaly Scanners:** Scanner folder kosong (`scan_empty_folders`) dan pemindai berkas besar (`scan_large_files`).
+  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_duplicates`, `scan_empty_folders`, `scan_large_files`, dan `delete_duplicate_files`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka Duplicate Finder dengan konfigurasi direktori, visualisasi grup duplikat berdasar hash Blake3, auto-selection salinan redundan, dan eksekusi penghapusan selektif.
   5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

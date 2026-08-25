@@ -3,7 +3,10 @@
 
 use std::path::PathBuf;
 use tauri::Manager;
-use taukudu_lib::{CleanerEngine, ScanResult, CleanExecutionResult};
+use taukudu_lib::{
+    CleanExecutionResult, CleanerEngine, DeduplicationEngine, DuplicateScanOptions,
+    DuplicateScanResult, EmptyFolderScanResult, LargeFileScanResult, ScanResult,
+};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -48,6 +51,26 @@ fn clean_targets(paths: Vec<String>) -> CleanExecutionResult {
     CleanerEngine::clean_files(&paths)
 }
 
+#[tauri::command]
+fn scan_duplicates(options: DuplicateScanOptions) -> DuplicateScanResult {
+    DeduplicationEngine::scan_duplicates(&options)
+}
+
+#[tauri::command]
+fn scan_empty_folders(directory: String) -> EmptyFolderScanResult {
+    DeduplicationEngine::scan_empty_folders(&directory)
+}
+
+#[tauri::command]
+fn scan_large_files(directory: String, min_size_bytes: u64) -> LargeFileScanResult {
+    DeduplicationEngine::scan_large_files(&directory, min_size_bytes)
+}
+
+#[tauri::command]
+fn delete_duplicate_files(paths: Vec<String>) -> usize {
+    DeduplicationEngine::delete_files(&paths)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -55,7 +78,11 @@ fn main() {
             greet,
             get_system_overview,
             scan_cleaners,
-            clean_targets
+            clean_targets,
+            scan_duplicates,
+            scan_empty_folders,
+            scan_large_files,
+            delete_duplicate_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

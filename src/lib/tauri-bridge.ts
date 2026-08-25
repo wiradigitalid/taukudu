@@ -37,6 +37,35 @@ export interface CleanExecutionResult {
   errors: string[]
 }
 
+export interface DuplicateFile {
+  path: string
+  size: number
+  last_modified: number
+}
+
+export interface DuplicateGroup {
+  hash: string
+  size: number
+  files: DuplicateFile[]
+}
+
+export interface DuplicateScanResult {
+  groups: DuplicateGroup[]
+  total_duplicates: number
+  reclaimable_space: number
+  scan_duration_ms: number
+  files_scanned: number
+}
+
+export interface DuplicateScanOptions {
+  directory: string
+  min_file_size: number
+  max_file_size: number | null
+  exclude_patterns: string[]
+  extension_filter: string[]
+  max_depth: number | null
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -49,5 +78,11 @@ export const tauriApi = {
   },
   cleanTargets: async (paths: string[]): Promise<CleanExecutionResult> => {
     return await invoke('clean_targets', { paths })
+  },
+  scanDuplicates: async (options: DuplicateScanOptions): Promise<DuplicateScanResult> => {
+    return await invoke('scan_duplicates', { options })
+  },
+  deleteDuplicateFiles: async (paths: string[]): Promise<number> => {
+    return await invoke('delete_duplicate_files', { paths })
   },
 }
