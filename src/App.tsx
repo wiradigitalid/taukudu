@@ -18,6 +18,8 @@ import {
   NetworkItemInfo,
   ActiveConnectionInfo,
   RegistryIssue,
+  GameModeStatus,
+  GameOptimizationItem,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -52,13 +54,14 @@ import {
   Sun,
   Wifi,
   Database,
+  Gamepad2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'game' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -86,6 +89,11 @@ export function App() {
   const [selectedDrivePath, setSelectedDrivePath] = useState<string>('D:\\')
   const [analyzingDisk, setAnalyzingDisk] = useState(false)
   const [diskAnalysis, setDiskAnalysis] = useState<DiskAnalysisResult | null>(null)
+
+  // Game Mode state
+  const [gameStatus, setGameStatus] = useState<GameModeStatus | null>(null)
+  const [gameOpts, setGameOpts] = useState<GameOptimizationItem[]>([])
+  const [gameFeedback, setGameFeedback] = useState<string | null>(null)
 
   // Registry state
   const [registryIssues, setRegistryIssues] = useState<RegistryIssue[]>([])
@@ -249,6 +257,30 @@ export function App() {
       console.error('Disk analysis error:', err)
     } finally {
       setAnalyzingDisk(false)
+    }
+  }
+
+  const fetchGameMode = async () => {
+    try {
+      const st = await tauriApi.getGameModeStatus()
+      setGameStatus(st)
+      const opts = await tauriApi.getGameOptimizations()
+      setGameOpts(opts)
+    } catch (err) {
+      console.error('Game mode error:', err)
+    }
+  }
+
+  const handleToggleGameMode = async () => {
+    if (!gameStatus) return
+    try {
+      const next = !gameStatus.is_active
+      const res = await tauriApi.toggleGameMode(next)
+      setGameStatus(res)
+      setGameFeedback(next ? 'Ultimate Game Mode Activated! (High Performance Power Plan + Indexing Paused)' : 'Game Mode Deactivated.')
+      await fetchGameMode()
+    } catch (err) {
+      setGameFeedback(`Game mode error: ${String(err)}`)
     }
   }
 
@@ -673,6 +705,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('game')
+                if (!gameStatus) fetchGameMode()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'game'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Gamepad2 className="w-4 h-4" />
+              Game Mode
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('registry')
                 if (registryIssues.length === 0 && !scanningRegistry) handleScanRegistry()
               }}
@@ -868,6 +914,8 @@ export function App() {
               ? 'Multi-Stage Duplicate Finder (Czkawka Concept)'
               : activeTab === 'disk'
               ? 'Disk Space & Treemap Analyzer'
+              : activeTab === 'game'
+              ? 'Game Mode Latency & Power Optimization'
               : activeTab === 'registry'
               ? 'Windows Registry Orphan Cleaner'
               : activeTab === 'network'
@@ -895,25 +943,14 @@ export function App() {
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'registry' ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={handleScanRegistry}
-                  disabled={scanningRegistry || fixingRegistry}
-                  className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${scanningRegistry ? 'animate-spin' : ''}`} />
-                  Scan Registry
-                </button>
-                <button
-                  onClick={handleFixSelectedRegistry}
-                  disabled={scanningRegistry || fixingRegistry || selectedRegistryIds.size === 0}
-                  className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-black font-semibold transition cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Fix Selected ({selectedRegistryIds.size})
-                </button>
-              </div>
+            {activeTab === 'game' ? (
+              <button
+                onClick={fetchGameMode}
+                className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh State
+              </button>
             ) : (
               <button
                 onClick={fetchOverview}
@@ -992,62 +1029,70 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'registry' ? (
-          /* Registry Fixer Page */
+        ) : activeTab === 'game' ? (
+          /* Game Mode Page */
           <div className="p-8 max-w-6xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-white">Windows Registry Orphan Fixer</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">
+                    Game Mode: {gameStatus?.is_active ? 'Active' : 'Inactive'}
+                  </h2>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                      gameStatus?.is_active
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : 'bg-zinc-800 text-zinc-400'
+                    }`}
+                  >
+                    {gameStatus?.is_active ? 'Max FPS & Min Latency' : 'Standard Desktop State'}
+                  </span>
+                </div>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {registryFeedback || 'Scan and safely purge broken Shared DLL references, invalid App Paths, and stale MUI cache keys.'}
+                  {gameFeedback || 'Automatically optimize power plans, pause background indexing, and disable GameDVR capture latency.'}
                 </p>
               </div>
+
+              <button
+                onClick={handleToggleGameMode}
+                className={`px-6 py-2.5 rounded-xl font-semibold text-xs transition flex items-center gap-2 cursor-pointer ${
+                  gameStatus?.is_active
+                    ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    : 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/20'
+                }`}
+              >
+                <Gamepad2 className="w-4 h-4" />
+                {gameStatus?.is_active ? 'Deactivate Game Mode' : 'Activate Game Mode'}
+              </button>
             </div>
 
-            <div className="space-y-3">
-              {registryIssues.length > 0 ? (
-                registryIssues.map((issue) => {
-                  const isSelected = selectedRegistryIds.has(issue.id)
-                  return (
-                    <div
-                      key={issue.id}
-                      className={`p-4 rounded-xl border transition flex justify-between items-start ${
-                        isSelected ? 'bg-amber-500/10 border-amber-500/30' : 'bg-[#16161a] border-[#2a2a36]'
-                      }`}
-                    >
-                      <label className="flex items-start gap-3 cursor-pointer mr-4">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            const next = new Set(selectedRegistryIds)
-                            if (e.target.checked) next.add(issue.id)
-                            else next.delete(issue.id)
-                            setSelectedRegistryIds(next)
-                          }}
-                          className="mt-1 rounded border-zinc-700 text-amber-500 focus:ring-0 cursor-pointer"
-                        />
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-white">{issue.target_file}</span>
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 uppercase font-mono">
-                              {issue.category}
-                            </span>
-                          </div>
-                          <p className="text-xs text-zinc-500 font-mono">{issue.key_path}</p>
-                          <p className="text-xs text-amber-400/80">{issue.issue_description}</p>
-                        </div>
-                      </label>
+            {/* Optimization list */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {gameOpts.map((opt) => (
+                <div
+                  key={opt.id}
+                  className={`p-4 rounded-xl border flex justify-between items-start transition ${
+                    opt.is_applied ? 'bg-[#16161a] border-emerald-500/30' : 'bg-[#16161a] border-[#2a2a36]'
+                  }`}
+                >
+                  <div className="space-y-1 mr-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-white">{opt.title}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] font-mono text-zinc-400 uppercase">
+                        {opt.category}
+                      </span>
                     </div>
-                  )
-                })
-              ) : (
-                <div className="p-12 rounded-xl bg-[#16161a] border border-[#2a2a36] flex flex-col items-center justify-center text-zinc-500">
-                  <CheckCircle2 className="w-8 h-8 mb-2 text-zinc-600" />
-                  <p className="text-sm font-semibold text-zinc-300">No orphaned registry issues found</p>
-                  <p className="text-xs text-zinc-500 mt-1">Your Windows registry configuration is clean and valid.</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">{opt.description}</p>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
+                      opt.is_applied ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-400'
+                    }`}
+                  >
+                    {opt.is_applied ? 'Applied' : 'Pending'}
+                  </span>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         ) : (

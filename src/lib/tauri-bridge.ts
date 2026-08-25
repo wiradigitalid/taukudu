@@ -258,6 +258,22 @@ export interface RegistryFixResult {
   errors: string[]
 }
 
+export interface GameModeStatus {
+  is_active: boolean
+  active_power_plan: string
+  game_dvr_disabled: boolean
+  background_indexing_paused: boolean
+  memory_cleaned_mb: number
+}
+
+export interface GameOptimizationItem {
+  id: string
+  title: string
+  description: string
+  category: string
+  is_applied: boolean
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -363,5 +379,14 @@ export const tauriApi = {
   },
   fixRegistryTargets: async (targets: [string, string][]): Promise<RegistryFixResult> => {
     return await invoke('fix_registry_targets', { targets })
+  },
+  getGameModeStatus: async (): Promise<GameModeStatus> => {
+    return await invoke('get_game_mode_status')
+  },
+  toggleGameMode: async (activate: boolean): Promise<GameModeStatus> => {
+    return await invoke('toggle_game_mode', { activate })
+  },
+  getGameOptimizations: async (): Promise<GameOptimizationItem[]> => {
+    return await invoke('get_game_optimizations')
   },
 }

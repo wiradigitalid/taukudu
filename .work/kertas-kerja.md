@@ -24,14 +24,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-13** | **CLI Mode & Headless** | Scriptable command-line interface (`taukudu clean --all`) | `clap`, subcommands `clean`, `duplicates`, `malware`, `privacy` | ✅ COMPLETED | 2026-08-26 |
 | **AREA-14** | **Network & Socket Optimizer** | DNS cache flush, ARP table purge, Winsock reset, Netstat monitoring | Native Win32 CLI / Netstat, `NetworkPage` UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-15** | **Windows Registry Orphan Fixer**| Shared DLLs, App Paths, MUI Cache scanning & repair | `winreg`, `RegistryCleanerPage` UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-16** | **Game Mode & Latency Optimizer**| Power plan switching, GameDVR toggle, Search indexer pause | `winreg`, powercfg, net service, `GameModePage` UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
 
-### Area 15 — Windows Registry Orphan Cleaner (Selesai: 2026-08-26)
+### Area 16 — Game Mode & Latency Optimizer (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **Registry Cleaner Engine (`src-tauri/src/registry_cleaner.rs`):** Menggunakan `winreg` untuk memindai: (a) Shared DLLs yang hilang dari disk di `HKLM\...\SharedDLLs`, (b) Invalid App Paths executable di `HKLM\...\App Paths`, dan (c) Stale MUI Cache entries di `HKCU\...\MuiCache`.
-  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_registry_issues` dan `fix_registry_targets`.
-  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Registry Fixer* dengan daftar issue, target file path yang rusak, deskripsi error, dan tombol *Fix Selected*.
+  1. **Game Mode Engine (`src-tauri/src/game_mode.rs`):**
+     - Pengaktifan profil daya performa tinggi (`powercfg /setactive ...`).
+     - Penonaktifan GameDVR & background capture recording (`GameDVR_Enabled` & `AppCaptureEnabled` di `HKCU`).
+     - Jeda layanan Windows Search indexer (`net stop WSearch`) saat bermain game untuk mengeliminasi disk I/O lag.
+     - Pengembalian konfigurasi default saat mode dinonaktifkan.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_game_mode_status`, `toggle_game_mode`, dan `get_game_optimizations`.
+  3. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka *Game Mode* dengan tombol aktivasi, status indikator, dan kartu daftar optimasi aktif.
   4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.

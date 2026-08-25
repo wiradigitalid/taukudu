@@ -9,12 +9,13 @@ use taukudu_lib::{
     handle_cli_mode, ActiveConnectionInfo, BloatwareApp, CleanExecutionResult, CleanerEngine,
     CliArgs, DeduplicationEngine, DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo,
     DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult, EmptyFolderScanResult,
-    HistoryRecord, InstalledProgramInfo, LargeFileScanResult, MalwareActionResult,
-    MalwareScanResult, MalwareScannerEngine, NetworkItemInfo, NetworkToolsEngine,
-    PerfMonitorEngine, PerformanceSnapshot, PrivacyApplyResult, PrivacyShieldEngine,
-    PrivacyShieldState, RegistryCleanerEngine, RegistryFixResult, RegistryIssue,
-    RegistryScanResult, ScanResult, ServiceDriverEngine, ServiceItemInfo, ShredderResult,
-    StartupDebloatEngine, StartupItem, UninstallerShredderEngine, GLOBAL_HISTORY,
+    GameModeEngine, GameModeStatus, GameOptimizationItem, HistoryRecord, InstalledProgramInfo,
+    LargeFileScanResult, MalwareActionResult, MalwareScanResult, MalwareScannerEngine,
+    NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot,
+    PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RegistryCleanerEngine,
+    RegistryFixResult, RegistryIssue, RegistryScanResult, ScanResult, ServiceDriverEngine,
+    ServiceItemInfo, ShredderResult, StartupDebloatEngine, StartupItem, UninstallerShredderEngine,
+    GLOBAL_HISTORY,
 };
 
 #[tauri::command]
@@ -249,6 +250,25 @@ fn fix_registry_targets(targets: Vec<(String, String)>) -> RegistryFixResult {
     RegistryCleanerEngine::fix_registry_issues(&targets)
 }
 
+#[tauri::command]
+fn get_game_mode_status() -> GameModeStatus {
+    GameModeEngine::get_status()
+}
+
+#[tauri::command]
+fn toggle_game_mode(activate: bool) -> Result<GameModeStatus, String> {
+    if activate {
+        GameModeEngine::activate_game_mode()
+    } else {
+        GameModeEngine::deactivate_game_mode()
+    }
+}
+
+#[tauri::command]
+fn get_game_optimizations() -> Vec<GameOptimizationItem> {
+    GameModeEngine::get_optimizations()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -298,7 +318,10 @@ fn main() {
             reset_tcp_stack,
             get_active_connections,
             scan_registry_issues,
-            fix_registry_targets
+            fix_registry_targets,
+            get_game_mode_status,
+            toggle_game_mode,
+            get_game_optimizations
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
