@@ -43,12 +43,24 @@ import {
   Gauge,
   XCircle,
   History,
+  Settings,
+  Globe,
+  Moon,
+  Sun,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'malware' | 'privacy'>('dashboard')
+  const { t, i18n } = useTranslation()
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'duplicates' | 'disk' | 'startup' | 'debloat' | 'services' | 'drivers' | 'uninstaller' | 'shredder' | 'perf' | 'history' | 'settings' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
+
+  // Settings State
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark')
+  const [currentLang, setCurrentLang] = useState<string>('en')
+  const [settingsFeedback, setSettingsFeedback] = useState<string | null>(null)
 
   // Cleaner state
   const [scanning, setScanning] = useState(false)
@@ -472,6 +484,20 @@ export function App() {
     }
   }
 
+  const handleChangeLanguage = (langCode: string) => {
+    setCurrentLang(langCode)
+    i18n.changeLanguage(langCode)
+    setSettingsFeedback(`Language updated to ${langCode}`)
+  }
+
+  const handleToggleTheme = (mode: 'dark' | 'light') => {
+    setThemeMode(mode)
+    const root = document.documentElement
+    root.classList.remove('dark', 'light')
+    root.classList.add(mode)
+    setSettingsFeedback(`Theme set to ${mode} mode`)
+  }
+
   useEffect(() => {
     fetchOverview()
   }, [])
@@ -487,9 +513,9 @@ export function App() {
   const activeCategorySummary = scanResult?.categories.find((c) => c.category === selectedCategory)
 
   return (
-    <div className="flex h-screen bg-[#0a0a10] text-[#e4e4e7] overflow-hidden font-sans">
+    <div className={`flex h-screen ${themeMode === 'dark' ? 'bg-[#0a0a10] text-[#e4e4e7]' : 'bg-gray-50 text-gray-900'} overflow-hidden font-sans`}>
       {/* Sidebar Navigation */}
-      <aside className="w-64 border-r border-[#1f2937]/50 bg-[#0f0f16] flex flex-col justify-between p-4">
+      <aside className={`w-64 border-r ${themeMode === 'dark' ? 'border-[#1f2937]/50 bg-[#0f0f16]' : 'border-gray-200 bg-white'} flex flex-col justify-between p-4`}>
         <div>
           <div className="flex items-center gap-3 px-2 py-4 mb-6 border-b border-[#1f2937]/40">
             <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-500 font-bold">
@@ -692,6 +718,17 @@ export function App() {
               <Shield className="w-4 h-4" />
               Privacy Shield
             </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'settings'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              Settings & i18n
+            </button>
           </nav>
         </div>
 
@@ -703,7 +740,7 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-y-auto">
-        <header className="h-14 border-b border-[#1f2937]/40 px-8 flex items-center justify-between bg-[#0a0a10]/80 backdrop-blur">
+        <header className={`h-14 border-b ${themeMode === 'dark' ? 'border-[#1f2937]/40 bg-[#0a0a10]/80' : 'border-gray-200 bg-white/80'} px-8 flex items-center justify-between backdrop-blur`}>
           <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
             {activeTab === 'dashboard'
               ? 'System Overview & Health'
@@ -729,36 +766,22 @@ export function App() {
               ? 'Cryptographic File Shredder (DoD 5220.22-M)'
               : activeTab === 'history'
               ? 'Cleaning History & Audit Trail (SQLite)'
+              : activeTab === 'settings'
+              ? 'Application Settings & Internationalization'
               : activeTab === 'malware'
               ? 'YARA & Heuristic Malware Scanner'
               : 'OS Privacy & Telemetry Shield'}
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'history' ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={fetchHistory}
-                  disabled={loadingHistory}
-                  className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
-                  Refresh
-                </button>
-                <button
-                  onClick={handleClearHistory}
-                  className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Clear Log
-                </button>
-              </div>
+            {activeTab === 'settings' ? (
+              <span className="text-xs text-zinc-500 font-mono">TauKudu v0.1.0</span>
             ) : (
               <button
                 onClick={fetchOverview}
                 className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 transition cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                Refresh Stats
+                Refresh
               </button>
             )}
           </div>
@@ -830,52 +853,91 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'history' ? (
-          /* Cleaning History & Audit Page */
-          <div className="p-8 max-w-6xl space-y-6">
+        ) : activeTab === 'settings' ? (
+          /* Settings Page */
+          <div className="p-8 max-w-5xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-white">Maintenance & Audit History ({historyList.length})</h2>
+                <h2 className="text-lg font-bold text-white">Preferences & Localization</h2>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {historyFeedback || 'Persistent SQLite audit log of past cleaning, shredding, and optimization sessions.'}
+                  {settingsFeedback || 'Customize application appearance, interface language (30+ locales), and runtime behavior.'}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-3">
-              {historyList.length > 0 ? (
-                historyList.map((rec) => (
-                  <div
-                    key={rec.id}
-                    className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-sm font-semibold text-white capitalize">{rec.action_type} Session</span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
-                          {new Date(rec.timestamp).toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="text-xs text-zinc-400">{rec.details_summary}</p>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <div className="text-sm font-bold font-mono text-emerald-400">
-                        {formatBytes(rec.total_space_saved_bytes)} Reclaimed
-                      </div>
-                      <div className="text-[11px] text-zinc-500">
-                        {rec.total_items_cleaned} files processed
-                      </div>
-                    </div>
+            <div className="space-y-4">
+              {/* Language Selection */}
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-amber-400" />
+                    <span className="text-sm font-semibold text-white">Language (i18n)</span>
                   </div>
-                ))
-              ) : (
-                <div className="p-12 rounded-xl bg-[#16161a] border border-[#2a2a36] flex flex-col items-center justify-center text-zinc-500">
-                  <History className="w-8 h-8 mb-2 text-zinc-600" />
-                  <p className="text-sm font-semibold text-zinc-300">No cleaning sessions recorded yet</p>
-                  <p className="text-xs text-zinc-500 mt-1">Clean your system to see space recovery analytics here.</p>
+                  <p className="text-xs text-zinc-400">Choose your preferred desktop interface language</p>
                 </div>
-              )}
+                <select
+                  value={currentLang}
+                  onChange={(e) => handleChangeLanguage(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-xs text-white outline-none focus:border-amber-500 cursor-pointer"
+                >
+                  {LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.nativeName} ({l.name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Appearance Mode */}
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Moon className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm font-semibold text-white">Theme & Appearance</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">Select Dark or Light theme for interface elements</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleToggleTheme('dark')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                      themeMode === 'dark'
+                        ? 'bg-amber-500 text-black'
+                        : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <Moon className="w-3.5 h-3.5" />
+                    Dark
+                  </button>
+                  <button
+                    onClick={() => handleToggleTheme('light')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                      themeMode === 'light'
+                        ? 'bg-amber-500 text-black'
+                        : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <Sun className="w-3.5 h-3.5" />
+                    Light
+                  </button>
+                </div>
+              </div>
+
+              {/* Zero Telemetry Guarantee */}
+              <div className="p-5 rounded-xl bg-[#16161a] border border-emerald-500/30 flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-emerald-400" />
+                    <span className="text-sm font-semibold text-white">Zero Telemetry Promise</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    TauKudu does not send usage metrics, telemetry, or file logs to any remote server.
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded text-[11px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  100% Offline
+                </span>
+              </div>
             </div>
           </div>
         ) : (

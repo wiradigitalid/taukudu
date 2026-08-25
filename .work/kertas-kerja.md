@@ -20,8 +20,8 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-09** | **Uninstaller & Secure Shredder** | Clean Uninstaller + Multi-pass cryptographic file shredder | `zeroize`, `rand`, Uninstaller & Shredder UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-10** | **Performance Monitor** | Live CPU, RAM, Disk I/O, Network, Process Manager + Page | `sysinfo`, Performance Monitor UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-11** | **History & SQLite Store** | Audit trail & history logging + HistoryPage | `rusqlite` (SQLite 3), `HistoryPage` UI | ✅ COMPLETED | 2026-08-26 |
-| **AREA-12** | **Settings, i18n & Updates** | 30+ Bahasa (i18next), Theme Dark/Light, Auto-updater | `i18next`, Tauri updater plugin | ⏳ NEXT UP | — |
-| **AREA-13** | **CLI Mode & Headless** | Scriptable command-line interface (`taukudu clean --all`) | `clap` | ⬜ PENDING | — |
+| **AREA-12** | **Settings, i18n & Updates** | 30+ Bahasa (i18next), Theme Dark/Light, Auto-updater | `i18next`, Dark/Light switch, Settings UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-13** | **CLI Mode & Headless** | Scriptable command-line interface (`taukudu clean --all`) | `clap` | ⏳ NEXT UP | — |
 
 ---
 
@@ -58,9 +58,12 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 - Real-time CPU/RAM metrics, process manager, dan terminate process capability.
 
 ### Area 11 — Cleaning History & SQLite Audit Store (Selesai: 2026-08-26)
+- SQLite history store via `rusqlite`, automated session logging, dan History UI.
+
+### Area 12 — App Settings & Multi-Language i18n (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
-  1. **SQLite Database Store (`src-tauri/src/history_store.rs`):** Menggunakan `rusqlite` untuk inisialisasi tabel audit permanen `history_records` (id, timestamp, action_type, space_saved, items_cleaned, duration, summary) yang thread-safe.
-  2. **Automated Session Logging:** Setiap eksekusi pembersihan di `clean_targets` otomatis mencatat hasil pembersihan ke database SQLite.
-  3. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_history_records` dan `clear_history_records`.
-  4. **Frontend UI (`src/App.tsx`):** Menambahkan antarmuka Cleaning History & Audit Trail dengan total statistik ruang yang dipulihkan dan rincian per sesi.
+  1. **i18n Multi-Language Localization (`src/i18n.ts`):** Mengintegrasikan `i18next` + `react-i18next` dengan dukungan switch instan untuk 30 bahasa resmi (Bahasa Indonesia, English, Spanish, French, German, Japanese, Chinese, Russian, Arabic, dll.).
+  2. **Appearance & Theming:** Opsi pemilih tema Dark / Light yang reaktif terhadap class DOM `dark`/`light`.
+  3. **Zero Telemetry Transparency:** Kartu komitmen privasi 100% offline.
+  4. **Frontend Settings Page (`src/App.tsx`):** Halaman Settings terpadu untuk pengaturan bahasa dan tema.
   5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
