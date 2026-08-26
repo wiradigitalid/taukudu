@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -333,6 +333,12 @@ export function App() {
   const [loadingSafety, setLoadingSafety] = useState(false)
   const [safetySearchQuery, setSafetySearchQuery] = useState('')
   const [safetyFeedback, setSafetyFeedback] = useState<string | null>(null)
+
+  // Hosts Security state
+  const [hostsSummary, setHostsSummary] = useState<import('@/lib/tauri-bridge').HostsFileSummary | null>(null)
+  const [loadingHosts, setLoadingHosts] = useState(false)
+  const [applyingHosts, setApplyingHosts] = useState(false)
+  const [hostsFeedback, setHostsFeedback] = useState<string | null>(null)
 
   // Debloater state
   const [bloatList, setBloatList] = useState<BloatwareApp[]>([])
@@ -1368,6 +1374,33 @@ export function App() {
     }
   }
 
+  const fetchHostsSummary = async () => {
+    setLoadingHosts(true)
+    setHostsFeedback(null)
+    try {
+      const sum = await tauriApi.scanHostsFileSecurity()
+      setHostsSummary(sum)
+      setHostsFeedback(`Hosts file: ${sum.total_entries} entries (${sum.telemetry_blocked_count} telemetry endpoints blocked). ${sum.is_writable ? 'Writable' : 'Read-only (elevation required)'}`)
+    } catch (err) {
+      setHostsFeedback(`Hosts scan error: ${String(err)}`)
+    } finally {
+      setLoadingHosts(false)
+    }
+  }
+
+  const handleToggleHostsTelemetryBlock = async (enableBlock: boolean) => {
+    setApplyingHosts(true)
+    try {
+      const res = await tauriApi.applyHostsTelemetryBlock(enableBlock)
+      setHostsFeedback(res.message)
+      await fetchHostsSummary()
+    } catch (err) {
+      setHostsFeedback(`Hosts error: ${String(err)}`)
+    } finally {
+      setApplyingHosts(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2302,6 +2335,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('hosts')
+                if (!hostsSummary && !loadingHosts) fetchHostsSummary()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'hosts'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Hosts Telemetry Block
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('network')
                 if (networkItems.length === 0) fetchNetwork()
               }}
@@ -2572,6 +2619,8 @@ export function App() {
               ? 'Real-Time Memory RAM Optimizer & Working Set Trimmer'
               : activeTab === 'safety'
               ? 'Offline Program & Startup Safety Intelligence Advisor'
+              : activeTab === 'hosts'
+              ? 'Windows Hosts File Security & Telemetry Blocker'
               : activeTab === 'network'
               ? 'Network Cache & TCP/IP Stack Optimizer'
               : activeTab === 'perf'
@@ -5841,6 +5890,87 @@ export function App() {
                 <ShieldCheck className="w-8 h-8 text-zinc-600 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {loadingSafety ? 'Loading safety database...' : 'Click "Refresh Database" to view intelligence ratings.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'hosts' ? (
+          /* Hosts File Security & Telemetry Blocker Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Windows Hosts File Telemetry & Redirection Blocker</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {hostsFeedback || `Hosts file: ${hostsSummary?.total_entries || 0} entries (${hostsSummary?.telemetry_blocked_count || 0} telemetry domains blocked).`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchHostsSummary}
+                  disabled={loadingHosts}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingHosts ? 'animate-spin' : ''}`} />
+                  {loadingHosts ? 'Reading...' : 'Refresh Hosts'}
+                </button>
+                <button
+                  onClick={() => handleToggleHostsTelemetryBlock((hostsSummary?.telemetry_blocked_count || 0) === 0)}
+                  disabled={applyingHosts}
+                  className={`px-4 py-2 rounded-xl font-semibold text-xs transition flex items-center gap-2 shadow-lg cursor-pointer ${
+                    (hostsSummary?.telemetry_blocked_count || 0) > 0
+                      ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30'
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
+                  }`}
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  {(hostsSummary?.telemetry_blocked_count || 0) > 0 ? 'Disable Telemetry Block' : 'Block Windows Telemetry (0.0.0.0)'}
+                </button>
+              </div>
+            </div>
+
+            {/* Hosts Entries List */}
+            {hostsSummary && hostsSummary.entries.length > 0 ? (
+              <div className="space-y-2">
+                <div className="px-3 py-1 text-xs text-zinc-500 font-mono flex justify-between">
+                  <span>File Location: {hostsSummary.hosts_file_path}</span>
+                  <span>{hostsSummary.entries.length} Total Lines</span>
+                </div>
+                <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+                  {hostsSummary.entries.map((h, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-xl border flex justify-between items-center text-xs font-mono ${
+                        h.is_telemetry_block && !h.is_commented
+                          ? 'bg-emerald-500/5 border-emerald-500/20'
+                          : h.is_commented
+                          ? 'bg-black/20 border-white/[0.03] text-zinc-500'
+                          : 'bg-[#16161a] border-[#2a2a36]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-amber-400 font-semibold">{h.ip_address}</span>
+                        <span className="text-zinc-200">{h.hostname}</span>
+                      </div>
+                      <div>
+                        {h.is_telemetry_block && !h.is_commented ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400">
+                            Telemetry Block Active
+                          </span>
+                        ) : h.is_commented ? (
+                          <span className="text-[10px] text-zinc-600">Commented Line</span>
+                        ) : (
+                          <span className="text-[10px] text-zinc-400">Custom Host Mapping</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <ShieldAlert className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingHosts ? 'Reading System32/drivers/etc/hosts...' : 'Click "Refresh Hosts" to view active DNS mappings.'}
                 </p>
               </div>
             )}

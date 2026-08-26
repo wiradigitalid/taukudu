@@ -20,7 +20,8 @@ use taukudu_lib::{
     EventLogCleanResult, EventLogCleanerEngine, EventLogScanSummary, EventLogTarget,
     FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
     GameModeStatus, GameOptimizationItem, GamingCleanResult, GamingCleanerEngine, GamingScanSummary, GamingTargetDetail,
-    GpuControllerEngine, GpuDiagnosticInfo, HistoryRecord,
+    GpuControllerEngine, GpuDiagnosticInfo, HistoryRecord, HostsApplyResult, HostsEntryItem,
+    HostsFileSummary, HostsSecurityEngine,
     IconFontCacheEngine, CacheRebuildExecutionResult, CacheRebuildScanSummary, CacheTargetDetail, InstalledProgramInfo,
     LargeFileScanResult, LeftoversCleanerEngine, LeftoversCleanResult, LeftoversScanResult,
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MemoryOptimizerEngine,
@@ -776,6 +777,16 @@ fn lookup_safety_rating(query: String) -> Option<SafetyRating> {
     SafetyIntelligenceEngine::lookup_rating(&query)
 }
 
+#[tauri::command]
+fn scan_hosts_file_security() -> HostsFileSummary {
+    HostsSecurityEngine::scan_hosts_file()
+}
+
+#[tauri::command]
+fn apply_hosts_telemetry_block(enable_block: bool) -> Result<HostsApplyResult, String> {
+    HostsSecurityEngine::apply_telemetry_block(enable_block)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -915,7 +926,9 @@ fn main() {
             get_memory_optimizer_snapshot,
             trim_memory_working_sets,
             get_safety_intelligence_summary,
-            lookup_safety_rating
+            lookup_safety_rating,
+            scan_hosts_file_security,
+            apply_hosts_telemetry_block
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

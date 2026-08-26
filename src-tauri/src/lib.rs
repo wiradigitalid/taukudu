@@ -20,6 +20,7 @@ pub mod game_mode;
 pub mod gaming_cleaner;
 pub mod gpu_controller;
 pub mod history_store;
+pub mod hosts_security;
 pub mod icon_font_cache;
 pub mod leftovers_cleaner;
 pub mod malware_scanner;
@@ -92,6 +93,9 @@ pub use gaming_cleaner::{
 };
 pub use gpu_controller::{GpuControllerEngine, GpuDiagnosticInfo};
 pub use history_store::{HistoryRecord, HistoryStore, GLOBAL_HISTORY};
+pub use hosts_security::{
+    HostsApplyResult, HostsEntryItem, HostsFileSummary, HostsSecurityEngine,
+};
 pub use icon_font_cache::{
     CacheRebuildExecutionResult, CacheRebuildScanSummary, CacheTargetDetail, IconFontCacheEngine,
 };

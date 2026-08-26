@@ -67,10 +67,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-56** | **Windows Update & SoftwareDistribution Cache Cleaner** | Download patch purger, Delivery Optimization cache & coordinated service restart | `WinUpdateCleanerEngine`, Windows Update Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-57** | **Real-Time Memory RAM Optimizer & Working Set Trimmer** | Win32 K32EmptyWorkingSet bulk trimmer, RAM load meter & per-process working set analyzer | `MemoryOptimizerEngine`, Memory RAM Trimmer Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-58** | **Offline Program & Startup Safety Intelligence Advisor** | Local ratings database, publisher trust, recommended startup actions & bloatware alerts | `SafetyIntelligenceEngine`, Safety Advisor Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-59** | **Windows Hosts File Security & Telemetry Blocker** | Hosts parser, Microsoft telemetry redirection to 0.0.0.0, pre-fix backup & DNS flush | `HostsSecurityEngine`, Hosts Telemetry Block Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 59 — Windows Hosts File Security & Telemetry Blocker (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Hosts Security Engine (`src-tauri/src/hosts_security.rs`):** Parser berkas `%WINDIR%\System32\drivers\etc\hosts`, deteksi redirect aktif/dikomentari, daftar kurasi endpoint telemetri Microsoft (`v10.events.data.microsoft.com`, `watson.telemetry.microsoft.com`, `vortex.data.microsoft.com`, dll.), pembuatan backup otomatis berstempel waktu di `Documents/TauKudu Backups/Hosts/`, pencabutan atribut read-only, penulisan aturan blokir `0.0.0.0`, dan eksekusi otomatis pembersihan DNS resolver cache (`ipconfig /flushdns`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_hosts_file_security` dan `apply_hosts_telemetry_block`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `HostsEntryItem`, `HostsFileSummary`, `HostsApplyResult`, serta method `tauriApi.scanHostsFileSecurity` dan `tauriApi.applyHostsTelemetryBlock`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman tab *Hosts Telemetry Block* lengkap dengan viewer daftar pemetaan DNS aktif, badge status Telemetry Block Active, dan tombol toggle aksi *Block Windows Telemetry (0.0.0.0)* / *Disable Telemetry Block*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 58 — Offline Program & Startup Safety Intelligence Advisor (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

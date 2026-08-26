@@ -529,6 +529,30 @@ export interface SafetyRatingSummary {
   ratings: SafetyRating[]
 }
 
+export interface HostsEntryItem {
+  ip_address: string
+  hostname: string
+  is_commented: boolean
+  is_telemetry_block: boolean
+  raw_line: string
+}
+
+export interface HostsFileSummary {
+  hosts_file_path: string
+  is_writable: boolean
+  total_entries: number
+  telemetry_blocked_count: number
+  entries: HostsEntryItem[]
+  scan_duration_ms: number
+}
+
+export interface HostsApplyResult {
+  success: boolean
+  backup_file_path?: string | null
+  blocked_domains_count: number
+  message: string
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1378,5 +1402,11 @@ export const tauriApi = {
   },
   lookupSafetyRating: async (query: string): Promise<SafetyRating | null> => {
     return await invoke('lookup_safety_rating', { query })
+  },
+  scanHostsFileSecurity: async (): Promise<HostsFileSummary> => {
+    return await invoke('scan_hosts_file_security')
+  },
+  applyHostsTelemetryBlock: async (enableBlock: boolean): Promise<HostsApplyResult> => {
+    return await invoke('apply_hosts_telemetry_block', { enableBlock })
   },
 }
