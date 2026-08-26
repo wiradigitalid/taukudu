@@ -368,6 +368,29 @@ export interface DatabaseOptimizeSummary {
   results: DatabaseVacuumResult[]
 }
 
+export interface OrphanEnvItem {
+  id: string
+  variable_name: string
+  raw_value: string
+  expanded_value: string
+  scope: string
+  entry_type: string
+  missing_reason: string
+}
+
+export interface EnvCleanerScanResult {
+  items: OrphanEnvItem[]
+  total_scanned: number
+  total_orphans: number
+  scan_duration_ms: number
+}
+
+export interface EnvCleanerCleanResult {
+  cleaned_count: number
+  failed_count: number
+  errors: string[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1175,5 +1198,11 @@ export const tauriApi = {
   },
   vacuumSqliteDatabases: async (paths: string[]): Promise<DatabaseOptimizeSummary> => {
     return await invoke('vacuum_sqlite_databases', { paths })
+  },
+  scanEnvironmentOrphans: async (): Promise<EnvCleanerScanResult> => {
+    return await invoke('scan_environment_orphans')
+  },
+  cleanEnvironmentOrphans: async (items: OrphanEnvItem[]): Promise<EnvCleanerCleanResult> => {
+    return await invoke('clean_environment_orphans', { items })
   },
 }

@@ -13,6 +13,7 @@ pub mod delete_failure_probe;
 pub mod deletion_logger;
 pub mod disk_analyzer;
 pub mod disk_maintenance;
+pub mod environment_cleaner;
 pub mod firewall_audit;
 pub mod game_mode;
 pub mod gpu_controller;
@@ -70,6 +71,9 @@ pub use disk_analyzer::{
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskTreemapNode, FileTypeBreakdown,
 };
 pub use disk_maintenance::{DiskMaintenanceEngine, DiskRepairOutput, TrimDriveStatus};
+pub use environment_cleaner::{
+    EnvCleanerCleanResult, EnvCleanerScanResult, EnvironmentCleanerEngine, OrphanEnvItem,
+};
 pub use firewall_audit::{FirewallAuditEngine, FirewallAuditSummary, FirewallRuleInfo};
 pub use game_mode::{
     DetectedGameInfo, GameModeEngine, GameModeStatus, GameOptimizationItem, GLOBAL_GAME_MODE,

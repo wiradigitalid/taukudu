@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -281,6 +281,13 @@ export function App() {
   const [scanningDatabases, setScanningDatabases] = useState(false)
   const [optimizingDatabases, setOptimizingDatabases] = useState(false)
   const [databaseFeedback, setDatabaseFeedback] = useState<string | null>(null)
+
+  // Environment Cleaner state
+  const [envScanResult, setEnvScanResult] = useState<import('@/lib/tauri-bridge').EnvCleanerScanResult | null>(null)
+  const [selectedEnvIds, setSelectedEnvIds] = useState<Set<string>>(new Set())
+  const [scanningEnv, setScanningEnv] = useState(false)
+  const [cleaningEnv, setCleaningEnv] = useState(false)
+  const [envFeedback, setEnvFeedback] = useState<string | null>(null)
 
   // Startup state
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
@@ -1116,6 +1123,38 @@ export function App() {
       setDatabaseFeedback(`Vacuum error: ${String(err)}`)
     } finally {
       setOptimizingDatabases(false)
+    }
+  }
+
+  const handleScanEnvironment = async () => {
+    setScanningEnv(true)
+    setEnvFeedback(null)
+    setSelectedEnvIds(new Set())
+    try {
+      const res = await tauriApi.scanEnvironmentOrphans()
+      setEnvScanResult(res)
+      const allIds = new Set(res.items.map((i) => i.id))
+      setSelectedEnvIds(allIds)
+      setEnvFeedback(`Scanned ${res.total_scanned} environment entries: found ${res.total_orphans} dead PATH/variable references in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      setEnvFeedback(`Environment scan error: ${String(err)}`)
+    } finally {
+      setScanningEnv(false)
+    }
+  }
+
+  const handleCleanSelectedEnv = async () => {
+    if (!envScanResult || selectedEnvIds.size === 0) return
+    setCleaningEnv(true)
+    try {
+      const itemsToClean = envScanResult.items.filter((i) => selectedEnvIds.has(i.id))
+      const res = await tauriApi.cleanEnvironmentOrphans(itemsToClean)
+      setEnvFeedback(`Successfully cleaned ${res.cleaned_count} invalid environment entries (${res.failed_count} failed).`)
+      await handleScanEnvironment()
+    } catch (err) {
+      setEnvFeedback(`Clean error: ${String(err)}`)
+    } finally {
+      setCleaningEnv(false)
     }
   }
 
@@ -1955,6 +1994,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('env')
+                if (!envScanResult && !scanningEnv) handleScanEnvironment()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'env'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Wrench className="w-4 h-4" />
+              Environment PATH
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('network')
                 if (networkItems.length === 0) fetchNetwork()
               }}
@@ -2211,6 +2264,8 @@ export function App() {
               ? 'Broken & Invalid Desktop / Start Menu Shortcuts'
               : activeTab === 'databases'
               ? 'Browser & App SQLite Database VACUUM & Optimizer'
+              : activeTab === 'env'
+              ? 'Windows Environment Variables & Dead PATH Cleaner'
               : activeTab === 'network'
               ? 'Network Cache & TCP/IP Stack Optimizer'
               : activeTab === 'perf'
@@ -4898,6 +4953,84 @@ export function App() {
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {scanningDatabases ? 'Inspecting SQLite database headers across profile directories...' : 'No fragmented SQLite databases found.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'env' ? (
+          /* Environment Variables & PATH Cleaner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Windows Environment Variables & PATH Cleaner</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {envFeedback || `Found ${envScanResult?.total_orphans || 0} orphaned directories in PATH and developer variables.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanEnvironment}
+                  disabled={scanningEnv}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanningEnv ? 'animate-spin' : ''}`} />
+                  {scanningEnv ? 'Scanning...' : 'Scan Environment'}
+                </button>
+                <button
+                  onClick={handleCleanSelectedEnv}
+                  disabled={cleaningEnv || selectedEnvIds.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clean Selected ({selectedEnvIds.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Orphan Items List */}
+            {envScanResult && envScanResult.items.length > 0 ? (
+              <div className="space-y-2">
+                {envScanResult.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3 truncate max-w-2xl">
+                      <input
+                        type="checkbox"
+                        checked={selectedEnvIds.has(item.id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedEnvIds)
+                          if (e.target.checked) next.add(item.id)
+                          else next.delete(item.id)
+                          setSelectedEnvIds(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer shrink-0"
+                      />
+                      <div className="space-y-0.5 truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white truncate">{item.variable_name}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-amber-400 shrink-0">
+                            {item.scope}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400 shrink-0">
+                            {item.entry_type}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-red-400 font-mono truncate">{item.missing_reason}</p>
+                        <p className="text-[10px] text-zinc-500 font-mono truncate">
+                          Value: {item.raw_value}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {scanningEnv ? 'Reading registry hives (HKCU/HKLM Environment) and validating paths...' : 'All PATH directories and environment variables are valid.'}
                 </p>
               </div>
             )}

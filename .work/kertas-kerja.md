@@ -60,10 +60,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-49** | **Registry Snapshot Backup & Rollback Manager** | Native .reg snapshot export before orphan cleanup & rollback restore | `RegistryBackupEngine`, Registry Cleaner Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-50** | **Broken & Invalid Shortcuts Cleaner** | Binary LNK parser & shell shortcut validator across Desktop, Start Menu & Recent | `ShortcutCleanerEngine`, Broken Shortcuts Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-51** | **Browser & App SQLite Database VACUUM Optimizer** | Native SQLite defragmenter, index rebuilder & WAL space reclaim across browsers/apps | `DatabaseOptimizerEngine`, Database VACUUM Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-52** | **Windows Environment Variables & PATH Cleaner** | User/System PATH orphan cleaner, dead dev home directories purge & Win32 broadcast | `EnvironmentCleanerEngine`, Environment PATH Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 52 — Windows Environment Variables & PATH Cleaner (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Environment Cleaner Engine (`src-tauri/src/environment_cleaner.rs`):** Pembacaan nilai variabel lingkungan dari registry Windows `HKCU\Environment` dan `HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment`. Pemindaian dan validasi eksistensi direktori pada entri `PATH` (User & System) dan variabel lingkungan pengembangan perangkat lunak (Java, Rust, Go, Node, Android SDK, Python, .NET, dll.). Fitur pembersihan entri PATH mati dan penghapusan variabel lingkungan yatim serta broadcast Windows `WM_SETTINGCHANGE` (`Environment`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_environment_orphans` dan `clean_environment_orphans`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `OrphanEnvItem`, `EnvCleanerScanResult`, `EnvCleanerCleanResult`, serta method `tauriApi.scanEnvironmentOrphans` dan `tauriApi.cleanEnvironmentOrphans`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman tab *Environment PATH* lengkap dengan list direktori yang hilang, scope (User/System), tipe entri (PATH / Variable), badge filter, dan tombol aksi *Clean Selected*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 51 — Browser & App SQLite Database VACUUM Optimizer (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

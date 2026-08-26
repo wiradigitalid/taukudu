@@ -16,7 +16,8 @@ use taukudu_lib::{
     DeletionLogStats, DeletionLoggerEngine, GranularDeletedFileEntry,
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
     DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
-    EmptyFolderScanResult, FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
+    EmptyFolderScanResult, EnvCleanerCleanResult, EnvCleanerScanResult, EnvironmentCleanerEngine,
+    FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
     GameModeStatus, GameOptimizationItem, GpuControllerEngine, GpuDiagnosticInfo, HistoryRecord, InstalledProgramInfo,
     LargeFileScanResult, LeftoversCleanerEngine, LeftoversCleanResult, LeftoversScanResult,
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MetricLine, MetricsEngine,
@@ -699,6 +700,16 @@ fn vacuum_sqlite_databases(paths: Vec<String>) -> DatabaseOptimizeSummary {
     DatabaseOptimizerEngine::optimize_databases(&paths)
 }
 
+#[tauri::command]
+fn scan_environment_orphans() -> EnvCleanerScanResult {
+    EnvironmentCleanerEngine::scan_environment()
+}
+
+#[tauri::command]
+fn clean_environment_orphans(items: Vec<taukudu_lib::OrphanEnvItem>) -> EnvCleanerCleanResult {
+    EnvironmentCleanerEngine::clean_environment_items(&items)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -824,7 +835,9 @@ fn main() {
             scan_broken_shortcuts,
             delete_broken_shortcuts,
             scan_sqlite_databases,
-            vacuum_sqlite_databases
+            vacuum_sqlite_databases,
+            scan_environment_orphans,
+            clean_environment_orphans
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
