@@ -77,7 +77,8 @@ pub use network_tools::{ActiveConnectionInfo, NetworkItemInfo, NetworkToolsEngin
 pub use perf_monitor::{PerfMonitorEngine, PerformanceSnapshot, ProcessItem};
 pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};
 pub use recycle_bin::{
-    RecycleBinCleanResult, RecycleBinDriveStat, RecycleBinEngine, RecycleBinSummary,
+    RecycleBinCleanResult, RecycleBinDriveStat, RecycleBinEngine, RecycleBinItemDetail,
+    RecycleBinSummary,
 };
 pub use registry_cleaner::{RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult};
 pub use restore_point::{

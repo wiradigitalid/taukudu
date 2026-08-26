@@ -34,6 +34,7 @@ import {
   RestorePointItem,
   RecycleBinSummary,
   RecycleBinCleanResult,
+  RecycleBinItemDetail,
   BlockerSummary,
   ProcessBlockerInfo,
   ThreatMonitorSummary,
@@ -2452,6 +2453,29 @@ export function App() {
                 </div>
               ))}
             </div>
+
+            {/* Detailed Deleted Items from $I Metadata */}
+            {recycleSummary && recycleSummary.items.length > 0 && (
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                  Deleted Items in Bin (Parsed from $I Windows Metadata)
+                </h3>
+                <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                  {recycleSummary.items.slice(0, 50).map((item) => (
+                    <div key={item.id} className="flex justify-between items-center p-2 rounded-lg bg-black/30 text-xs font-mono">
+                      <div className="space-y-0.5 truncate max-w-xl">
+                        <span className="text-white font-semibold">{item.file_name}</span>
+                        <p className="text-[10px] text-zinc-500 truncate">{item.original_path}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-amber-400">{formatBytes(item.size_bytes)}</span>
+                        <p className="text-[10px] text-zinc-500">{item.deleted_timestamp}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : activeTab === 'threats' ? (
           /* Live Outbound Threat Monitor Page */

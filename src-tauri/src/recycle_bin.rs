@@ -1,10 +1,22 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::os::windows::process::CommandExt;
 
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecycleBinItemDetail {
+    pub id: String,
+    pub original_path: String,
+    pub file_name: String,
+    pub size_bytes: u64,
+    pub deleted_timestamp: String,
+    pub drive_letter: String,
+    pub payload_path: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecycleBinDriveStat {
@@ -18,6 +30,7 @@ pub struct RecycleBinDriveStat {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecycleBinSummary {
     pub drives: Vec<RecycleBinDriveStat>,
+    pub items: Vec<RecycleBinItemDetail>,
     pub total_items: usize,
     pub total_bytes: u64,
     pub scan_duration_ms: u64,
@@ -73,13 +86,13 @@ public static class KuduBins {
             }
         }
 
-        // Fallback: If powershell failed, check common drives C:, D:, E:
+        // Fallback: Check common drive letters if powershell query is unavailable
         if results.is_empty() {
             for letter in ['C', 'D', 'E', 'F'] {
                 let bin_root = PathBuf::from(format!(r"{}:\$Recycle.Bin", letter));
                 if bin_root.is_dir() {
                     if let Ok(entries) = fs::read_dir(&bin_root) {
-                        for e in entries.filter_map(|x| x.ok()) {
+                        for e in entries.flatten() {
                             let p = e.path();
                             if p.is_dir() {
                                 let name = e.file_name().to_string_lossy().to_string();
@@ -96,12 +109,58 @@ public static class KuduBins {
         results
     }
 
+    /// Parse a single Windows $I metadata binary record directly in Rust
+    fn parse_i_file(i_path: &Path) -> Option<(u64, String, String)> {
+        let mut f = fs::File::open(i_path).ok()?;
+        let mut buf = Vec::new();
+        f.read_to_end(&mut buf).ok()?;
+
+        if buf.len() < 28 {
+            return None;
+        }
+
+        let version = u64::from_le_bytes(buf[0..8].try_into().ok()?);
+        let size_bytes = u64::from_le_bytes(buf[8..16].try_into().ok()?);
+        let filetime = u64::from_le_bytes(buf[16..24].try_into().ok()?);
+
+        // Convert Windows FILETIME (100ns intervals since 1601) to Unix epoch timestamp
+        let unix_secs = if filetime >= 116_444_736_000_000_000 {
+            (filetime - 116_444_736_000_000_000) / 10_000_000
+        } else {
+            0
+        };
+
+        let date_formatted = chrono::DateTime::from_timestamp(unix_secs as i64, 0)
+            .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        let raw_u16: Vec<u16> = if version == 2 && buf.len() >= 28 {
+            // Version 2 (Win 10/11): length at 24..28, string at 28..
+            buf[28..]
+                .chunks_exact(2)
+                .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                .take_while(|&c| c != 0)
+                .collect()
+        } else {
+            // Version 1 (Win Vista/7/8): fixed length path starting at offset 24
+            buf[24..]
+                .chunks_exact(2)
+                .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                .take_while(|&c| c != 0)
+                .collect()
+        };
+
+        let orig_path = String::from_utf16_lossy(&raw_u16);
+        Some((size_bytes, orig_path, date_formatted))
+    }
+
     /// Scan and inspect all items currently in the Recycle Bin across all drives
     pub fn get_summary() -> RecycleBinSummary {
         let start = std::time::Instant::now();
         let bin_paths = Self::get_user_recycle_bin_paths();
 
         let mut drives_stat = Vec::new();
+        let mut detailed_items = Vec::new();
         let mut total_items = 0usize;
         let mut total_bytes = 0u64;
 
@@ -111,15 +170,47 @@ public static class KuduBins {
             let mut accessible = true;
 
             if let Ok(entries) = fs::read_dir(&path) {
-                for entry in entries.filter_map(|e| e.ok()) {
-                    let file_name = entry.file_name().to_string_lossy().to_string();
-                    let upper = file_name.to_uppercase();
+                let dir_files: Vec<PathBuf> = entries.filter_map(|e| e.ok().map(|x| x.path())).collect();
 
-                    // Only count $R payload files (files actually taking storage)
-                    if upper.starts_with("$R") {
-                        drive_items += 1;
-                        if let Ok(meta) = entry.metadata() {
-                            drive_bytes += meta.len();
+                for p in &dir_files {
+                    if let Some(file_name) = p.file_name().and_then(|f| f.to_str()) {
+                        let upper = file_name.to_uppercase();
+
+                        // Match $R payload
+                        if upper.starts_with("$R") {
+                            drive_items += 1;
+                            let raw_size = p.metadata().map(|m| m.len()).unwrap_or(0);
+                            drive_bytes += raw_size;
+
+                            // Look for corresponding $I metadata file
+                            let i_name = format!("$I{}", &file_name[2..]);
+                            let i_path = path.join(i_name);
+
+                            let (item_size, orig_path, date_str) = if i_path.exists() {
+                                if let Some((s, op, dt)) = Self::parse_i_file(&i_path) {
+                                    (if s > 0 { s } else { raw_size }, op, dt)
+                                } else {
+                                    (raw_size, file_name.to_string(), "Recent".to_string())
+                                }
+                            } else {
+                                (raw_size, file_name.to_string(), "Recent".to_string())
+                            };
+
+                            let display_fname = Path::new(&orig_path)
+                                .file_name()
+                                .and_then(|f| f.to_str())
+                                .unwrap_or(file_name)
+                                .to_string();
+
+                            detailed_items.push(RecycleBinItemDetail {
+                                id: format!("rb-{}-{}", drive_letter, detailed_items.len() + 1),
+                                original_path: orig_path,
+                                file_name: display_fname,
+                                size_bytes: item_size,
+                                deleted_timestamp: date_str,
+                                drive_letter: drive_letter.clone(),
+                                payload_path: p.to_string_lossy().to_string(),
+                            });
                         }
                     }
                 }
@@ -141,6 +232,7 @@ public static class KuduBins {
 
         RecycleBinSummary {
             drives: drives_stat,
+            items: detailed_items,
             total_items,
             total_bytes,
             scan_duration_ms: start.elapsed().as_millis() as u64,
@@ -199,7 +291,7 @@ public static class KuduBins {
 
                 // 2. Clear remaining orphaned $I metadata files
                 if let Ok(remaining_entries) = fs::read_dir(&bin_dir) {
-                    for re in remaining_entries.filter_map(|e| e.ok()) {
+                    for re in remaining_entries.flatten() {
                         let r_name = re.file_name().to_string_lossy().to_string();
                         if r_name.to_uppercase().starts_with("$I") {
                             if fs::remove_file(re.path()).is_ok() {

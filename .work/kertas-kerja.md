@@ -53,10 +53,18 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-42** | **Full System Navigation & Feature Unification** | Unified multi-view sidebar covering all 35+ native system tools & engines | `src/App.tsx` navigation & view router | ✅ COMPLETED | 2026-08-26 |
 | **AREA-43** | **Official Release & Update Verifier** | Native release version metadata & GitHub release tag verifier | `AppUpdaterEngine`, About & Settings UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-44** | **Client-Side CVE False-Positive Filter** | Debian epoch/revision version parser & runtime misattribution filter | `CveScannerEngine`, CVE Scanner Page | ✅ COMPLETED | 2026-08-26 |
+| **AREA-45** | **Recycle Bin $I Metadata Binary Parser & File Inspection** | Pure Rust parser for Windows $I binary headers & detailed deleted item viewer | `RecycleBinEngine`, Recycle Bin Inspector UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 45 — Recycle Bin $I Metadata Binary Parser & Inspection (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Binary $I Metadata Parser (`src-tauri/src/recycle_bin.rs`):** Implementasi parser native Rust untuk membaca header biner record `$I*` Windows Recycle Bin (Versi 1 dan Versi 2 Win 10/11), mengekstrak ukuran asli berkas, konversi timestamp Windows FILETIME (100ns sejak 1601) ke Unix timestamp, serta ekstraksi nama dan path berkas asal via UTF-16 decoding.
+  2. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `RecycleBinItemDetail` dan pembaruan `RecycleBinSummary` (`items: RecycleBinItemDetail[]`).
+  3. **Frontend UI (`src/App.tsx`):** Menambahkan tabel/daftar interaktif inspeksi berkas yang berada di dalam Recycle Bin sebelum eksekusi pengosongan.
+  4. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 44 — Client-Side CVE False-Positive Filter Engine (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

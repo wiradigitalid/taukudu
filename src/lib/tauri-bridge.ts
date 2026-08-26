@@ -512,6 +512,16 @@ export interface RestorePointResult {
   message: string
 }
 
+export interface RecycleBinItemDetail {
+  id: string
+  original_path: string
+  file_name: string
+  size_bytes: number
+  deleted_timestamp: string
+  drive_letter: string
+  payload_path: string
+}
+
 export interface RecycleBinDriveStat {
   drive_letter: string
   path: string
@@ -522,6 +532,7 @@ export interface RecycleBinDriveStat {
 
 export interface RecycleBinSummary {
   drives: RecycleBinDriveStat[]
+  items: RecycleBinItemDetail[]
   total_items: number
   total_bytes: number
   scan_duration_ms: number
