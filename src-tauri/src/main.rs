@@ -16,7 +16,7 @@ use taukudu_lib::{
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
     DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
-    GameModeStatus, GameOptimizationItem, HistoryRecord, InstalledProgramInfo,
+    GameModeStatus, GameOptimizationItem, GpuControllerEngine, GpuDiagnosticInfo, HistoryRecord, InstalledProgramInfo,
     LargeFileScanResult, LeftoversCleanerEngine, LeftoversCleanResult, LeftoversScanResult,
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MetricLine, MetricsEngine,
     NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot,
@@ -625,6 +625,16 @@ fn check_app_updates() -> AppReleaseInfo {
     AppUpdaterEngine::check_for_updates()
 }
 
+#[tauri::command]
+fn get_gpu_diagnostics() -> GpuDiagnosticInfo {
+    GpuControllerEngine::get_gpu_diagnostics()
+}
+
+#[tauri::command]
+fn set_gpu_hardware_acceleration(disable: bool) -> Result<GpuDiagnosticInfo, String> {
+    GpuControllerEngine::set_gpu_disabled(disable)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -736,7 +746,9 @@ fn main() {
             get_app_log_stats,
             clear_app_logs,
             get_app_version,
-            check_app_updates
+            check_app_updates,
+            get_gpu_diagnostics,
+            set_gpu_hardware_acceleration
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

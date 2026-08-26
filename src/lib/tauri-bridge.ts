@@ -736,6 +736,15 @@ export interface AppReleaseInfo {
   checked_at: string
 }
 
+export interface GpuDiagnosticInfo {
+  adapter_name: string
+  driver_version: string
+  driver_date: string
+  is_hardware_acceleration_disabled: boolean
+  marker_exists: boolean
+  rendering_mode: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -1038,5 +1047,11 @@ export const tauriApi = {
   },
   checkAppUpdates: async (): Promise<AppReleaseInfo> => {
     return await invoke('check_app_updates')
+  },
+  getGpuDiagnostics: async (): Promise<GpuDiagnosticInfo> => {
+    return await invoke('get_gpu_diagnostics')
+  },
+  setGpuHardwareAcceleration: async (disable: boolean): Promise<GpuDiagnosticInfo> => {
+    return await invoke('set_gpu_hardware_acceleration', { disable })
   },
 }

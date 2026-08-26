@@ -14,6 +14,7 @@ pub mod disk_analyzer;
 pub mod disk_maintenance;
 pub mod firewall_audit;
 pub mod game_mode;
+pub mod gpu_controller;
 pub mod history_store;
 pub mod leftovers_cleaner;
 pub mod malware_scanner;
@@ -65,6 +66,7 @@ pub use firewall_audit::{FirewallAuditEngine, FirewallAuditSummary, FirewallRule
 pub use game_mode::{
     DetectedGameInfo, GameModeEngine, GameModeStatus, GameOptimizationItem, GLOBAL_GAME_MODE,
 };
+pub use gpu_controller::{GpuControllerEngine, GpuDiagnosticInfo};
 pub use history_store::{HistoryRecord, HistoryStore, GLOBAL_HISTORY};
 pub use leftovers_cleaner::{
     LeftoverFolderItem, LeftoversCleanResult, LeftoversCleanerEngine, LeftoversScanResult,

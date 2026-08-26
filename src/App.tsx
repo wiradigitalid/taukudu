@@ -59,6 +59,7 @@ import {
   EmptyFolderScanResult,
   LargeFileScanResult,
   AppReleaseInfo,
+  GpuDiagnosticInfo,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -137,6 +138,8 @@ export function App() {
   const [settingsFeedback, setSettingsFeedback] = useState<string | null>(null)
   const [appReleaseInfo, setAppReleaseInfo] = useState<AppReleaseInfo | null>(null)
   const [checkingAppRelease, setCheckingAppRelease] = useState(false)
+  const [gpuInfo, setGpuInfo] = useState<GpuDiagnosticInfo | null>(null)
+  const [loadingGpu, setLoadingGpu] = useState(false)
 
   // Cleaner state
   const [scanning, setScanning] = useState(false)
@@ -1419,9 +1422,32 @@ export function App() {
     setSettingsFeedback(`Theme set to ${mode} mode`)
   }
 
+  const fetchGpuDiagnostics = async () => {
+    setLoadingGpu(true)
+    try {
+      const g = await tauriApi.getGpuDiagnostics()
+      setGpuInfo(g)
+    } catch (err) {
+      console.error('Fetch GPU diagnostics error:', err)
+    } finally {
+      setLoadingGpu(false)
+    }
+  }
+
+  const handleToggleGpuAcceleration = async (disable: boolean) => {
+    try {
+      const g = await tauriApi.setGpuHardwareAcceleration(disable)
+      setGpuInfo(g)
+      setSettingsFeedback(`GPU hardware acceleration ${disable ? 'disabled (Software Mode)' : 'enabled (Hardware Mode)'}. Relaunch to take full effect.`)
+    } catch (err) {
+      setSettingsFeedback(`GPU toggle error: ${String(err)}`)
+    }
+  }
+
   useEffect(() => {
     fetchOverview()
     fetchAppSettings()
+    fetchGpuDiagnostics()
   }, [])
 
   const formatBytes = (bytes: number) => {
@@ -3683,6 +3709,28 @@ export function App() {
                     className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
                   />
                 </label>
+              </div>
+            </div>
+
+            {/* GPU & Hardware Acceleration Control */}
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">GPU Hardware Acceleration & Graphics Fallback</h3>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Adapter: {gpuInfo?.adapter_name || 'Generic'} • Driver: {gpuInfo?.driver_version || 'N/A'} • Mode: <span className="text-amber-400 font-semibold">{gpuInfo?.rendering_mode || 'Auto'}</span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleToggleGpuAcceleration(!gpuInfo?.is_hardware_acceleration_disabled)}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                    gpuInfo?.is_hardware_acceleration_disabled
+                      ? 'bg-amber-500 text-black font-bold'
+                      : 'bg-zinc-800 text-zinc-300 hover:text-white'
+                  }`}
+                >
+                  {gpuInfo?.is_hardware_acceleration_disabled ? 'Enable Hardware GPU' : 'Force Software Fallback'}
+                </button>
               </div>
             </div>
 

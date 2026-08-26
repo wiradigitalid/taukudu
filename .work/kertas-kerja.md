@@ -54,10 +54,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-43** | **Official Release & Update Verifier** | Native release version metadata & GitHub release tag verifier | `AppUpdaterEngine`, About & Settings UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-44** | **Client-Side CVE False-Positive Filter** | Debian epoch/revision version parser & runtime misattribution filter | `CveScannerEngine`, CVE Scanner Page | ✅ COMPLETED | 2026-08-26 |
 | **AREA-45** | **Recycle Bin $I Metadata Binary Parser & File Inspection** | Pure Rust parser for Windows $I binary headers & detailed deleted item viewer | `RecycleBinEngine`, Recycle Bin Inspector UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-46** | **GPU Hardware Acceleration & Graphics Fallback Controller** | Win32 GPU controller & software rasterizer fallback switch | `GpuControllerEngine`, Settings & Preferences UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 46 — GPU Hardware Acceleration & Graphics Fallback Controller (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **GPU Controller Engine (`src-tauri/src/gpu_controller.rs`):** Deteksi adapter grafis Windows aktif melalui WMI `Win32_VideoController` (nama kartu grafis, versi driver, tanggal driver), status akselerasi perangkat keras, serta kontrol sakelar *Software Fallback (WARP / software rasterizer)* via env dan marker file (`.disable-gpu`) untuk mencegah crash pada sistem operasi Windows yang di-strip down / minimal.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_gpu_diagnostics` dan `set_gpu_hardware_acceleration`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `GpuDiagnosticInfo`, serta method `tauriApi.getGpuDiagnostics` dan `tauriApi.setGpuHardwareAcceleration`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan kartu kontrol *GPU Hardware Acceleration & Graphics Fallback* pada tab *Settings & Preferences* lengkap dengan info adapter GPU dan tombol toggle *Force Software Fallback / Enable Hardware GPU*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 45 — Recycle Bin $I Metadata Binary Parser & Inspection (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
