@@ -36,7 +36,8 @@ use taukudu_lib::{
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatBlacklistData,
     ThreatBlacklistStore, ThreatBlacklistSummary, ThreatMonitorEngine,
     ThreatMonitorSummary, TrimDriveStatus, TrimHistoryStore, TrimHistorySummary, TrimRecord,
-    UninstallerShredderEngine, UpdateExecutionResult, WindowGeometryState, WindowStateEngine,
+    UninstallerShredderEngine, UpdateExecutionResult, WinUpdateCleanResult, WinUpdateCleanerEngine,
+    WinUpdateScanSummary, WinUpdateTarget, WindowGeometryState, WindowStateEngine,
     YaraBundleValidationResult, YaraRuleFileEntry, YaraRulesMetadata, YaraRulesStoreEngine,
     GLOBAL_APP_LOGGER, GLOBAL_BREACH_MONITOR, GLOBAL_DELETION_LOGGER, GLOBAL_GAME_MODE, GLOBAL_HISTORY,
     GLOBAL_SCHEDULER, GLOBAL_SETTINGS, GLOBAL_THREAT_BLACKLIST, GLOBAL_THREAT_MONITOR,
@@ -743,6 +744,16 @@ fn clean_windows_event_logs(targets: Vec<taukudu_lib::EventLogTarget>) -> EventL
     EventLogCleanerEngine::clean_event_log_targets(&targets)
 }
 
+#[tauri::command]
+fn scan_windows_updates() -> WinUpdateScanSummary {
+    WinUpdateCleanerEngine::scan_update_caches()
+}
+
+#[tauri::command]
+fn clean_windows_updates(paths: Vec<String>) -> WinUpdateCleanResult {
+    WinUpdateCleanerEngine::clean_update_targets(&paths)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -876,7 +887,9 @@ fn main() {
             scan_gaming_cleaner,
             clean_gaming_targets,
             scan_windows_event_logs,
-            clean_windows_event_logs
+            clean_windows_event_logs,
+            scan_windows_updates,
+            clean_windows_updates
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

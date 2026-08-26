@@ -462,6 +462,31 @@ export interface EventLogCleanResult {
   errors: string[]
 }
 
+export interface WinUpdateTarget {
+  id: string
+  name: string
+  description: string
+  file_path: string
+  size_bytes: number
+  file_count: number
+  needs_service_stop: boolean
+}
+
+export interface WinUpdateScanSummary {
+  targets: WinUpdateTarget[]
+  total_size_bytes: number
+  total_files_count: number
+  scan_duration_ms: number
+}
+
+export interface WinUpdateCleanResult {
+  cleaned_targets_count: number
+  bytes_freed: number
+  services_restarted: boolean
+  failed_count: number
+  errors: string[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1293,5 +1318,11 @@ export const tauriApi = {
   },
   cleanWindowsEventLogs: async (targets: EventLogTarget[]): Promise<EventLogCleanResult> => {
     return await invoke('clean_windows_event_logs', { targets })
+  },
+  scanWindowsUpdates: async (): Promise<WinUpdateScanSummary> => {
+    return await invoke('scan_windows_updates')
+  },
+  cleanWindowsUpdates: async (paths: string[]): Promise<WinUpdateCleanResult> => {
+    return await invoke('clean_windows_updates', { paths })
   },
 }

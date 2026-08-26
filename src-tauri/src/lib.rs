@@ -43,6 +43,7 @@ pub mod threat_blacklist;
 pub mod threat_monitor;
 pub mod trim_history;
 pub mod uninstaller_shredder;
+pub mod win_update_cleaner;
 pub mod window_state;
 pub mod yara_rules_store;
 
@@ -138,6 +139,9 @@ pub use trim_history::{
 };
 pub use uninstaller_shredder::{
     InstalledProgramInfo, ShredderResult, UninstallerShredderEngine,
+};
+pub use win_update_cleaner::{
+    WinUpdateCleanResult, WinUpdateCleanerEngine, WinUpdateScanSummary, WinUpdateTarget,
 };
 pub use window_state::{
     WindowGeometryState, WindowStateEngine, GLOBAL_WINDOW_STATE, MIN_WINDOW_HEIGHT,

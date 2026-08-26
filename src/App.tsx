@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -309,6 +309,13 @@ export function App() {
   const [scanningEventLogs, setScanningEventLogs] = useState(false)
   const [clearingEventLogs, setClearingEventLogs] = useState(false)
   const [eventLogsFeedback, setEventLogsFeedback] = useState<string | null>(null)
+
+  // Windows Update Cleaner state
+  const [winUpdateSummary, setWinUpdateSummary] = useState<import('@/lib/tauri-bridge').WinUpdateScanSummary | null>(null)
+  const [selectedWinUpdateIds, setSelectedWinUpdateIds] = useState<Set<string>>(new Set())
+  const [scanningWinUpdate, setScanningWinUpdate] = useState(false)
+  const [cleaningWinUpdate, setCleaningWinUpdate] = useState(false)
+  const [winUpdateFeedback, setWinUpdateFeedback] = useState<string | null>(null)
 
   // Startup state
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
@@ -1273,6 +1280,41 @@ export function App() {
     }
   }
 
+  const handleScanWinUpdates = async () => {
+    setScanningWinUpdate(true)
+    setWinUpdateFeedback(null)
+    setSelectedWinUpdateIds(new Set())
+    try {
+      const res = await tauriApi.scanWindowsUpdates()
+      setWinUpdateSummary(res)
+      const allIds = new Set(res.targets.map((t) => t.id))
+      setSelectedWinUpdateIds(allIds)
+      setWinUpdateFeedback(`Found ${res.total_files_count} cached update files (${formatBytes(res.total_size_bytes)} total) in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      setWinUpdateFeedback(`Scan error: ${String(err)}`)
+    } finally {
+      setScanningWinUpdate(false)
+    }
+  }
+
+  const handleCleanSelectedWinUpdates = async () => {
+    if (!winUpdateSummary || selectedWinUpdateIds.size === 0) return
+    setCleaningWinUpdate(true)
+    try {
+      const paths = winUpdateSummary.targets
+        .filter((t) => selectedWinUpdateIds.has(t.id))
+        .map((t) => t.file_path)
+
+      const res = await tauriApi.cleanWindowsUpdates(paths)
+      setWinUpdateFeedback(`Successfully purged ${formatBytes(res.bytes_freed)} across ${res.cleaned_targets_count} update targets (${res.failed_count} failed). ${res.services_restarted ? 'Windows Update services refreshed.' : ''}`)
+      await handleScanWinUpdates()
+    } catch (err) {
+      setWinUpdateFeedback(`Clean error: ${String(err)}`)
+    } finally {
+      setCleaningWinUpdate(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2095,6 +2137,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('winupdate')
+                if (!winUpdateSummary && !scanningWinUpdate) handleScanWinUpdates()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'winupdate'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <ArrowUpCircle className="w-4 h-4" />
+              Windows Update
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('registry')
                 if (registryIssues.length === 0 && !scanningRegistry) handleScanRegistry()
               }}
@@ -2419,6 +2475,8 @@ export function App() {
               ? 'Gaming Launchers, DirectX Shaders & Steam Redistributables'
               : activeTab === 'eventlogs'
               ? 'Windows Event Logs (.evtx), Crash Dumps & Diagnostics'
+              : activeTab === 'winupdate'
+              ? 'Windows Update & SoftwareDistribution Cache Cleaner'
               : activeTab === 'registry'
               ? 'Windows Registry Orphan Cleaner'
               : activeTab === 'shortcuts'
@@ -5429,6 +5487,87 @@ export function App() {
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {scanningEventLogs ? 'Scanning winevt Logs, crash dumps, and Windows Error Reports...' : 'No bloated Windows Event Logs or crash dumps found.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'winupdate' ? (
+          /* Windows Update Cleaner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Windows Update & SoftwareDistribution Cleaner</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {winUpdateFeedback || `Found ${winUpdateSummary?.total_files_count || 0} cached update files (${formatBytes(winUpdateSummary?.total_size_bytes || 0)} total).`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanWinUpdates}
+                  disabled={scanningWinUpdate}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanningWinUpdate ? 'animate-spin' : ''}`} />
+                  {scanningWinUpdate ? 'Scanning...' : 'Scan Updates'}
+                </button>
+                <button
+                  onClick={handleCleanSelectedWinUpdates}
+                  disabled={cleaningWinUpdate || selectedWinUpdateIds.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Purge Selected ({selectedWinUpdateIds.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Targets List */}
+            {winUpdateSummary && winUpdateSummary.targets.length > 0 ? (
+              <div className="space-y-2">
+                {winUpdateSummary.targets.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3 truncate max-w-2xl">
+                      <input
+                        type="checkbox"
+                        checked={selectedWinUpdateIds.has(item.id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedWinUpdateIds)
+                          if (e.target.checked) next.add(item.id)
+                          else next.delete(item.id)
+                          setSelectedWinUpdateIds(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer shrink-0"
+                      />
+                      <div className="space-y-0.5 truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white truncate">{item.name}</span>
+                          {item.needs_service_stop && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-400 shrink-0">
+                              Requires Service Pause
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-zinc-400 font-mono truncate">{item.description}</p>
+                        <p className="text-[10px] text-zinc-500 font-mono truncate">{item.file_path}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        {formatBytes(item.size_bytes)}
+                      </span>
+                      <p className="text-[10px] text-zinc-500 font-mono">{item.file_count} files</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {scanningWinUpdate ? 'Scanning SoftwareDistribution and DeliveryOptimization directories...' : 'No leftover Windows Update downloads found.'}
                 </p>
               </div>
             )}

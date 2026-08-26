@@ -64,10 +64,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-53** | **Icon, Thumbnail & Font Cache Rebuilder** | Explorer iconcache/thumbcache purge, FontCache.dat rebuilder & graceful restart | `IconFontCacheEngine`, Icon & Font Cache Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-54** | **Gaming Ecosystem & Steam Shader / Redist Cleaner** | Steam VDF/ACF library parser, per-game shader caches, GPU DirectX/Vulkan shader caches | `GamingCleanerEngine`, Gaming Clean Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-55** | **Windows Event Logs (.evtx) & Crash Dumps Cleaner** | wevtutil event log channel cleaner, memory dump purger & WER error report cleaner | `EventLogCleanerEngine`, Event Logs Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-56** | **Windows Update & SoftwareDistribution Cache Cleaner** | Download patch purger, Delivery Optimization cache & coordinated service restart | `WinUpdateCleanerEngine`, Windows Update Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 56 — Windows Update & SoftwareDistribution Cache Cleaner (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Windows Update Cleaner Engine (`src-tauri/src/win_update_cleaner.rs`):** Pemindaian paket instalasi Windows Update terunduh di `%WINDIR%\SoftwareDistribution\Download`, berkas Delivery Optimization sistem dan user (`SoftwareDistribution\DeliveryOptimization` dan `%LOCALAPPDATA%\Microsoft\Windows\DeliveryOptimization`), log transaksi database Windows Update (`DataStore\Logs`), log diagnosa Update Orchestrator (`%PROGRAMDATA%\USOShared\Logs`), dan log pembersihan upgrade Windows (`System32\LogFiles\setupcln`). Didukung koordinasi penghentian service sementara (`wuauserv`, `bits`, `dosvc`) untuk melepas kunci berkas saat pembersihan dan menjalankan kembali service secara otomatis.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_windows_updates` dan `clean_windows_updates`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `WinUpdateTarget`, `WinUpdateScanSummary`, `WinUpdateCleanResult`, serta method `tauriApi.scanWindowsUpdates` dan `tauriApi.cleanWindowsUpdates`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman tab *Windows Update* lengkap dengan badge status kebutuhan jeda service (*Requires Service Pause*), deskripsi komponen update, jumlah berkas, ukuran kapasitas, dan tombol aksi *Purge Selected*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 55 — Windows Event Logs (.evtx) & Crash Dumps Cleaner (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
