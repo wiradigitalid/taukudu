@@ -684,6 +684,34 @@ export interface VssPurgeResult {
   message: string
 }
 
+export interface DefenderExclusionItem {
+  id: string
+  exclusion_type: string
+  value: string
+  risk_level: string
+  risk_reason: string
+}
+
+export interface DefenderAuditSummary {
+  is_antivirus_enabled: boolean
+  is_realtime_protection_enabled: boolean
+  is_cloud_protection_enabled: boolean
+  is_tamper_protection_enabled: boolean
+  antimalware_version: string
+  signature_updated_date: string
+  total_exclusions: number
+  high_risk_exclusions_count: number
+  exclusions: DefenderExclusionItem[]
+  scan_duration_ms: number
+}
+
+export interface DefenderRemediationResult {
+  success: boolean
+  removed_exclusions_count: number
+  failed_count: number
+  errors: string[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1566,5 +1594,11 @@ export const tauriApi = {
   },
   purgeVssShadowCopies: async (purgeAll: boolean): Promise<VssPurgeResult> => {
     return await invoke('purge_vss_shadow_copies', { purgeAll })
+  },
+  auditWindowsDefenderSecurity: async (): Promise<DefenderAuditSummary> => {
+    return await invoke('audit_windows_defender_security')
+  },
+  removeDefenderExclusion: async (exclusionType: string, value: string): Promise<DefenderRemediationResult> => {
+    return await invoke('remove_defender_exclusion', { exclusionType, value })
   },
 }

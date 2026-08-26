@@ -12,7 +12,8 @@ use taukudu_lib::{
     BrowserCacheScanSummary, BrowserProfileCacheTarget, ChromiumCacheEngine,
     CleanExecutionResult, CleanerBlockersEngine, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
     ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DatabaseOptimizeSummary,
-    DatabaseOptimizerEngine, DatabaseScanSummary, DatabaseTargetInfo, DatabaseVacuumResult, DeduplicationEngine,
+    DatabaseOptimizerEngine, DatabaseScanSummary, DatabaseTargetInfo, DatabaseVacuumResult,
+    DefenderAuditSummary, DefenderAuditorEngine, DefenderExclusionItem, DefenderRemediationResult, DeduplicationEngine,
     DeleteFailureProbeEngine, DeletePathProbeResult, DeleteProbeSummary, DeletionLogQueryOptions,
     DeletionLogStats, DeletionLoggerEngine, DevCacheCleanResult, DevCacheCleanerEngine,
     DevCacheScanSummary, DevCacheTarget, GranularDeletedFileEntry,
@@ -837,6 +838,16 @@ fn purge_vss_shadow_copies(purge_all: bool) -> Result<VssPurgeResult, String> {
     VssManagerEngine::purge_shadow_copies(purge_all)
 }
 
+#[tauri::command]
+fn audit_windows_defender_security() -> DefenderAuditSummary {
+    DefenderAuditorEngine::audit_defender_security()
+}
+
+#[tauri::command]
+fn remove_defender_exclusion(exclusion_type: String, value: String) -> Result<DefenderRemediationResult, String> {
+    DefenderAuditorEngine::remove_exclusion(&exclusion_type, &value)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -987,7 +998,9 @@ fn main() {
             get_power_diagnostics_summary,
             set_active_power_scheme,
             scan_vss_shadow_copies,
-            purge_vss_shadow_copies
+            purge_vss_shadow_copies,
+            audit_windows_defender_security,
+            remove_defender_exclusion
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

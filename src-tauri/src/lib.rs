@@ -10,6 +10,7 @@ pub mod context_menu;
 pub mod cve_scanner;
 pub mod database_optimizer;
 pub mod deduplication;
+pub mod defender_auditor;
 pub mod delete_failure_probe;
 pub mod deletion_logger;
 pub mod dev_cache_cleaner;
@@ -74,6 +75,9 @@ pub use database_optimizer::{
 pub use deduplication::{
     DeduplicationEngine, DuplicateFile, DuplicateGroup, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, LargeFileScanResult,
+};
+pub use defender_auditor::{
+    DefenderAuditSummary, DefenderAuditorEngine, DefenderExclusionItem, DefenderRemediationResult,
 };
 pub use delete_failure_probe::{
     DeleteFailureProbeEngine, DeletePathProbeResult, DeleteProbeStatus, DeleteProbeSummary,

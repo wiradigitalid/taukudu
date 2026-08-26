@@ -130,7 +130,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'drivehealth' | 'bsod' | 'power' | 'vss' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'drivehealth' | 'bsod' | 'power' | 'vss' | 'defender' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -369,6 +369,11 @@ export function App() {
   const [loadingVss, setLoadingVss] = useState(false)
   const [purgingVss, setPurgingVss] = useState(false)
   const [vssFeedback, setVssFeedback] = useState<string | null>(null)
+
+  // Windows Defender Security state
+  const [defenderSummary, setDefenderSummary] = useState<import('@/lib/tauri-bridge').DefenderAuditSummary | null>(null)
+  const [loadingDefender, setLoadingDefender] = useState(false)
+  const [defenderFeedback, setDefenderFeedback] = useState<string | null>(null)
 
   // Debloater state
   const [bloatList, setBloatList] = useState<BloatwareApp[]>([])
@@ -1547,6 +1552,30 @@ export function App() {
     }
   }
 
+  const fetchDefenderAudit = async () => {
+    setLoadingDefender(true)
+    setDefenderFeedback(null)
+    try {
+      const sum = await tauriApi.auditWindowsDefenderSecurity()
+      setDefenderSummary(sum)
+      setDefenderFeedback(`Defender Status: ${sum.is_realtime_protection_enabled ? 'Real-Time Protection Active' : 'Real-Time Protection Disabled'} • ${sum.total_exclusions} exclusions detected (${sum.high_risk_exclusions_count} high risk).`)
+    } catch (err) {
+      setDefenderFeedback(`Defender audit error: ${String(err)}`)
+    } finally {
+      setLoadingDefender(false)
+    }
+  }
+
+  const handleRemoveDefenderExclusion = async (item: import('@/lib/tauri-bridge').DefenderExclusionItem) => {
+    try {
+      const res = await tauriApi.removeDefenderExclusion(item.exclusion_type, item.value)
+      setDefenderFeedback(`Successfully removed exclusion: ${item.value}`)
+      await fetchDefenderAudit()
+    } catch (err) {
+      setDefenderFeedback(`Exclusion removal error: ${String(err)}`)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2299,6 +2328,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('defender')
+                if (!defenderSummary && !loadingDefender) fetchDefenderAudit()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'defender'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Defender Exclusions
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('firewall')
                 if (!firewallSummary && !loadingFirewall) fetchFirewall()
               }}
@@ -2809,6 +2852,8 @@ export function App() {
               ? 'Battery Health, Capacity & Power Scheme Manager'
               : activeTab === 'vss'
               ? 'Volume Shadow Copy (VSS) & System Storage Quota'
+              : activeTab === 'defender'
+              ? 'Windows Defender Real-Time & Antivirus Exclusions Audit'
               : activeTab === 'firewall'
               ? 'Windows Firewall & Open Port Security Audit'
               : activeTab === 'cve'
@@ -5379,6 +5424,106 @@ export function App() {
                 <History className="w-8 h-8 text-zinc-600 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {loadingVss ? 'Querying volume shadow copy service (VSS)...' : 'No volume shadow snapshots consuming storage on disk.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'defender' ? (
+          /* Windows Defender Security & Exclusions Audit Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">Windows Defender Exclusions & Posture</h2>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                    defenderSummary?.is_realtime_protection_enabled
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse'
+                  }`}>
+                    {defenderSummary?.is_realtime_protection_enabled ? 'Real-Time Protection Active' : 'Protection Disabled'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {defenderFeedback || `Audited Defender preferences via Get-MpPreference and Get-MpComputerStatus.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchDefenderAudit}
+                disabled={loadingDefender}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingDefender ? 'animate-spin' : ''}`} />
+                {loadingDefender ? 'Auditing...' : 'Re-Audit Defender'}
+              </button>
+            </div>
+
+            {/* Defender Posture Cards */}
+            {defenderSummary && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
+                <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-1">
+                  <span className="text-zinc-500 text-[10px]">Antimalware Version</span>
+                  <p className="text-white font-semibold text-sm">{defenderSummary.antimalware_version}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-1">
+                  <span className="text-zinc-500 text-[10px]">Cloud Protection (MAPS)</span>
+                  <p className="text-emerald-400 font-semibold text-sm">
+                    {defenderSummary.is_cloud_protection_enabled ? 'Enabled' : 'Disabled'}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-1">
+                  <span className="text-zinc-500 text-[10px]">Tamper Protection</span>
+                  <p className="text-emerald-400 font-semibold text-sm">
+                    {defenderSummary.is_tamper_protection_enabled ? 'Guarded' : 'Off'}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-1">
+                  <span className="text-zinc-500 text-[10px]">Active Exclusions</span>
+                  <p className={`font-semibold text-sm ${defenderSummary.high_risk_exclusions_count > 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+                    {defenderSummary.total_exclusions} ({defenderSummary.high_risk_exclusions_count} High Risk)
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Exclusions List */}
+            {defenderSummary && defenderSummary.exclusions.length > 0 ? (
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Exclusion Entries</h3>
+                {defenderSummary.exclusions.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-xl border flex justify-between items-center text-xs ${
+                      item.risk_level === 'High' ? 'bg-red-500/10 border-red-500/30' : 'bg-[#16161a] border-[#2a2a36]'
+                    }`}
+                  >
+                    <div className="space-y-1 max-w-2xl">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white font-mono">{item.value}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                          {item.exclusion_type}
+                        </span>
+                        {item.risk_level === 'High' && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                            High Risk
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-zinc-400 text-xs">{item.risk_reason}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveDefenderExclusion(item)}
+                      className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-semibold border border-red-500/30 transition cursor-pointer"
+                    >
+                      Remove Exclusion
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingDefender ? 'Inspecting Defender preferences...' : 'Windows Defender is fully protected. No unauthorized file, path, or process exclusions.'}
                 </p>
               </div>
             )}

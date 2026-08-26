@@ -73,10 +73,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-62** | **BSOD Crash Dump & Bugcheck Stop Code Analyzer** | Binary Minidump parser, 50+ Windows bugcheck stop code dictionary & driver detector | `BsodAnalyzerEngine`, BSOD Crash Analyzer Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-63** | **Battery Health, Capacity & Power Scheme Manager** | Win32_Battery diagnostics, battery wear/capacity ratio, and powercfg scheme switcher | `PowerDiagnosticsEngine`, Battery & Power Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-64** | **Volume Shadow Copy (VSS) & System Storage Quota** | vssadmin shadow copy inventory, allocated vs used shadow storage analysis & purge | `VssManagerEngine`, Shadow Copies (VSS) Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-65** | **Windows Defender Security & Exclusions Auditor** | Get-MpPreference & Get-MpComputerStatus audit, exclusion remover & risk classification | `DefenderAuditorEngine`, Defender Exclusions Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 65 — Windows Defender Security & Exclusions Auditor (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Windows Defender Auditor Engine (`src-tauri/src/defender_auditor.rs`):** Audit mendalam terhadap konfigurasi preferensi Windows Defender menggunakan `Get-MpComputerStatus` (status antivirus, real-time protection, cloud protection/MAPS, tamper protection, antimalware version, dan tanggal signature terkini). Menginspeksi daftar pengecualian pemindaian (*ExclusionPath* dan *ExclusionProcess*) via `Get-MpPreference`, mengklasifikasikan tingkat risiko (High Risk untuk pengecualian root disk `C:\` atau folder temp), serta menyediakan fungsi remediasi pencabutan pengecualian berbahaya via `Remove-MpPreference`.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `audit_windows_defender_security` dan `remove_defender_exclusion`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `DefenderExclusionItem`, `DefenderAuditSummary`, `DefenderRemediationResult`, serta method `tauriApi.auditWindowsDefenderSecurity` dan `tauriApi.removeDefenderExclusion`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman tab *Defender Exclusions* lengkap dengan 4 kartu postur keamanan (Versi Antimalware, Cloud Protection, Tamper Protection, Active Exclusions), daftar entri pengecualian dengan badge risiko (*High Risk*), dan tombol aksi pencabutan (*Remove Exclusion*).
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 64 — Volume Shadow Copy (VSS) & System Storage Quota (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
