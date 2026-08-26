@@ -415,6 +415,30 @@ export interface CacheRebuildExecutionResult {
   errors: string[]
 }
 
+export interface GamingTargetDetail {
+  id: string
+  group: string
+  title: string
+  detail: string
+  path: string
+  size_bytes: number
+  file_count: number
+}
+
+export interface GamingScanSummary {
+  targets: GamingTargetDetail[]
+  total_size_bytes: number
+  total_items: number
+  scan_duration_ms: number
+}
+
+export interface GamingCleanResult {
+  cleaned_count: number
+  bytes_freed: number
+  failed_count: number
+  errors: string[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1234,5 +1258,11 @@ export const tauriApi = {
   },
   rebuildAndPurgeCaches: async (restartExplorer: boolean): Promise<CacheRebuildExecutionResult> => {
     return await invoke('rebuild_and_purge_caches', { restartExplorer })
+  },
+  scanGamingCleaner: async (): Promise<GamingScanSummary> => {
+    return await invoke('scan_gaming_cleaner')
+  },
+  cleanGamingTargets: async (paths: string[]): Promise<GamingCleanResult> => {
+    return await invoke('clean_gaming_targets', { paths })
   },
 }

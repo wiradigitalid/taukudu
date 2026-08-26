@@ -16,6 +16,7 @@ pub mod disk_maintenance;
 pub mod environment_cleaner;
 pub mod firewall_audit;
 pub mod game_mode;
+pub mod gaming_cleaner;
 pub mod gpu_controller;
 pub mod history_store;
 pub mod icon_font_cache;
@@ -78,6 +79,9 @@ pub use environment_cleaner::{
 pub use firewall_audit::{FirewallAuditEngine, FirewallAuditSummary, FirewallRuleInfo};
 pub use game_mode::{
     DetectedGameInfo, GameModeEngine, GameModeStatus, GameOptimizationItem, GLOBAL_GAME_MODE,
+};
+pub use gaming_cleaner::{
+    GamingCleanResult, GamingCleanerEngine, GamingScanSummary, GamingTargetDetail,
 };
 pub use gpu_controller::{GpuControllerEngine, GpuDiagnosticInfo};
 pub use history_store::{HistoryRecord, HistoryStore, GLOBAL_HISTORY};

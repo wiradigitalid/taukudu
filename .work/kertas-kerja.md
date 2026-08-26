@@ -62,10 +62,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-51** | **Browser & App SQLite Database VACUUM Optimizer** | Native SQLite defragmenter, index rebuilder & WAL space reclaim across browsers/apps | `DatabaseOptimizerEngine`, Database VACUUM Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-52** | **Windows Environment Variables & PATH Cleaner** | User/System PATH orphan cleaner, dead dev home directories purge & Win32 broadcast | `EnvironmentCleanerEngine`, Environment PATH Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-53** | **Icon, Thumbnail & Font Cache Rebuilder** | Explorer iconcache/thumbcache purge, FontCache.dat rebuilder & graceful restart | `IconFontCacheEngine`, Icon & Font Cache Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-54** | **Gaming Ecosystem & Steam Shader / Redist Cleaner** | Steam VDF/ACF library parser, per-game shader caches, GPU DirectX/Vulkan shader caches | `GamingCleanerEngine`, Gaming Clean Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 54 — Gaming Ecosystem & Steam Shader / Redist Cleaner (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Gaming Cleaner Engine (`src-tauri/src/gaming_cleaner.rs`):** Parser multi-drive `libraryfolders.vdf` Steam dan pemetaan AppID ke nama game asli dari berkas `appmanifest_*.acf`. Pemindaian per-game shader cache di `steamapps/shadercache/<appid>`, pembersihan folder installer redistributable bersama (`Steamworks Shared/_CommonRedist`), pembersihan cache browser web launcher game (Epic Games Launcher, Ubisoft Connect, EA Desktop/Origin, Battle.net, GOG Galaxy, Riot Client, Steam HTML/HTTP cache), serta GPU vendor shader cache (DirectX `D3DSCache`, NVIDIA `DXCache`/`GLCache`, AMD Radeon `DxCache`, Intel `ShaderCache`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_gaming_cleaner` dan `clean_gaming_targets`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `GamingTargetDetail`, `GamingScanSummary`, `GamingCleanResult`, serta method `tauriApi.scanGamingCleaner` dan `tauriApi.cleanGamingTargets`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman tab *Gaming Clean* lengkap dengan kategorisasi target (Launcher Caches, GPU Shader Caches, Steam Game Shader Caches, Steam Redistributables), rincian judul game & AppID, jumlah berkas, dan tombol pembersihan massal (*Clean Selected*).
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 53 — Icon, Thumbnail & Font Cache Rebuilder (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

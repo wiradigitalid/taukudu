@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -295,6 +295,13 @@ export function App() {
   const [rebuildingIconFont, setRebuildingIconFont] = useState(false)
   const [restartExplorerCheck, setRestartExplorerCheck] = useState(true)
   const [iconFontFeedback, setIconFontFeedback] = useState<string | null>(null)
+
+  // Gaming Cleaner state
+  const [gamingScanResult, setGamingScanResult] = useState<import('@/lib/tauri-bridge').GamingScanSummary | null>(null)
+  const [selectedGamingIds, setSelectedGamingIds] = useState<Set<string>>(new Set())
+  const [scanningGaming, setScanningGaming] = useState(false)
+  const [cleaningGaming, setCleaningGaming] = useState(false)
+  const [gamingFeedback, setGamingFeedback] = useState<string | null>(null)
 
   // Startup state
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
@@ -1192,6 +1199,41 @@ export function App() {
     }
   }
 
+  const handleScanGaming = async () => {
+    setScanningGaming(true)
+    setGamingFeedback(null)
+    setSelectedGamingIds(new Set())
+    try {
+      const res = await tauriApi.scanGamingCleaner()
+      setGamingScanResult(res)
+      const allIds = new Set(res.targets.map((t) => t.id))
+      setSelectedGamingIds(allIds)
+      setGamingFeedback(`Found ${res.total_items} game cache/redist targets totaling ${formatBytes(res.total_size_bytes)} in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      setGamingFeedback(`Gaming scan error: ${String(err)}`)
+    } finally {
+      setScanningGaming(false)
+    }
+  }
+
+  const handleCleanSelectedGaming = async () => {
+    if (!gamingScanResult || selectedGamingIds.size === 0) return
+    setCleaningGaming(true)
+    try {
+      const targets = gamingScanResult.targets
+        .filter((t) => selectedGamingIds.has(t.id))
+        .map((t) => t.path)
+
+      const res = await tauriApi.cleanGamingTargets(targets)
+      setGamingFeedback(`Successfully freed ${formatBytes(res.bytes_freed)} across ${res.cleaned_count} gaming directories (${res.failed_count} failed).`)
+      await handleScanGaming()
+    } catch (err) {
+      setGamingFeedback(`Clean error: ${String(err)}`)
+    } finally {
+      setCleaningGaming(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -1986,6 +2028,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('gamingcleaner')
+                if (!gamingScanResult && !scanningGaming) handleScanGaming()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'gamingcleaner'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Gamepad2 className="w-4 h-4" />
+              Gaming Clean
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('registry')
                 if (registryIssues.length === 0 && !scanningRegistry) handleScanRegistry()
               }}
@@ -2306,6 +2362,8 @@ export function App() {
               ? 'Explorer Right-Click Context Menu Manager'
               : activeTab === 'game'
               ? 'Game Mode Latency & Power Optimization'
+              : activeTab === 'gamingcleaner'
+              ? 'Gaming Launchers, DirectX Shaders & Steam Redistributables'
               : activeTab === 'registry'
               ? 'Windows Registry Orphan Cleaner'
               : activeTab === 'shortcuts'
@@ -5161,6 +5219,84 @@ export function App() {
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {scanningIconFont ? 'Scanning Explorer and FontCache directories...' : 'Click "Scan Caches" to detect active cache databases.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'gamingcleaner' ? (
+          /* Gaming Ecosystem & Steam Shader Cleaner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Gaming Launchers, Shaders & Steam Redistributables</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {gamingFeedback || `Found ${gamingScanResult?.total_items || 0} gaming cache targets (${formatBytes(gamingScanResult?.total_size_bytes || 0)} total).`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanGaming}
+                  disabled={scanningGaming}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanningGaming ? 'animate-spin' : ''}`} />
+                  {scanningGaming ? 'Scanning...' : 'Scan Gaming'}
+                </button>
+                <button
+                  onClick={handleCleanSelectedGaming}
+                  disabled={cleaningGaming || selectedGamingIds.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clean Selected ({selectedGamingIds.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Gaming Targets List */}
+            {gamingScanResult && gamingScanResult.targets.length > 0 ? (
+              <div className="space-y-2">
+                {gamingScanResult.targets.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3 truncate max-w-2xl">
+                      <input
+                        type="checkbox"
+                        checked={selectedGamingIds.has(item.id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedGamingIds)
+                          if (e.target.checked) next.add(item.id)
+                          else next.delete(item.id)
+                          setSelectedGamingIds(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer shrink-0"
+                      />
+                      <div className="space-y-0.5 truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white truncate">{item.title}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-amber-400 shrink-0">
+                            {item.group}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 font-mono truncate">{item.detail}</p>
+                        <p className="text-[10px] text-zinc-500 font-mono truncate">{item.path}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        {formatBytes(item.size_bytes)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {scanningGaming ? 'Scanning Steam libraries, Epic Games, Ubisoft, EA, Battle.net, and GPU shader directories...' : 'No bloated game shader caches or redistributables found.'}
                 </p>
               </div>
             )}

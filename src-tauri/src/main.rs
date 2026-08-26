@@ -18,7 +18,8 @@ use taukudu_lib::{
     DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, EnvCleanerCleanResult, EnvCleanerScanResult, EnvironmentCleanerEngine,
     FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
-    GameModeStatus, GameOptimizationItem, GpuControllerEngine, GpuDiagnosticInfo, HistoryRecord,
+    GameModeStatus, GameOptimizationItem, GamingCleanResult, GamingCleanerEngine, GamingScanSummary, GamingTargetDetail,
+    GpuControllerEngine, GpuDiagnosticInfo, HistoryRecord,
     IconFontCacheEngine, CacheRebuildExecutionResult, CacheRebuildScanSummary, CacheTargetDetail, InstalledProgramInfo,
     LargeFileScanResult, LeftoversCleanerEngine, LeftoversCleanResult, LeftoversScanResult,
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MetricLine, MetricsEngine,
@@ -721,6 +722,16 @@ fn rebuild_and_purge_caches(restart_explorer: bool) -> CacheRebuildExecutionResu
     IconFontCacheEngine::rebuild_and_purge_caches(restart_explorer)
 }
 
+#[tauri::command]
+fn scan_gaming_cleaner() -> GamingScanSummary {
+    GamingCleanerEngine::scan_gaming_targets()
+}
+
+#[tauri::command]
+fn clean_gaming_targets(paths: Vec<String>) -> GamingCleanResult {
+    GamingCleanerEngine::clean_gaming_targets(&paths)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -850,7 +861,9 @@ fn main() {
             scan_environment_orphans,
             clean_environment_orphans,
             scan_icon_font_caches,
-            rebuild_and_purge_caches
+            rebuild_and_purge_caches,
+            scan_gaming_cleaner,
+            clean_gaming_targets
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
