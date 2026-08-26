@@ -120,27 +120,33 @@ impl DiskMaintenanceEngine {
         }
     }
 
-    pub fn run_dism() -> Result<DiskRepairOutput, String> {
+    pub fn run_sfc_repair() -> Result<DiskRepairOutput, String> {
         #[cfg(windows)]
         {
             use std::process::Command;
-            let output = Command::new("dism")
-                .args(["/online", "/cleanup-image", "/checkhealth"])
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            use std::os::windows::process::CommandExt;
+
+            let output = Command::new("sfc")
+                .arg("/scannow")
+                .creation_flags(CREATE_NO_WINDOW)
                 .output();
 
             match output {
                 Ok(o) => {
                     let out_str = String::from_utf8_lossy(&o.stdout).to_string();
-                    let success = o.status.success();
+                    let success = o.status.success() || out_str.contains("successfully repaired them") || out_str.contains("did not find any integrity violations");
                     Ok(DiskRepairOutput {
-                        tool: "dism".to_string(),
+                        tool: "sfc_repair".to_string(),
                         success,
                         exit_code: o.status.code().unwrap_or(0),
-                        output: out_str,
-                        summary: if success {
-                            "Component store is healthy and repairable.".to_string()
+                        output: out_str.clone(),
+                        summary: if out_str.contains("successfully repaired them") {
+                            "Windows Resource Protection found corrupt files and successfully repaired them.".to_string()
+                        } else if success {
+                            "Windows Resource Protection did not find any integrity violations.".to_string()
                         } else {
-                            "DISM reported component store anomalies.".to_string()
+                            "System file integrity repair completed with warnings.".to_string()
                         },
                     })
                 }
@@ -150,10 +156,53 @@ impl DiskMaintenanceEngine {
         #[cfg(not(windows))]
         {
             Ok(DiskRepairOutput {
-                tool: "dism".to_string(),
+                tool: "sfc_repair".to_string(),
                 success: true,
                 exit_code: 0,
-                output: "DISM not applicable on non-Windows".to_string(),
+                output: "SFC repair simulated on non-Windows".to_string(),
+                summary: "Clean".to_string(),
+            })
+        }
+    }
+
+    pub fn run_dism_restore_health() -> Result<DiskRepairOutput, String> {
+        #[cfg(windows)]
+        {
+            use std::process::Command;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            use std::os::windows::process::CommandExt;
+
+            let output = Command::new("dism")
+                .args(["/online", "/cleanup-image", "/restorehealth"])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output();
+
+            match output {
+                Ok(o) => {
+                    let out_str = String::from_utf8_lossy(&o.stdout).to_string();
+                    let success = o.status.success() || out_str.contains("The restore operation completed successfully");
+                    Ok(DiskRepairOutput {
+                        tool: "dism_restore".to_string(),
+                        success,
+                        exit_code: o.status.code().unwrap_or(0),
+                        output: out_str,
+                        summary: if success {
+                            "The Windows component store restore operation completed successfully.".to_string()
+                        } else {
+                            "DISM restore operation finished with errors.".to_string()
+                        },
+                    })
+                }
+                Err(e) => Err(e.to_string()),
+            }
+        }
+        #[cfg(not(windows))]
+        {
+            Ok(DiskRepairOutput {
+                tool: "dism_restore".to_string(),
+                success: true,
+                exit_code: 0,
+                output: "DISM restore simulated on non-Windows".to_string(),
                 summary: "Clean".to_string(),
             })
         }

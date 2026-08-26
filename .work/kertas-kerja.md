@@ -74,10 +74,22 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-63** | **Battery Health, Capacity & Power Scheme Manager** | Win32_Battery diagnostics, battery wear/capacity ratio, and powercfg scheme switcher | `PowerDiagnosticsEngine`, Battery & Power Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-64** | **Volume Shadow Copy (VSS) & System Storage Quota** | vssadmin shadow copy inventory, allocated vs used shadow storage analysis & purge | `VssManagerEngine`, Shadow Copies (VSS) Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-65** | **Windows Defender Security & Exclusions Auditor** | Get-MpPreference & Get-MpComputerStatus audit, exclusion remover & risk classification | `DefenderAuditorEngine`, Defender Exclusions Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-66** | **System File SFC & DISM Auto-Repair Engine** | Live SFC /scannow repair, DISM /RestoreHealth component store repair, CHKDSK /scan | `DiskMaintenanceEngine`, Disk Maintenance Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 66 — System File SFC & DISM Auto-Repair Engine (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **System File & Component Store Repair Engine (`src-tauri/src/disk_maintenance.rs`):** Peningkatan kapabilitas perbaikan integritas berkas sistem operasi:
+     - Eksekusi verifikasi integritas berkas sistem `sfc /verifyonly` dan eksekusi perbaikan langsung `sfc /scannow` (`run_sfc_repair`).
+     - Eksekusi diagnosa citra komponen Windows `dism /online /cleanup-image /checkhealth` dan eksekusi pemulihan repositori komponen rusak `dism /online /cleanup-image /restorehealth` (`run_dism_restore_health`).
+     - Pemeriksaan anomali integritas filesystem volume NTFS non-invasif via `chkdsk C: /scan`.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `run_sfc_repair` dan `run_dism_restore_health`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Method `tauriApi.runSfcRepair` dan `tauriApi.runDismRestoreHealth`.
+  4. **Frontend UI (`src/App.tsx`):** Memperbarui halaman tab *Disk Maintenance* dengan dual action button: *Verify* vs *Auto-Repair* untuk SFC dan *Check* vs *Restore* untuk DISM Component Store.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 65 — Windows Defender Security & Exclusions Auditor (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

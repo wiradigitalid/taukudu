@@ -379,8 +379,13 @@ fn run_sfc_scan() -> Result<DiskRepairOutput, String> {
 }
 
 #[tauri::command]
-fn run_dism_scan() -> Result<DiskRepairOutput, String> {
-    DiskMaintenanceEngine::run_dism()
+fn run_sfc_repair() -> Result<DiskRepairOutput, String> {
+    DiskMaintenanceEngine::run_sfc_repair()
+}
+
+#[tauri::command]
+fn run_dism_restore_health() -> Result<DiskRepairOutput, String> {
+    DiskMaintenanceEngine::run_dism_restore_health()
 }
 
 #[tauri::command]
@@ -912,7 +917,8 @@ fn main() {
             get_trim_history_summary,
             is_drive_trim_throttled,
             run_sfc_scan,
-            run_dism_scan,
+            run_sfc_repair,
+            run_dism_restore_health,
             run_chkdsk_scan,
             get_context_menu_entries,
             toggle_context_menu_entry,

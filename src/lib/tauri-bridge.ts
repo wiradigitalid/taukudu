@@ -1329,8 +1329,11 @@ export const tauriApi = {
   runSfcScan: async (): Promise<DiskRepairOutput> => {
     return await invoke('run_sfc_scan')
   },
-  runDismScan: async (): Promise<DiskRepairOutput> => {
-    return await invoke('run_dism_scan')
+  runSfcRepair: async (): Promise<DiskRepairOutput> => {
+    return await invoke('run_sfc_repair')
+  },
+  runDismRestoreHealth: async (): Promise<DiskRepairOutput> => {
+    return await invoke('run_dism_restore_health')
   },
   runChkdskScan: async (drive_letter: string): Promise<DiskRepairOutput> => {
     return await invoke('run_chkdsk_scan', { driveLetter: drive_letter })

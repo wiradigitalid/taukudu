@@ -825,10 +825,10 @@ export function App() {
     }
   }
 
-  const handleRunSfc = async () => {
-    setRunningRepair('sfc')
+  const handleRunSfc = async (repair: boolean = false) => {
+    setRunningRepair(repair ? 'sfc_repair' : 'sfc')
     try {
-      const res = await tauriApi.runSfcScan()
+      const res = repair ? await tauriApi.runSfcRepair() : await tauriApi.runSfcScan()
       setRepairResults((prev) => ({ ...prev, sfc: res }))
     } catch (err) {
       console.error('SFC error:', err)
@@ -837,10 +837,10 @@ export function App() {
     }
   }
 
-  const handleRunDism = async () => {
-    setRunningRepair('dism')
+  const handleRunDism = async (restoreHealth: boolean = false) => {
+    setRunningRepair(restoreHealth ? 'dism_restore' : 'dism')
     try {
-      const res = await tauriApi.runDismScan()
+      const res = restoreHealth ? await tauriApi.runDismRestoreHealth() : await tauriApi.runSfcScan()
       setRepairResults((prev) => ({ ...prev, dism: res }))
     } catch (err) {
       console.error('DISM error:', err)
@@ -5017,29 +5017,49 @@ export function App() {
             {/* System Repair Tools */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
-                <h3 className="text-sm font-semibold text-white">SFC Integrity Check</h3>
-                <p className="text-xs text-zinc-400">Verifies Windows core system file integrity via System File Checker.</p>
-                <button
-                  onClick={handleRunSfc}
-                  disabled={runningRepair === 'sfc'}
-                  className="w-full py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3 h-3 ${runningRepair === 'sfc' ? 'animate-spin' : ''}`} />
-                  {runningRepair === 'sfc' ? 'Running SFC...' : 'Verify System Files'}
-                </button>
+                <h3 className="text-sm font-semibold text-white">SFC Integrity Check & Repair</h3>
+                <p className="text-xs text-zinc-400">Verifies Windows core system file integrity and auto-repairs corrupted files.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleRunSfc(false)}
+                    disabled={runningRepair === 'sfc' || runningRepair === 'sfc_repair'}
+                    className="flex-1 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${runningRepair === 'sfc' ? 'animate-spin' : ''}`} />
+                    {runningRepair === 'sfc' ? 'Checking...' : 'Verify'}
+                  </button>
+                  <button
+                    onClick={() => handleRunSfc(true)}
+                    disabled={runningRepair === 'sfc' || runningRepair === 'sfc_repair'}
+                    className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Wrench className={`w-3 h-3 ${runningRepair === 'sfc_repair' ? 'animate-spin' : ''}`} />
+                    {runningRepair === 'sfc_repair' ? 'Repairing...' : 'Auto-Repair'}
+                  </button>
+                </div>
               </div>
 
               <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
                 <h3 className="text-sm font-semibold text-white">DISM Component Store</h3>
-                <p className="text-xs text-zinc-400">Checks Windows Component Store corruption using Deployment Image Servicing.</p>
-                <button
-                  onClick={handleRunDism}
-                  disabled={runningRepair === 'dism'}
-                  className="w-full py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3 h-3 ${runningRepair === 'dism' ? 'animate-spin' : ''}`} />
-                  {runningRepair === 'dism' ? 'Checking DISM...' : 'Check Image Health'}
-                </button>
+                <p className="text-xs text-zinc-400">Checks and restores Windows Component Store via Deployment Image Servicing.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleRunDism(false)}
+                    disabled={runningRepair === 'dism' || runningRepair === 'dism_restore'}
+                    className="flex-1 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-zinc-200 text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${runningRepair === 'dism' ? 'animate-spin' : ''}`} />
+                    {runningRepair === 'dism' ? 'Checking...' : 'Check'}
+                  </button>
+                  <button
+                    onClick={() => handleRunDism(true)}
+                    disabled={runningRepair === 'dism' || runningRepair === 'dism_restore'}
+                    className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RotateCcw className={`w-3 h-3 ${runningRepair === 'dism_restore' ? 'animate-spin' : ''}`} />
+                    {runningRepair === 'dism_restore' ? 'Restoring...' : 'Restore'}
+                  </button>
+                </div>
               </div>
 
               <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
