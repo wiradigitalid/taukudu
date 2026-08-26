@@ -50,6 +50,7 @@ pub mod threat_blacklist;
 pub mod threat_monitor;
 pub mod trim_history;
 pub mod uninstaller_shredder;
+pub mod vss_manager;
 pub mod win_update_cleaner;
 pub mod window_state;
 pub mod yara_rules_store;
@@ -167,6 +168,9 @@ pub use trim_history::{
 };
 pub use uninstaller_shredder::{
     InstalledProgramInfo, ShredderResult, UninstallerShredderEngine,
+};
+pub use vss_manager::{
+    ShadowCopyItem, ShadowStorageAllocation, VssManagerEngine, VssPurgeResult, VssSummary,
 };
 pub use win_update_cleaner::{
     WinUpdateCleanResult, WinUpdateCleanerEngine, WinUpdateScanSummary, WinUpdateTarget,

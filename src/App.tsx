@@ -130,7 +130,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'drivehealth' | 'bsod' | 'power' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'drivehealth' | 'bsod' | 'power' | 'vss' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -363,6 +363,12 @@ export function App() {
   const [powerSummary, setPowerSummary] = useState<import('@/lib/tauri-bridge').PowerSummary | null>(null)
   const [loadingPower, setLoadingPower] = useState(false)
   const [powerFeedback, setPowerFeedback] = useState<string | null>(null)
+
+  // Volume Shadow Copies (VSS) state
+  const [vssSummary, setVssSummary] = useState<import('@/lib/tauri-bridge').VssSummary | null>(null)
+  const [loadingVss, setLoadingVss] = useState(false)
+  const [purgingVss, setPurgingVss] = useState(false)
+  const [vssFeedback, setVssFeedback] = useState<string | null>(null)
 
   // Debloater state
   const [bloatList, setBloatList] = useState<BloatwareApp[]>([])
@@ -1514,6 +1520,33 @@ export function App() {
     }
   }
 
+  const fetchVssSummary = async () => {
+    setLoadingVss(true)
+    setVssFeedback(null)
+    try {
+      const sum = await tauriApi.scanVssShadowCopies()
+      setVssSummary(sum)
+      setVssFeedback(`Found ${sum.total_shadows} Volume Shadow Copies (${formatBytes(sum.total_used_bytes)} used storage).`)
+    } catch (err) {
+      setVssFeedback(`VSS scan error: ${String(err)}`)
+    } finally {
+      setLoadingVss(false)
+    }
+  }
+
+  const handlePurgeVss = async (purgeAll: boolean) => {
+    setPurgingVss(true)
+    try {
+      const res = await tauriApi.purgeVssShadowCopies(purgeAll)
+      setVssFeedback(res.message)
+      await fetchVssSummary()
+    } catch (err) {
+      setVssFeedback(`Purge error: ${String(err)}`)
+    } finally {
+      setPurgingVss(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2252,6 +2285,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('vss')
+                if (!vssSummary && !loadingVss) fetchVssSummary()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'vss'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <History className="w-4 h-4" />
+              Shadow Copies (VSS)
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('firewall')
                 if (!firewallSummary && !loadingFirewall) fetchFirewall()
               }}
@@ -2760,6 +2807,8 @@ export function App() {
               ? 'BSOD Crash Dump & Bugcheck Stop Code Analyzer'
               : activeTab === 'power'
               ? 'Battery Health, Capacity & Power Scheme Manager'
+              : activeTab === 'vss'
+              ? 'Volume Shadow Copy (VSS) & System Storage Quota'
               : activeTab === 'firewall'
               ? 'Windows Firewall & Open Port Security Audit'
               : activeTab === 'cve'
@@ -5233,6 +5282,104 @@ export function App() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'vss' ? (
+          /* Volume Shadow Copy (VSS) & Quota Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">Volume Shadow Copy (VSS) Storage</h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                    {formatBytes(vssSummary?.total_used_bytes || 0)} Used
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {vssFeedback || `Found ${vssSummary?.total_shadows || 0} volume shadow snapshots.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchVssSummary}
+                  disabled={loadingVss}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingVss ? 'animate-spin' : ''}`} />
+                  {loadingVss ? 'Scanning...' : 'Rescan VSS'}
+                </button>
+                <button
+                  onClick={() => handlePurgeVss(false)}
+                  disabled={purgingVss || (vssSummary?.total_shadows === 0)}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Purge Oldest
+                </button>
+                <button
+                  onClick={() => handlePurgeVss(true)}
+                  disabled={purgingVss || (vssSummary?.total_shadows === 0)}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Purge All Shadows
+                </button>
+              </div>
+            </div>
+
+            {/* Storage Allocations */}
+            {vssSummary && vssSummary.storage_allocations.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {vssSummary.storage_allocations.map((alloc, idx) => (
+                  <div key={idx} className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2 text-xs font-mono">
+                    <span className="text-sm font-bold text-white">{alloc.volume}</span>
+                    <div className="space-y-1 text-zinc-400">
+                      <div className="flex justify-between">
+                        <span>Used Shadow Storage:</span>
+                        <span className="text-amber-400 font-bold">{formatBytes(alloc.used_space_bytes)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Allocated Space:</span>
+                        <span>{formatBytes(alloc.allocated_space_bytes)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Max Quota:</span>
+                        <span>{formatBytes(alloc.max_space_bytes)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Shadow Copies List */}
+            {vssSummary && vssSummary.shadow_copies.length > 0 ? (
+              <div className="space-y-2">
+                {vssSummary.shadow_copies.map((s) => (
+                  <div
+                    key={s.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center text-xs"
+                  >
+                    <div className="space-y-0.5 truncate max-w-xl">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-white">{s.volume_name}</span>
+                        <span className="text-[10px] text-zinc-500 font-mono">ID: {s.shadow_id}</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400">{s.provider}</p>
+                    </div>
+                    <div className="text-right font-mono text-xs text-zinc-400">
+                      <span>{s.creation_time}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <History className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingVss ? 'Querying volume shadow copy service (VSS)...' : 'No volume shadow snapshots consuming storage on disk.'}
+                </p>
               </div>
             )}
           </div>

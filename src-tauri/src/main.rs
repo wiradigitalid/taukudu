@@ -43,7 +43,8 @@ use taukudu_lib::{
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatBlacklistData,
     ThreatBlacklistStore, ThreatBlacklistSummary, ThreatMonitorEngine,
     ThreatMonitorSummary, TrimDriveStatus, TrimHistoryStore, TrimHistorySummary, TrimRecord,
-    UninstallerShredderEngine, UpdateExecutionResult, WinUpdateCleanResult, WinUpdateCleanerEngine,
+    UninstallerShredderEngine, UpdateExecutionResult, VssManagerEngine, VssPurgeResult, VssSummary,
+    ShadowCopyItem, ShadowStorageAllocation, WinUpdateCleanResult, WinUpdateCleanerEngine,
     WinUpdateScanSummary, WinUpdateTarget, WindowGeometryState, WindowStateEngine,
     YaraBundleValidationResult, YaraRuleFileEntry, YaraRulesMetadata, YaraRulesStoreEngine,
     GLOBAL_APP_LOGGER, GLOBAL_BREACH_MONITOR, GLOBAL_DELETION_LOGGER, GLOBAL_GAME_MODE, GLOBAL_HISTORY,
@@ -826,6 +827,16 @@ fn set_active_power_scheme(guid: String) -> Result<String, String> {
     PowerDiagnosticsEngine::set_active_power_scheme(&guid)
 }
 
+#[tauri::command]
+fn scan_vss_shadow_copies() -> VssSummary {
+    VssManagerEngine::scan_shadow_copies()
+}
+
+#[tauri::command]
+fn purge_vss_shadow_copies(purge_all: bool) -> Result<VssPurgeResult, String> {
+    VssManagerEngine::purge_shadow_copies(purge_all)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -974,7 +985,9 @@ fn main() {
             analyze_bsod_crash_dumps,
             get_known_bugcheck_codes,
             get_power_diagnostics_summary,
-            set_active_power_scheme
+            set_active_power_scheme,
+            scan_vss_shadow_copies,
+            purge_vss_shadow_copies
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

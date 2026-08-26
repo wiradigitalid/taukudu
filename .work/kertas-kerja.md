@@ -72,10 +72,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-61** | **Physical Storage S.M.A.R.T. Health & Wear Monitor** | MSFT_PhysicalDisk & Win32_DiskDrive SSD/NVMe wear, temperature, status, & capacity | `SmartHealthEngine`, S.M.A.R.T. Drive Health Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-62** | **BSOD Crash Dump & Bugcheck Stop Code Analyzer** | Binary Minidump parser, 50+ Windows bugcheck stop code dictionary & driver detector | `BsodAnalyzerEngine`, BSOD Crash Analyzer Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-63** | **Battery Health, Capacity & Power Scheme Manager** | Win32_Battery diagnostics, battery wear/capacity ratio, and powercfg scheme switcher | `PowerDiagnosticsEngine`, Battery & Power Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-64** | **Volume Shadow Copy (VSS) & System Storage Quota** | vssadmin shadow copy inventory, allocated vs used shadow storage analysis & purge | `VssManagerEngine`, Shadow Copies (VSS) Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 64 — Volume Shadow Copy (VSS) & System Storage Quota (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Volume Shadow Copy Engine (`src-tauri/src/vss_manager.rs`):** Inventarisasi seluruh snapshot restore point / shadow copies aktif menggunakan `vssadmin list shadows` (ekstraksi ID Shadow Copy, volume asal, timestamp pembuatan, dan provider). Menghitung alokasi kapasitas penyimpanan shadow copy (`vssadmin list shadowstorage`: used, allocated, max quota), serta menyediakan fungsi pembersihan snapshot tertua (`vssadmin delete shadows /for=C: /oldest /quiet`) atau pembersihan massal seluruh shadow copy (`/all`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_vss_shadow_copies` dan `purge_vss_shadow_copies`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `ShadowCopyItem`, `ShadowStorageAllocation`, `VssSummary`, `VssPurgeResult`, serta method `tauriApi.scanVssShadowCopies` dan `tauriApi.purgeVssShadowCopies`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman tab *Shadow Copies (VSS)* lengkap dengan ringkasan kapasitas terpakai, grid kuota per-volume (Used, Allocated, Max Quota), daftar berkas snapshot, tombol *Purge Oldest*, dan tombol *Purge All Shadows*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 63 — Battery Health, Capacity & Power Scheme Manager (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

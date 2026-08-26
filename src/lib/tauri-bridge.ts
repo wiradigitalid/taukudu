@@ -654,6 +654,36 @@ export interface PowerSummary {
   scan_duration_ms: number
 }
 
+export interface ShadowCopyItem {
+  id: string
+  shadow_id: string
+  volume_name: string
+  creation_time: string
+  provider: string
+}
+
+export interface ShadowStorageAllocation {
+  volume: string
+  used_space_bytes: number
+  allocated_space_bytes: number
+  max_space_bytes: number
+}
+
+export interface VssSummary {
+  shadow_copies: ShadowCopyItem[]
+  storage_allocations: ShadowStorageAllocation[]
+  total_shadows: number
+  total_used_bytes: number
+  scan_duration_ms: number
+}
+
+export interface VssPurgeResult {
+  success: boolean
+  shadows_purged: number
+  bytes_freed: number
+  message: string
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1530,5 +1560,11 @@ export const tauriApi = {
   },
   setActivePowerScheme: async (guid: string): Promise<string> => {
     return await invoke('set_active_power_scheme', { guid })
+  },
+  scanVssShadowCopies: async (): Promise<VssSummary> => {
+    return await invoke('scan_vss_shadow_copies')
+  },
+  purgeVssShadowCopies: async (purgeAll: boolean): Promise<VssPurgeResult> => {
+    return await invoke('purge_vss_shadow_copies', { purgeAll })
   },
 }
