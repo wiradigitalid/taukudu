@@ -439,6 +439,29 @@ export interface GamingCleanResult {
   errors: string[]
 }
 
+export interface EventLogTarget {
+  id: string
+  name: string
+  category: string
+  file_path: string
+  size_bytes: number
+  is_channel: boolean
+}
+
+export interface EventLogScanSummary {
+  targets: EventLogTarget[]
+  total_size_bytes: number
+  total_logs_count: number
+  scan_duration_ms: number
+}
+
+export interface EventLogCleanResult {
+  cleared_count: number
+  bytes_freed: number
+  failed_count: number
+  errors: string[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1264,5 +1287,11 @@ export const tauriApi = {
   },
   cleanGamingTargets: async (paths: string[]): Promise<GamingCleanResult> => {
     return await invoke('clean_gaming_targets', { paths })
+  },
+  scanWindowsEventLogs: async (): Promise<EventLogScanSummary> => {
+    return await invoke('scan_windows_event_logs')
+  },
+  cleanWindowsEventLogs: async (targets: EventLogTarget[]): Promise<EventLogCleanResult> => {
+    return await invoke('clean_windows_event_logs', { targets })
   },
 }

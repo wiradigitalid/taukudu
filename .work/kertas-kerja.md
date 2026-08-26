@@ -63,10 +63,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-52** | **Windows Environment Variables & PATH Cleaner** | User/System PATH orphan cleaner, dead dev home directories purge & Win32 broadcast | `EnvironmentCleanerEngine`, Environment PATH Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-53** | **Icon, Thumbnail & Font Cache Rebuilder** | Explorer iconcache/thumbcache purge, FontCache.dat rebuilder & graceful restart | `IconFontCacheEngine`, Icon & Font Cache Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-54** | **Gaming Ecosystem & Steam Shader / Redist Cleaner** | Steam VDF/ACF library parser, per-game shader caches, GPU DirectX/Vulkan shader caches | `GamingCleanerEngine`, Gaming Clean Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-55** | **Windows Event Logs (.evtx) & Crash Dumps Cleaner** | wevtutil event log channel cleaner, memory dump purger & WER error report cleaner | `EventLogCleanerEngine`, Event Logs Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 55 — Windows Event Logs (.evtx) & Crash Dumps Cleaner (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Event Log & Crash Dump Engine (`src-tauri/src/event_log_cleaner.rs`):** Pemindaian berkas log kejadian Windows di `%WINDIR%\System32\winevt\Logs\*.evtx` yang berukuran besar (>64KB), pembersihan via utility bawaan `wevtutil cl <channel>`, pemindaian crash dump (`MEMORY.DMP` dan `%WINDIR%\Minidump\*`), user crash dumps (`%LOCALAPPDATA%\CrashDumps`), serta laporan Windows Error Reporting (WER) pengguna dan sistem (`%LOCALAPPDATA%\WER` & `%PROGRAMDATA%\WER`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_windows_event_logs` dan `clean_windows_event_logs`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `EventLogTarget`, `EventLogScanSummary`, `EventLogCleanResult`, serta method `tauriApi.scanWindowsEventLogs` dan `tauriApi.cleanWindowsEventLogs`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman tab *Event Logs* lengkap dengan daftar channel log kejadian, ukuran berkas, kategori (Event Logs, Crash Dumps, WER Reports), dan tombol aksi pembersihan (*Clear Selected*).
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 54 — Gaming Ecosystem & Steam Shader / Redist Cleaner (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

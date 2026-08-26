@@ -14,6 +14,7 @@ pub mod deletion_logger;
 pub mod disk_analyzer;
 pub mod disk_maintenance;
 pub mod environment_cleaner;
+pub mod event_log_cleaner;
 pub mod firewall_audit;
 pub mod game_mode;
 pub mod gaming_cleaner;
@@ -75,6 +76,9 @@ pub use disk_analyzer::{
 pub use disk_maintenance::{DiskMaintenanceEngine, DiskRepairOutput, TrimDriveStatus};
 pub use environment_cleaner::{
     EnvCleanerCleanResult, EnvCleanerScanResult, EnvironmentCleanerEngine, OrphanEnvItem,
+};
+pub use event_log_cleaner::{
+    EventLogCleanResult, EventLogCleanerEngine, EventLogScanSummary, EventLogTarget,
 };
 pub use firewall_audit::{FirewallAuditEngine, FirewallAuditSummary, FirewallRuleInfo};
 pub use game_mode::{

@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -302,6 +302,13 @@ export function App() {
   const [scanningGaming, setScanningGaming] = useState(false)
   const [cleaningGaming, setCleaningGaming] = useState(false)
   const [gamingFeedback, setGamingFeedback] = useState<string | null>(null)
+
+  // Event Logs & Crash Dumps state
+  const [eventLogsSummary, setEventLogsSummary] = useState<import('@/lib/tauri-bridge').EventLogScanSummary | null>(null)
+  const [selectedEventLogIds, setSelectedEventLogIds] = useState<Set<string>>(new Set())
+  const [scanningEventLogs, setScanningEventLogs] = useState(false)
+  const [clearingEventLogs, setClearingEventLogs] = useState(false)
+  const [eventLogsFeedback, setEventLogsFeedback] = useState<string | null>(null)
 
   // Startup state
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
@@ -1234,6 +1241,38 @@ export function App() {
     }
   }
 
+  const handleScanEventLogs = async () => {
+    setScanningEventLogs(true)
+    setEventLogsFeedback(null)
+    setSelectedEventLogIds(new Set())
+    try {
+      const res = await tauriApi.scanWindowsEventLogs()
+      setEventLogsSummary(res)
+      const allIds = new Set(res.targets.map((t) => t.id))
+      setSelectedEventLogIds(allIds)
+      setEventLogsFeedback(`Found ${res.total_logs_count} event log channels and crash dump files (${formatBytes(res.total_size_bytes)} total) in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      setEventLogsFeedback(`Scan error: ${String(err)}`)
+    } finally {
+      setScanningEventLogs(false)
+    }
+  }
+
+  const handleClearSelectedEventLogs = async () => {
+    if (!eventLogsSummary || selectedEventLogIds.size === 0) return
+    setClearingEventLogs(true)
+    try {
+      const targets = eventLogsSummary.targets.filter((t) => selectedEventLogIds.has(t.id))
+      const res = await tauriApi.cleanWindowsEventLogs(targets)
+      setEventLogsFeedback(`Successfully cleared ${res.cleared_count} event logs and dump targets (${formatBytes(res.bytes_freed)} freed).`)
+      await handleScanEventLogs()
+    } catch (err) {
+      setEventLogsFeedback(`Clear error: ${String(err)}`)
+    } finally {
+      setClearingEventLogs(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2042,6 +2081,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('eventlogs')
+                if (!eventLogsSummary && !scanningEventLogs) handleScanEventLogs()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'eventlogs'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <FileCode className="w-4 h-4" />
+              Event Logs
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('registry')
                 if (registryIssues.length === 0 && !scanningRegistry) handleScanRegistry()
               }}
@@ -2364,6 +2417,8 @@ export function App() {
               ? 'Game Mode Latency & Power Optimization'
               : activeTab === 'gamingcleaner'
               ? 'Gaming Launchers, DirectX Shaders & Steam Redistributables'
+              : activeTab === 'eventlogs'
+              ? 'Windows Event Logs (.evtx), Crash Dumps & Diagnostics'
               : activeTab === 'registry'
               ? 'Windows Registry Orphan Cleaner'
               : activeTab === 'shortcuts'
@@ -5297,6 +5352,83 @@ export function App() {
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {scanningGaming ? 'Scanning Steam libraries, Epic Games, Ubisoft, EA, Battle.net, and GPU shader directories...' : 'No bloated game shader caches or redistributables found.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'eventlogs' ? (
+          /* Event Logs & Crash Dumps Cleaner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Windows Event Logs (.evtx) & Crash Dumps</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {eventLogsFeedback || `Found ${eventLogsSummary?.total_logs_count || 0} event logs & diagnostics files (${formatBytes(eventLogsSummary?.total_size_bytes || 0)} total).`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanEventLogs}
+                  disabled={scanningEventLogs}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanningEventLogs ? 'animate-spin' : ''}`} />
+                  {scanningEventLogs ? 'Scanning...' : 'Scan Logs & Dumps'}
+                </button>
+                <button
+                  onClick={handleClearSelectedEventLogs}
+                  disabled={clearingEventLogs || selectedEventLogIds.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear Selected ({selectedEventLogIds.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Event Logs List */}
+            {eventLogsSummary && eventLogsSummary.targets.length > 0 ? (
+              <div className="space-y-2">
+                {eventLogsSummary.targets.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3 truncate max-w-2xl">
+                      <input
+                        type="checkbox"
+                        checked={selectedEventLogIds.has(item.id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedEventLogIds)
+                          if (e.target.checked) next.add(item.id)
+                          else next.delete(item.id)
+                          setSelectedEventLogIds(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer shrink-0"
+                      />
+                      <div className="space-y-0.5 truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white truncate">{item.name}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-amber-400 shrink-0">
+                            {item.category}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 font-mono truncate">{item.file_path}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        {formatBytes(item.size_bytes)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {scanningEventLogs ? 'Scanning winevt Logs, crash dumps, and Windows Error Reports...' : 'No bloated Windows Event Logs or crash dumps found.'}
                 </p>
               </div>
             )}

@@ -17,6 +17,7 @@ use taukudu_lib::{
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
     DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, EnvCleanerCleanResult, EnvCleanerScanResult, EnvironmentCleanerEngine,
+    EventLogCleanResult, EventLogCleanerEngine, EventLogScanSummary, EventLogTarget,
     FirewallAuditEngine, FirewallAuditSummary, GameModeEngine,
     GameModeStatus, GameOptimizationItem, GamingCleanResult, GamingCleanerEngine, GamingScanSummary, GamingTargetDetail,
     GpuControllerEngine, GpuDiagnosticInfo, HistoryRecord,
@@ -732,6 +733,16 @@ fn clean_gaming_targets(paths: Vec<String>) -> GamingCleanResult {
     GamingCleanerEngine::clean_gaming_targets(&paths)
 }
 
+#[tauri::command]
+fn scan_windows_event_logs() -> EventLogScanSummary {
+    EventLogCleanerEngine::scan_event_logs()
+}
+
+#[tauri::command]
+fn clean_windows_event_logs(targets: Vec<taukudu_lib::EventLogTarget>) -> EventLogCleanResult {
+    EventLogCleanerEngine::clean_event_log_targets(&targets)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -863,7 +874,9 @@ fn main() {
             scan_icon_font_caches,
             rebuild_and_purge_caches,
             scan_gaming_cleaner,
-            clean_gaming_targets
+            clean_gaming_targets,
+            scan_windows_event_logs,
+            clean_windows_event_logs
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
