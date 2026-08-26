@@ -35,7 +35,8 @@ use taukudu_lib::{
     RestorePointItem, RestorePointResult, RestorePointSummary, SafetyIntelligenceEngine,
     SafetyRating, SafetyRatingSummary, ScanResult, ScheduleItem,
     ScheduleSummary, SecurityPostureEngine, SecurityPostureSummary, ServiceDriverEngine, ServiceItemInfo, ShortcutCleanerEngine,
-    BrokenShortcutCleanResult, BrokenShortcutItem, BrokenShortcutScanResult, ShredderResult, SoftwareUpdateSummary,
+    BrokenShortcutCleanResult, BrokenShortcutItem, BrokenShortcutScanResult, ShredderResult, SmartHealthEngine,
+    DriveHealthSummary, PhysicalDriveHealth, SoftwareUpdateSummary,
     AppSettings, CleanerConfig, SettingsStoreEngine,
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatBlacklistData,
     ThreatBlacklistStore, ThreatBlacklistSummary, ThreatMonitorEngine,
@@ -798,6 +799,11 @@ fn clean_developer_caches(paths: Vec<String>) -> DevCacheCleanResult {
     DevCacheCleanerEngine::clean_dev_cache_targets(&paths)
 }
 
+#[tauri::command]
+fn inspect_physical_drives_health() -> DriveHealthSummary {
+    SmartHealthEngine::inspect_physical_drives()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -941,7 +947,8 @@ fn main() {
             scan_hosts_file_security,
             apply_hosts_telemetry_block,
             scan_developer_caches,
-            clean_developer_caches
+            clean_developer_caches,
+            inspect_physical_drives_health
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

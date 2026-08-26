@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'drivehealth' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -346,6 +346,11 @@ export function App() {
   const [scanningDevCache, setScanningDevCache] = useState(false)
   const [cleaningDevCache, setCleaningDevCache] = useState(false)
   const [devCacheFeedback, setDevCacheFeedback] = useState<string | null>(null)
+
+  // Physical Drive SMART Health state
+  const [driveHealthSummary, setDriveHealthSummary] = useState<import('@/lib/tauri-bridge').DriveHealthSummary | null>(null)
+  const [loadingDriveHealth, setLoadingDriveHealth] = useState(false)
+  const [driveHealthFeedback, setDriveHealthFeedback] = useState<string | null>(null)
 
   // Debloater state
   const [bloatList, setBloatList] = useState<BloatwareApp[]>([])
@@ -1443,6 +1448,20 @@ export function App() {
     }
   }
 
+  const fetchDriveHealth = async () => {
+    setLoadingDriveHealth(true)
+    setDriveHealthFeedback(null)
+    try {
+      const sum = await tauriApi.inspectPhysicalDrivesHealth()
+      setDriveHealthSummary(sum)
+      setDriveHealthFeedback(`Inspected ${sum.total_drives} storage drives. ${sum.has_failing_drive ? 'Warning: Drive health degraded!' : 'All physical drives report Healthy.'}`)
+    } catch (err) {
+      setDriveHealthFeedback(`Inspection error: ${String(err)}`)
+    } finally {
+      setLoadingDriveHealth(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2139,6 +2158,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('drivehealth')
+                if (!driveHealthSummary && !loadingDriveHealth) fetchDriveHealth()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'drivehealth'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <HardDrive className="w-4 h-4" />
+              S.M.A.R.T. Drive Health
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('firewall')
                 if (!firewallSummary && !loadingFirewall) fetchFirewall()
               }}
@@ -2641,6 +2674,8 @@ export function App() {
               ? 'Disk Space & Treemap Analyzer'
               : activeTab === 'repair'
               ? 'SSD TRIM & Filesystem Integrity Repair'
+              : activeTab === 'drivehealth'
+              ? 'Physical Storage S.M.A.R.T. Health & Wear Monitor'
               : activeTab === 'firewall'
               ? 'Windows Firewall & Open Port Security Audit'
               : activeTab === 'cve'
@@ -4842,6 +4877,99 @@ export function App() {
                 </button>
               </div>
             </div>
+          </div>
+        ) : activeTab === 'drivehealth' ? (
+          /* S.M.A.R.T. Drive Health & Life Inspector Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">Physical Storage S.M.A.R.T. Health</h2>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                    driveHealthSummary?.has_failing_drive
+                      ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                      : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {driveHealthSummary?.has_failing_drive ? 'Drive Alert Detected' : 'All Drives Healthy'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {driveHealthFeedback || `Inspected ${driveHealthSummary?.total_drives || 0} physical drives via MSFT_PhysicalDisk & Win32_DiskDrive.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchDriveHealth}
+                disabled={loadingDriveHealth}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingDriveHealth ? 'animate-spin' : ''}`} />
+                {loadingDriveHealth ? 'Inspecting...' : 'Re-Inspect Drives'}
+              </button>
+            </div>
+
+            {/* Drives List */}
+            {driveHealthSummary && driveHealthSummary.drives.length > 0 ? (
+              <div className="space-y-3">
+                {driveHealthSummary.drives.map((d) => (
+                  <div
+                    key={d.device_id}
+                    className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3"
+                  >
+                    <div className="flex justify-between items-center pb-2 border-b border-white/[0.05]">
+                      <div className="flex items-center gap-3">
+                        <HardDrive className="w-5 h-5 text-amber-400" />
+                        <div>
+                          <span className="text-sm font-bold text-white">{d.model}</span>
+                          <span className="text-[10px] text-zinc-500 font-mono ml-2">({d.device_id})</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 uppercase">
+                          {d.bus_type} • {d.media_type}
+                        </span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                          d.health_status === 'Healthy'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-red-500/10 text-red-400 border-red-500/20'
+                        }`}>
+                          {d.health_status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
+                      <div className="p-3 rounded-lg bg-black/30 border border-white/[0.03]">
+                        <span className="text-zinc-500 text-[10px]">Total Capacity</span>
+                        <p className="text-white font-semibold text-sm mt-0.5">{formatBytes(d.size_bytes)}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-black/30 border border-white/[0.03]">
+                        <span className="text-zinc-500 text-[10px]">Operational Status</span>
+                        <p className="text-emerald-400 font-semibold text-sm mt-0.5">{d.operational_status}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-black/30 border border-white/[0.03]">
+                        <span className="text-zinc-500 text-[10px]">Temperature</span>
+                        <p className="text-amber-400 font-semibold text-sm mt-0.5">
+                          {d.temperature_celsius ? `${d.temperature_celsius} °C` : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-black/30 border border-white/[0.03]">
+                        <span className="text-zinc-500 text-[10px]">Estimated Life / Health</span>
+                        <p className="text-emerald-400 font-semibold text-sm mt-0.5">
+                          {d.wear_percentage ? `${d.wear_percentage}% Good` : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <HardDrive className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingDriveHealth ? 'Querying physical drive controllers...' : 'Click "Re-Inspect Drives" to read S.M.A.R.T. disk telemetry.'}
+                </p>
+              </div>
+            )}
           </div>
         ) : activeTab === 'firewall' ? (
           /* Firewall Audit Page */

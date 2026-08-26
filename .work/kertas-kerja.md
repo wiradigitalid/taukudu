@@ -69,10 +69,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-58** | **Offline Program & Startup Safety Intelligence Advisor** | Local ratings database, publisher trust, recommended startup actions & bloatware alerts | `SafetyIntelligenceEngine`, Safety Advisor Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-59** | **Windows Hosts File Security & Telemetry Blocker** | Hosts parser, Microsoft telemetry redirection to 0.0.0.0, pre-fix backup & DNS flush | `HostsSecurityEngine`, Hosts Telemetry Block Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-60** | **Developer Ecosystem & Package Cache Sweeper** | npm, yarn, pnpm, bun, pip, cargo, go, nuget, gradle, maven, composer, & IDE caches purge | `DevCacheCleanerEngine`, Developer Caches Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-61** | **Physical Storage S.M.A.R.T. Health & Wear Monitor** | MSFT_PhysicalDisk & Win32_DiskDrive SSD/NVMe wear, temperature, status, & capacity | `SmartHealthEngine`, S.M.A.R.T. Drive Health Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 61 — Physical Storage S.M.A.R.T. Health & Wear Monitor (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **S.M.A.R.T. Drive Health Engine (`src-tauri/src/smart_health.rs`):** Inspeksi mendalam perangkat penyimpanan fisik via WMI/CIM `MSFT_PhysicalDisk` dan `Win32_DiskDrive`. Deteksi tipe media (`SSD`, `NVMe`, `HDD`), tipe bus (`NVMe`, `SATA`, `USB`, `SCSI`), status kesehatan perangkat (*Healthy, Warning, Unhealthy*), status operasional, estimasi sisa usia/wear percentage SSD (0-100%), pembacaan suhu operasional Celsius, kapasitas total byte, dan nomor seri hardware.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `inspect_physical_drives_health`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `PhysicalDriveHealth`, `DriveHealthSummary`, serta method `tauriApi.inspectPhysicalDrivesHealth`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman tab *S.M.A.R.T. Drive Health* lengkap dengan badge status kesehatan global (*All Drives Healthy* / *Drive Alert Detected*), kartu drive per-perangkat (Model, ID, Bus, Tipe Media), serta grid metrik teknis (Kapasitas, Status Operasional, Suhu °C, dan Estimasi Sisa Usia SSD).
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 60 — Developer Ecosystem & Package Cache Sweeper (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

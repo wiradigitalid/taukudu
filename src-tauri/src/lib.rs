@@ -41,6 +41,7 @@ pub mod security_posture;
 pub mod service_driver;
 pub mod settings_store;
 pub mod shortcut_cleaner;
+pub mod smart_health;
 pub mod software_updater;
 pub mod startup_debloat;
 pub mod threat_blacklist;
@@ -141,6 +142,9 @@ pub use settings_store::{
 };
 pub use shortcut_cleaner::{
     BrokenShortcutCleanResult, BrokenShortcutItem, BrokenShortcutScanResult, ShortcutCleanerEngine,
+};
+pub use smart_health::{
+    DriveHealthSummary, PhysicalDriveHealth, SmartHealthEngine,
 };
 pub use software_updater::{SoftwareUpdateSummary, SoftwareUpdaterEngine, UpdatablePackage, UpdateExecutionResult};
 pub use startup_debloat::{BloatwareApp, StartupDebloatEngine, StartupItem};

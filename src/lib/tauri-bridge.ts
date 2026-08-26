@@ -577,6 +577,27 @@ export interface DevCacheCleanResult {
   errors: string[]
 }
 
+export interface PhysicalDriveHealth {
+  device_id: string
+  model: string
+  media_type: string
+  bus_type: string
+  size_bytes: number
+  status: string
+  health_status: string
+  operational_status: string
+  temperature_celsius?: number | null
+  wear_percentage?: number | null
+  serial_number: string
+}
+
+export interface DriveHealthSummary {
+  drives: PhysicalDriveHealth[]
+  total_drives: number
+  has_failing_drive: boolean
+  scan_duration_ms: number
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1438,5 +1459,8 @@ export const tauriApi = {
   },
   cleanDeveloperCaches: async (paths: string[]): Promise<DevCacheCleanResult> => {
     return await invoke('clean_developer_caches', { paths })
+  },
+  inspectPhysicalDrivesHealth: async (): Promise<DriveHealthSummary> => {
+    return await invoke('inspect_physical_drives_health')
   },
 }
