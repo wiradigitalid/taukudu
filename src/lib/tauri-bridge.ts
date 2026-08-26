@@ -514,6 +514,21 @@ export interface MemoryTrimResult {
   errors: string[]
 }
 
+export interface SafetyRating {
+  key: string
+  name: string
+  publisher: string
+  safety_score: number
+  classification: string
+  recommendation: string
+  description: string
+}
+
+export interface SafetyRatingSummary {
+  total_ratings_known: number
+  ratings: SafetyRating[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1357,5 +1372,11 @@ export const tauriApi = {
   },
   trimMemoryWorkingSets: async (): Promise<MemoryTrimResult> => {
     return await invoke('trim_memory_working_sets')
+  },
+  getSafetyIntelligenceSummary: async (): Promise<SafetyRatingSummary> => {
+    return await invoke('get_safety_intelligence_summary')
+  },
+  lookupSafetyRating: async (query: string): Promise<SafetyRating | null> => {
+    return await invoke('lookup_safety_rating', { query })
   },
 }

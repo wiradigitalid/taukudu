@@ -30,7 +30,8 @@ use taukudu_lib::{
     RecycleBinDriveStat, RecycleBinEngine, RecycleBinSummary, RegistryBackupEngine,
     RegistryBackupEntry, RegistryBackupSummary, RegistryCleanerEngine,
     RegistryFixResult, RegistryIssue, RegistryScanResult, RestorePointEngine,
-    RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
+    RestorePointItem, RestorePointResult, RestorePointSummary, SafetyIntelligenceEngine,
+    SafetyRating, SafetyRatingSummary, ScanResult, ScheduleItem,
     ScheduleSummary, SecurityPostureEngine, SecurityPostureSummary, ServiceDriverEngine, ServiceItemInfo, ShortcutCleanerEngine,
     BrokenShortcutCleanResult, BrokenShortcutItem, BrokenShortcutScanResult, ShredderResult, SoftwareUpdateSummary,
     AppSettings, CleanerConfig, SettingsStoreEngine,
@@ -765,6 +766,16 @@ fn trim_memory_working_sets() -> MemoryTrimResult {
     MemoryOptimizerEngine::trim_working_sets()
 }
 
+#[tauri::command]
+fn get_safety_intelligence_summary() -> SafetyRatingSummary {
+    SafetyIntelligenceEngine::get_safety_summary()
+}
+
+#[tauri::command]
+fn lookup_safety_rating(query: String) -> Option<SafetyRating> {
+    SafetyIntelligenceEngine::lookup_rating(&query)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -902,7 +913,9 @@ fn main() {
             scan_windows_updates,
             clean_windows_updates,
             get_memory_optimizer_snapshot,
-            trim_memory_working_sets
+            trim_memory_working_sets,
+            get_safety_intelligence_summary,
+            lookup_safety_rating
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

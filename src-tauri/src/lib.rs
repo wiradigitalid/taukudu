@@ -33,6 +33,7 @@ pub mod registry_backup;
 pub mod registry_cleaner;
 pub mod restore_point;
 pub mod rules;
+pub mod safety_intelligence;
 pub mod scheduler;
 pub mod security_posture;
 pub mod service_driver;
@@ -117,6 +118,9 @@ pub use registry_backup::{
 pub use registry_cleaner::{RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult};
 pub use restore_point::{
     RestorePointEngine, RestorePointItem, RestorePointResult, RestorePointSummary,
+};
+pub use safety_intelligence::{
+    SafetyIntelligenceEngine, SafetyRating, SafetyRatingSummary,
 };
 pub use scheduler::{ScheduleEngine, ScheduleItem, ScheduleSummary, GLOBAL_SCHEDULER};
 pub use security_posture::{

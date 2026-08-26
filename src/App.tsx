@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -327,6 +327,12 @@ export function App() {
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
   const [loadingStartup, setLoadingStartup] = useState(false)
   const [startupFeedback, setStartupFeedback] = useState<string | null>(null)
+
+  // Safety Intelligence state
+  const [safetySummary, setSafetySummary] = useState<import('@/lib/tauri-bridge').SafetyRatingSummary | null>(null)
+  const [loadingSafety, setLoadingSafety] = useState(false)
+  const [safetySearchQuery, setSafetySearchQuery] = useState('')
+  const [safetyFeedback, setSafetyFeedback] = useState<string | null>(null)
 
   // Debloater state
   const [bloatList, setBloatList] = useState<BloatwareApp[]>([])
@@ -1348,6 +1354,20 @@ export function App() {
     }
   }
 
+  const fetchSafetyIntelligence = async () => {
+    setLoadingSafety(true)
+    setSafetyFeedback(null)
+    try {
+      const sum = await tauriApi.getSafetyIntelligenceSummary()
+      setSafetySummary(sum)
+      setSafetyFeedback(`Loaded ${sum.total_ratings_known} curated program & startup safety classifications.`)
+    } catch (err) {
+      setSafetyFeedback(`Error loading safety db: ${String(err)}`)
+    } finally {
+      setLoadingSafety(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2268,6 +2288,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('safety')
+                if (!safetySummary && !loadingSafety) fetchSafetyIntelligence()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'safety'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Safety Advisor
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('network')
                 if (networkItems.length === 0) fetchNetwork()
               }}
@@ -2536,6 +2570,8 @@ export function App() {
               ? 'Windows Explorer Icon, Thumbnail & Font Cache Rebuilder'
               : activeTab === 'ram'
               ? 'Real-Time Memory RAM Optimizer & Working Set Trimmer'
+              : activeTab === 'safety'
+              ? 'Offline Program & Startup Safety Intelligence Advisor'
               : activeTab === 'network'
               ? 'Network Cache & TCP/IP Stack Optimizer'
               : activeTab === 'perf'
@@ -5713,6 +5749,98 @@ export function App() {
                 <Gauge className="w-8 h-8 text-zinc-600 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {loadingMemorySnapshot ? 'Analyzing running system processes memory...' : 'Click "Refresh RAM" to load working set details.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'safety' ? (
+          /* Safety Intelligence Advisor Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Offline Program & Startup Safety Advisor</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {safetyFeedback || `Loaded ${safetySummary?.total_ratings_known || 0} curated safety records across Windows components, applications, and bloatware.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchSafetyIntelligence}
+                  disabled={loadingSafety}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingSafety ? 'animate-spin' : ''}`} />
+                  {loadingSafety ? 'Loading...' : 'Refresh Database'}
+                </button>
+              </div>
+            </div>
+
+            {/* Search Box */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#16161a] border border-[#2a2a36]">
+              <FolderSearch className="w-4 h-4 text-zinc-400" />
+              <input
+                type="text"
+                value={safetySearchQuery}
+                onChange={(e) => setSafetySearchQuery(e.target.value)}
+                placeholder="Search known software, process name, or publisher (e.g. Spotify, OneDrive, CCleaner, McAfee)..."
+                className="flex-1 bg-transparent border-none text-xs text-zinc-200 focus:outline-none"
+              />
+            </div>
+
+            {/* Safety Items List */}
+            {safetySummary && safetySummary.ratings.length > 0 ? (
+              <div className="space-y-2">
+                {safetySummary.ratings
+                  .filter((r) => {
+                    if (!safetySearchQuery) return true
+                    const q = safetySearchQuery.toLowerCase()
+                    return (
+                      r.name.toLowerCase().includes(q) ||
+                      r.publisher.toLowerCase().includes(q) ||
+                      r.classification.toLowerCase().includes(q) ||
+                      r.description.toLowerCase().includes(q)
+                    )
+                  })
+                  .map((r) => (
+                    <div
+                      key={r.key}
+                      className="p-4 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center text-xs"
+                    >
+                      <div className="space-y-1 max-w-2xl">
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-bold text-white text-sm">{r.name}</span>
+                          <span className="text-[10px] text-zinc-500 font-mono">({r.publisher})</span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
+                              r.safety_score >= 90
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : r.safety_score >= 70
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            }`}
+                          >
+                            {r.classification}
+                          </span>
+                        </div>
+                        <p className="text-zinc-400 text-xs">{r.description}</p>
+                        <p className="text-[11px] text-amber-400 font-mono">Recommendation: {r.recommendation}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-bold font-mono">
+                          <span className={r.safety_score >= 80 ? 'text-emerald-400' : r.safety_score >= 60 ? 'text-amber-400' : 'text-red-400'}>
+                            {r.safety_score}/100
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-zinc-500">Trust Score</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <ShieldCheck className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingSafety ? 'Loading safety database...' : 'Click "Refresh Database" to view intelligence ratings.'}
                 </p>
               </div>
             )}
