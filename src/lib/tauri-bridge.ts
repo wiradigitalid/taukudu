@@ -598,6 +598,34 @@ export interface DriveHealthSummary {
   scan_duration_ms: number
 }
 
+export interface BugcheckStopCode {
+  code_hex: string
+  symbol: string
+  description: string
+  common_causes: string
+  recommended_fix: string
+}
+
+export interface MinidumpCrashReport {
+  id: string
+  filename: string
+  file_path: string
+  size_bytes: number
+  crash_time_formatted: string
+  stop_code_hex: string
+  stop_code_symbol: string
+  stop_code_description: string
+  faulting_module?: string | null
+  recommended_fix: string
+}
+
+export interface BsodDumpAnalysisSummary {
+  crash_reports: MinidumpCrashReport[]
+  total_crashes_detected: number
+  latest_crash_date?: string | null
+  scan_duration_ms: number
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1462,5 +1490,11 @@ export const tauriApi = {
   },
   inspectPhysicalDrivesHealth: async (): Promise<DriveHealthSummary> => {
     return await invoke('inspect_physical_drives_health')
+  },
+  analyzeBsodCrashDumps: async (): Promise<BsodDumpAnalysisSummary> => {
+    return await invoke('analyze_bsod_crash_dumps')
+  },
+  getKnownBugcheckCodes: async (): Promise<BugcheckStopCode[]> => {
+    return await invoke('get_known_bugcheck_codes')
   },
 }

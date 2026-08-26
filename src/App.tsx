@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'drivehealth' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'drivehealth' | 'bsod' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -351,6 +351,12 @@ export function App() {
   const [driveHealthSummary, setDriveHealthSummary] = useState<import('@/lib/tauri-bridge').DriveHealthSummary | null>(null)
   const [loadingDriveHealth, setLoadingDriveHealth] = useState(false)
   const [driveHealthFeedback, setDriveHealthFeedback] = useState<string | null>(null)
+
+  // BSOD Crash Dump Analyzer state
+  const [bsodSummary, setBsodSummary] = useState<import('@/lib/tauri-bridge').BsodDumpAnalysisSummary | null>(null)
+  const [bugcheckDb, setBugcheckDb] = useState<import('@/lib/tauri-bridge').BugcheckStopCode[]>([])
+  const [loadingBsod, setLoadingBsod] = useState(false)
+  const [bsodFeedback, setBsodFeedback] = useState<string | null>(null)
 
   // Debloater state
   const [bloatList, setBloatList] = useState<BloatwareApp[]>([])
@@ -1462,6 +1468,22 @@ export function App() {
     }
   }
 
+  const fetchBsodAnalysis = async () => {
+    setLoadingBsod(true)
+    setBsodFeedback(null)
+    try {
+      const sum = await tauriApi.analyzeBsodCrashDumps()
+      setBsodSummary(sum)
+      const codes = await tauriApi.getKnownBugcheckCodes()
+      setBugcheckDb(codes)
+      setBsodFeedback(`Detected ${sum.total_crashes_detected} Minidump & kernel crash dumps. Latest crash: ${sum.latest_crash_date || 'None'}`)
+    } catch (err) {
+      setBsodFeedback(`BSOD analysis error: ${String(err)}`)
+    } finally {
+      setLoadingBsod(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2172,6 +2194,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('bsod')
+                if (!bsodSummary && !loadingBsod) fetchBsodAnalysis()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'bsod'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <AlertTriangle className="w-4 h-4" />
+              BSOD Crash Analyzer
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('firewall')
                 if (!firewallSummary && !loadingFirewall) fetchFirewall()
               }}
@@ -2676,6 +2712,8 @@ export function App() {
               ? 'SSD TRIM & Filesystem Integrity Repair'
               : activeTab === 'drivehealth'
               ? 'Physical Storage S.M.A.R.T. Health & Wear Monitor'
+              : activeTab === 'bsod'
+              ? 'BSOD Crash Dump & Bugcheck Stop Code Analyzer'
               : activeTab === 'firewall'
               ? 'Windows Firewall & Open Port Security Audit'
               : activeTab === 'cve'
@@ -4967,6 +5005,80 @@ export function App() {
                 <HardDrive className="w-8 h-8 text-zinc-600 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {loadingDriveHealth ? 'Querying physical drive controllers...' : 'Click "Re-Inspect Drives" to read S.M.A.R.T. disk telemetry.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'bsod' ? (
+          /* BSOD Crash Dump & Bugcheck Analyzer Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">BSOD Crash Dump & Stop Code Analyzer</h2>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                    (bsodSummary?.total_crashes_detected || 0) > 0
+                      ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                      : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {(bsodSummary?.total_crashes_detected || 0) > 0 ? `${bsodSummary?.total_crashes_detected} Crashes Recorded` : 'No Crash Dumps Found'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {bsodFeedback || `Analyzed Minidump and kernel crash dumps with ${bugcheckDb.length} known stop code diagnostics.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchBsodAnalysis}
+                disabled={loadingBsod}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingBsod ? 'animate-spin' : ''}`} />
+                {loadingBsod ? 'Analyzing...' : 'Rescan Dumps'}
+              </button>
+            </div>
+
+            {/* Crash Reports List */}
+            {bsodSummary && bsodSummary.crash_reports.length > 0 ? (
+              <div className="space-y-3">
+                {bsodSummary.crash_reports.map((cr) => (
+                  <div
+                    key={cr.id}
+                    className="p-5 rounded-xl bg-[#16161a] border border-red-500/30 space-y-3"
+                  >
+                    <div className="flex justify-between items-center pb-2 border-b border-white/[0.05]">
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle className="w-5 h-5 text-red-400" />
+                        <div>
+                          <span className="text-sm font-bold text-white">{cr.stop_code_symbol}</span>
+                          <span className="text-[10px] text-zinc-500 font-mono ml-2">({cr.stop_code_hex})</span>
+                        </div>
+                      </div>
+                      <div className="text-right font-mono text-xs text-zinc-400">
+                        <span>{cr.crash_time_formatted}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs">
+                      <p className="text-zinc-300">{cr.stop_code_description}</p>
+                      {cr.faulting_module && (
+                        <p className="text-[11px] text-zinc-500 font-mono">
+                          Probable Cause: <span className="text-amber-400 font-semibold">{cr.faulting_module}</span>
+                        </p>
+                      )}
+                      <div className="p-3 rounded-lg bg-black/40 border border-white/[0.05] space-y-1">
+                        <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Recommended Troubleshooting Action</span>
+                        <p className="text-zinc-300 text-xs">{cr.recommended_fix}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingBsod ? 'Scanning Minidump and MEMORY.DMP headers...' : 'System is running stable. No BSOD kernel crash dumps detected.'}
                 </p>
               </div>
             )}

@@ -70,10 +70,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-59** | **Windows Hosts File Security & Telemetry Blocker** | Hosts parser, Microsoft telemetry redirection to 0.0.0.0, pre-fix backup & DNS flush | `HostsSecurityEngine`, Hosts Telemetry Block Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-60** | **Developer Ecosystem & Package Cache Sweeper** | npm, yarn, pnpm, bun, pip, cargo, go, nuget, gradle, maven, composer, & IDE caches purge | `DevCacheCleanerEngine`, Developer Caches Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-61** | **Physical Storage S.M.A.R.T. Health & Wear Monitor** | MSFT_PhysicalDisk & Win32_DiskDrive SSD/NVMe wear, temperature, status, & capacity | `SmartHealthEngine`, S.M.A.R.T. Drive Health Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-62** | **BSOD Crash Dump & Bugcheck Stop Code Analyzer** | Binary Minidump parser, 50+ Windows bugcheck stop code dictionary & driver detector | `BsodAnalyzerEngine`, BSOD Crash Analyzer Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 62 — BSOD Crash Dump & Bugcheck Stop Code Analyzer (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **BSOD Crash Dump Analyzer Engine (`src-tauri/src/bsod_analyzer.rs`):** Parser berkas crash dump biner Windows Minidump (`%WINDIR%\Minidump\*.dmp` dengan header signature `MDMP`) dan Complete Memory Dump (`MEMORY.DMP`). Dilengkapi pangkalan data kamus Bugcheck Stop Code Windows (`IRQL_NOT_LESS_OR_EQUAL`, `SYSTEM_SERVICE_EXCEPTION`, `PAGE_FAULT_IN_NONPAGED_AREA`, `DRIVER_POWER_STATE_FAILURE`, `VIDEO_TDR_FAILURE`, `WHEA_UNCORRECTABLE_ERROR`, `DPC_WATCHDOG_VIOLATION`, `KERNEL_SECURITY_CHECK_FAILURE`, `UNEXPECTED_STORE_EXCEPTION`, `CRITICAL_PROCESS_DIED`, dll.), identifikasi modul/driver penyebab crash, waktu insiden, deskripsi teknis, dan rekomendasi langkah perbaikan terarah.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `analyze_bsod_crash_dumps` dan `get_known_bugcheck_codes`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `BugcheckStopCode`, `MinidumpCrashReport`, `BsodDumpAnalysisSummary`, serta method `tauriApi.analyzeBsodCrashDumps` dan `tauriApi.getKnownBugcheckCodes`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman tab *BSOD Crash Analyzer* lengkap dengan badge status insiden crash sistem, kartu laporan per-crash dump, stop code hex & simbolik, modul penyebab crash, dan kartu rekomendasi pemecahan masalah (*Recommended Troubleshooting Action*).
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 61 — Physical Storage S.M.A.R.T. Health & Wear Monitor (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

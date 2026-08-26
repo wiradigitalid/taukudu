@@ -7,7 +7,8 @@ use std::path::PathBuf;
 use tauri::Manager;
 use taukudu_lib::{
     handle_cli_mode, ActiveConnectionInfo, AppLoggerEngine, AppReleaseInfo, AppUpdaterEngine,
-    BloatwareApp, BreachMonitorSummary,
+    BloatwareApp, BreachMonitorSummary, BsodAnalyzerEngine, BsodDumpAnalysisSummary,
+    BugcheckStopCode, MinidumpCrashReport,
     BrowserCacheScanSummary, BrowserProfileCacheTarget, ChromiumCacheEngine,
     CleanExecutionResult, CleanerBlockersEngine, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
     ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DatabaseOptimizeSummary,
@@ -804,6 +805,16 @@ fn inspect_physical_drives_health() -> DriveHealthSummary {
     SmartHealthEngine::inspect_physical_drives()
 }
 
+#[tauri::command]
+fn analyze_bsod_crash_dumps() -> BsodDumpAnalysisSummary {
+    BsodAnalyzerEngine::scan_and_analyze_crash_dumps()
+}
+
+#[tauri::command]
+fn get_known_bugcheck_codes() -> Vec<BugcheckStopCode> {
+    BsodAnalyzerEngine::get_known_bugcheck_database()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -948,7 +959,9 @@ fn main() {
             apply_hosts_telemetry_block,
             scan_developer_caches,
             clean_developer_caches,
-            inspect_physical_drives_health
+            inspect_physical_drives_health,
+            analyze_bsod_crash_dumps,
+            get_known_bugcheck_codes
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
