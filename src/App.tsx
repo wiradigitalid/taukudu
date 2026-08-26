@@ -264,6 +264,8 @@ export function App() {
   const [scanningRegistry, setScanningRegistry] = useState(false)
   const [fixingRegistry, setFixingRegistry] = useState(false)
   const [registryFeedback, setRegistryFeedback] = useState<string | null>(null)
+  const [registryBackups, setRegistryBackups] = useState<import('@/lib/tauri-bridge').RegistryBackupEntry[]>([])
+  const [loadingBackups, setLoadingBackups] = useState(false)
 
   // Startup state
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
@@ -973,21 +975,62 @@ export function App() {
     }
   }
 
+  const fetchRegistryBackups = async () => {
+    setLoadingBackups(true)
+    try {
+      const res = await tauriApi.listRegistryBackups()
+      setRegistryBackups(res.backups)
+    } catch (err) {
+      console.error('List backups error:', err)
+    } finally {
+      setLoadingBackups(false)
+    }
+  }
+
   const handleFixSelectedRegistry = async () => {
     if (selectedRegistryIds.size === 0) return
     setFixingRegistry(true)
     try {
-      const targets: [string, string][] = registryIssues
-        .filter((i) => selectedRegistryIds.has(i.id))
-        .map((i) => [i.key_path, i.value_name])
+      const selectedIssues = registryIssues.filter((i) => selectedRegistryIds.has(i.id))
+      // First export safety registry backups for touched root keys
+      for (const issue of selectedIssues) {
+        try {
+          await tauriApi.exportRegistryKeyBackup(issue.key_path, issue.category)
+        } catch (e) {
+          console.warn('Backup non-critical warning:', e)
+        }
+      }
+
+      const targets: [string, string][] = selectedIssues.map((i) => [i.key_path, i.value_name])
 
       const res = await tauriApi.fixRegistryTargets(targets)
-      setRegistryFeedback(`Fixed ${res.fixed_count} registry entries successfully.`)
+      setRegistryFeedback(`Fixed ${res.fixed_count} registry entries successfully (pre-fix backups saved).`)
       await handleScanRegistry()
+      await fetchRegistryBackups()
     } catch (err) {
       setRegistryFeedback(`Fix registry error: ${String(err)}`)
     } finally {
       setFixingRegistry(false)
+    }
+  }
+
+  const handleRestoreRegistryBackup = async (filePath: string) => {
+    try {
+      const msg = await tauriApi.restoreRegistryBackup(filePath)
+      setRegistryFeedback(msg)
+      await fetchRegistryBackups()
+    } catch (err) {
+      setRegistryFeedback(`Restore backup error: ${String(err)}`)
+    }
+  }
+
+  const handleDeleteRegistryBackup = async (filePath: string) => {
+    try {
+      await tauriApi.deleteRegistryBackup(filePath)
+      setRegistryFeedback(`Deleted backup file.`)
+      await fetchRegistryBackups()
+    } catch (err) {
+      setRegistryFeedback(`Delete backup error: ${String(err)}`)
     }
   }
 
@@ -4459,13 +4502,13 @@ export function App() {
             )}
           </div>
         ) : activeTab === 'registry' ? (
-          /* Registry Cleaner Page */
+          /* Registry Cleaner & Backup Manager Page */
           <div className="p-8 max-w-6xl space-y-6">
             <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-white">Windows Registry Orphan Cleaner</h2>
+                <h2 className="text-lg font-bold text-white">Windows Registry Orphan Cleaner & Rollback</h2>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {registryFeedback || `Found ${registryIssues.length} orphaned shared DLLs, stale App Paths, and obsolete MUI keys.`}
+                  {registryFeedback || `Found ${registryIssues.length} orphaned registry entries • ${registryBackups.length} safety snapshots available.`}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -4478,6 +4521,14 @@ export function App() {
                   {scanningRegistry ? 'Scanning...' : 'Scan Registry'}
                 </button>
                 <button
+                  onClick={fetchRegistryBackups}
+                  disabled={loadingBackups}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <History className="w-3.5 h-3.5" />
+                  {loadingBackups ? 'Loading...' : 'View Backups'}
+                </button>
+                <button
                   onClick={handleFixSelectedRegistry}
                   disabled={fixingRegistry || selectedRegistryIds.size === 0}
                   className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
@@ -4487,6 +4538,48 @@ export function App() {
                 </button>
               </div>
             </div>
+
+            {/* Backups Tray */}
+            {registryBackups.length > 0 && (
+              <div className="p-5 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4" />
+                    Automatic Pre-Fix .reg Snapshots ({registryBackups.length})
+                  </h3>
+                  <span className="text-[10px] text-zinc-400 font-mono">Location: Documents/TauKudu Backups/Registry</span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {registryBackups.map((bak) => (
+                    <div
+                      key={bak.id}
+                      className="p-2.5 rounded-lg bg-black/40 border border-white/[0.05] flex justify-between items-center text-xs"
+                    >
+                      <div className="space-y-0.5 truncate max-w-lg">
+                        <span className="font-semibold text-white">{bak.filename}</span>
+                        <p className="text-[10px] text-zinc-400 font-mono truncate">{bak.key_path}</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-[10px] text-zinc-500 font-mono">{bak.created_at}</span>
+                        <button
+                          onClick={() => handleRestoreRegistryBackup(bak.backup_file_path)}
+                          className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-[11px] font-semibold border border-amber-500/30 transition cursor-pointer"
+                        >
+                          Restore .reg
+                        </button>
+                        <button
+                          onClick={() => handleDeleteRegistryBackup(bak.backup_file_path)}
+                          className="p-1 rounded text-zinc-500 hover:text-red-400 transition cursor-pointer"
+                          title="Delete snapshot"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Issues List */}
             {registryIssues.length > 0 ? (

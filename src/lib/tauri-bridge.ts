@@ -297,6 +297,21 @@ export interface RegistryFixResult {
   errors: string[]
 }
 
+export interface RegistryBackupEntry {
+  id: string
+  filename: string
+  key_path: string
+  file_size_bytes: number
+  created_at: string
+  backup_file_path: string
+}
+
+export interface RegistryBackupSummary {
+  backup_dir: string
+  backups: RegistryBackupEntry[]
+  total_backups: number
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1080,5 +1095,17 @@ export const tauriApi = {
   },
   deleteYaraRuleFile: async (filename: string): Promise<YaraRulesMetadata> => {
     return await invoke('delete_yara_rule_file', { filename })
+  },
+  listRegistryBackups: async (): Promise<RegistryBackupSummary> => {
+    return await invoke('list_registry_backups')
+  },
+  exportRegistryKeyBackup: async (keyPath: string, tag: string): Promise<RegistryBackupEntry> => {
+    return await invoke('export_registry_key_backup', { keyPath, tag })
+  },
+  restoreRegistryBackup: async (filePath: string): Promise<string> => {
+    return await invoke('restore_registry_backup', { filePath })
+  },
+  deleteRegistryBackup: async (filePath: string): Promise<void> => {
+    return await invoke('delete_registry_backup', { filePath })
   },
 }

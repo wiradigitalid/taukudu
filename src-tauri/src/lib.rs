@@ -23,6 +23,7 @@ pub mod network_tools;
 pub mod perf_monitor;
 pub mod privacy;
 pub mod recycle_bin;
+pub mod registry_backup;
 pub mod registry_cleaner;
 pub mod restore_point;
 pub mod rules;
@@ -82,6 +83,9 @@ pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, Priva
 pub use recycle_bin::{
     RecycleBinCleanResult, RecycleBinDriveStat, RecycleBinEngine, RecycleBinItemDetail,
     RecycleBinSummary,
+};
+pub use registry_backup::{
+    RegistryBackupEngine, RegistryBackupEntry, RegistryBackupSummary,
 };
 pub use registry_cleaner::{RegistryCleanerEngine, RegistryFixResult, RegistryIssue, RegistryScanResult};
 pub use restore_point::{

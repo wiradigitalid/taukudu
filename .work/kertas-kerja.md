@@ -57,10 +57,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-46** | **GPU Hardware Acceleration & Graphics Fallback Controller** | Win32 GPU controller & software rasterizer fallback switch | `GpuControllerEngine`, Settings & Preferences UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-47** | **Robust Parallel File Deletion & Permission Recovery** | Read-only attribute stripping retry, granular error classification & directory recovery | `CleanerEngine::clean_files` in `cleaner.rs` | ✅ COMPLETED | 2026-08-26 |
 | **AREA-48** | **YARA Threat Rules Store & In-App Signature Editor** | Persistent .yar rules repository, bundle Blake3 hash integrity & signature manager | `YaraRulesStoreEngine`, Malware Rules tab UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-49** | **Registry Snapshot Backup & Rollback Manager** | Native .reg snapshot export before orphan cleanup & rollback restore | `RegistryBackupEngine`, Registry Cleaner Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 49 — Registry Snapshot Backup & Rollback Manager (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Registry Backup Engine (`src-tauri/src/registry_backup.rs`):** Direktori penyimpanan snapshot aman di `%USERPROFILE%/Documents/TauKudu Backups/Registry/`, fungsi ekspor snapshot `.reg` otomatis (`reg export <key> <file> /y`) sebelum modifikasi/penghapusan key, fungsi pemulihan (*rollback/restore*) instan (`reg import <file>`), serta enumerasi dan penghapusan snapshot historis.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `list_registry_backups`, `export_registry_key_backup`, `restore_registry_backup`, dan `delete_registry_backup`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `RegistryBackupEntry`, `RegistryBackupSummary`, serta method `tauriApi.listRegistryBackups`, `tauriApi.exportRegistryKeyBackup`, `tauriApi.restoreRegistryBackup`, dan `tauriApi.deleteRegistryBackup`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan baki interaktif *Automatic Pre-Fix .reg Snapshots* pada tab *Registry Cleaner* lengkap dengan riwayat snapshot, tombol *Restore .reg*, dan *Delete Snapshot*, serta otomatisasi ekspor backup setiap kali tombol *Fix Selected* dieksekusi.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 48 — YARA Threat Rules Store & Signature Editor (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

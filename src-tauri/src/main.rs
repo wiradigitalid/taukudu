@@ -21,7 +21,8 @@ use taukudu_lib::{
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MetricLine, MetricsEngine,
     NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot,
     PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RecycleBinCleanResult,
-    RecycleBinDriveStat, RecycleBinEngine, RecycleBinSummary, RegistryCleanerEngine,
+    RecycleBinDriveStat, RecycleBinEngine, RecycleBinSummary, RegistryBackupEngine,
+    RegistryBackupEntry, RegistryBackupSummary, RegistryCleanerEngine,
     RegistryFixResult, RegistryIssue, RegistryScanResult, RestorePointEngine,
     RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
     ScheduleSummary, SecurityPostureEngine, SecurityPostureSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
@@ -656,6 +657,26 @@ fn delete_yara_rule_file(filename: String) -> Result<YaraRulesMetadata, String> 
     GLOBAL_YARA_RULES_STORE.delete_rule_file(&filename)
 }
 
+#[tauri::command]
+fn list_registry_backups() -> RegistryBackupSummary {
+    RegistryBackupEngine::list_backups()
+}
+
+#[tauri::command]
+fn export_registry_key_backup(key_path: String, tag: String) -> Result<RegistryBackupEntry, String> {
+    RegistryBackupEngine::export_key(&key_path, &tag)
+}
+
+#[tauri::command]
+fn restore_registry_backup(file_path: String) -> Result<String, String> {
+    RegistryBackupEngine::restore_backup_file(&file_path)
+}
+
+#[tauri::command]
+fn delete_registry_backup(file_path: String) -> Result<(), String> {
+    RegistryBackupEngine::delete_backup(&file_path)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -773,7 +794,11 @@ fn main() {
             list_yara_rule_files,
             get_yara_rules_metadata,
             save_yara_rule_file,
-            delete_yara_rule_file
+            delete_yara_rule_file,
+            list_registry_backups,
+            export_registry_key_backup,
+            restore_registry_backup,
+            delete_registry_backup
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");
