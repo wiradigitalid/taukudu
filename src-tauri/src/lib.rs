@@ -18,6 +18,7 @@ pub mod firewall_audit;
 pub mod game_mode;
 pub mod gpu_controller;
 pub mod history_store;
+pub mod icon_font_cache;
 pub mod leftovers_cleaner;
 pub mod malware_scanner;
 pub mod metrics;
@@ -80,6 +81,9 @@ pub use game_mode::{
 };
 pub use gpu_controller::{GpuControllerEngine, GpuDiagnosticInfo};
 pub use history_store::{HistoryRecord, HistoryStore, GLOBAL_HISTORY};
+pub use icon_font_cache::{
+    CacheRebuildExecutionResult, CacheRebuildScanSummary, CacheTargetDetail, IconFontCacheEngine,
+};
 pub use leftovers_cleaner::{
     LeftoverFolderItem, LeftoversCleanResult, LeftoversCleanerEngine, LeftoversScanResult,
 };

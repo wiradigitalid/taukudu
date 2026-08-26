@@ -391,6 +391,30 @@ export interface EnvCleanerCleanResult {
   errors: string[]
 }
 
+export interface CacheTargetDetail {
+  id: string
+  name: string
+  category: string
+  file_path: string
+  size_bytes: number
+  exists: boolean
+}
+
+export interface CacheRebuildScanSummary {
+  items: CacheTargetDetail[]
+  total_size_bytes: number
+  total_files: number
+  scan_duration_ms: number
+}
+
+export interface CacheRebuildExecutionResult {
+  purged_files_count: number
+  bytes_reclaimed: number
+  explorer_restarted: boolean
+  font_service_signaled: boolean
+  errors: string[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1204,5 +1228,11 @@ export const tauriApi = {
   },
   cleanEnvironmentOrphans: async (items: OrphanEnvItem[]): Promise<EnvCleanerCleanResult> => {
     return await invoke('clean_environment_orphans', { items })
+  },
+  scanIconFontCaches: async (): Promise<CacheRebuildScanSummary> => {
+    return await invoke('scan_icon_font_caches')
+  },
+  rebuildAndPurgeCaches: async (restartExplorer: boolean): Promise<CacheRebuildExecutionResult> => {
+    return await invoke('rebuild_and_purge_caches', { restartExplorer })
   },
 }

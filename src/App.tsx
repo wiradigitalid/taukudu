@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -288,6 +288,13 @@ export function App() {
   const [scanningEnv, setScanningEnv] = useState(false)
   const [cleaningEnv, setCleaningEnv] = useState(false)
   const [envFeedback, setEnvFeedback] = useState<string | null>(null)
+
+  // Icon & Font Cache Rebuilder state
+  const [iconFontCacheSummary, setIconFontCacheSummary] = useState<import('@/lib/tauri-bridge').CacheRebuildScanSummary | null>(null)
+  const [scanningIconFont, setScanningIconFont] = useState(false)
+  const [rebuildingIconFont, setRebuildingIconFont] = useState(false)
+  const [restartExplorerCheck, setRestartExplorerCheck] = useState(true)
+  const [iconFontFeedback, setIconFontFeedback] = useState<string | null>(null)
 
   // Startup state
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
@@ -1158,6 +1165,33 @@ export function App() {
     }
   }
 
+  const handleScanIconFontCaches = async () => {
+    setScanningIconFont(true)
+    setIconFontFeedback(null)
+    try {
+      const res = await tauriApi.scanIconFontCaches()
+      setIconFontCacheSummary(res)
+      setIconFontFeedback(`Found ${res.total_files} cache files totaling ${formatBytes(res.total_size_bytes)} in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      setIconFontFeedback(`Scan error: ${String(err)}`)
+    } finally {
+      setScanningIconFont(false)
+    }
+  }
+
+  const handleRebuildAndPurgeCaches = async () => {
+    setRebuildingIconFont(true)
+    try {
+      const res = await tauriApi.rebuildAndPurgeCaches(restartExplorerCheck)
+      setIconFontFeedback(`Successfully purged ${res.purged_files_count} cache files (${formatBytes(res.bytes_reclaimed)} freed). ${res.explorer_restarted ? 'Explorer restarted.' : ''} ${res.font_service_signaled ? 'Font cache service refreshed.' : ''}`)
+      await handleScanIconFontCaches()
+    } catch (err) {
+      setIconFontFeedback(`Rebuild error: ${String(err)}`)
+    } finally {
+      setRebuildingIconFont(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2008,6 +2042,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('cache')
+                if (!iconFontCacheSummary && !scanningIconFont) handleScanIconFontCaches()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'cache'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Icon & Font Cache
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('network')
                 if (networkItems.length === 0) fetchNetwork()
               }}
@@ -2266,6 +2314,8 @@ export function App() {
               ? 'Browser & App SQLite Database VACUUM & Optimizer'
               : activeTab === 'env'
               ? 'Windows Environment Variables & Dead PATH Cleaner'
+              : activeTab === 'cache'
+              ? 'Windows Explorer Icon, Thumbnail & Font Cache Rebuilder'
               : activeTab === 'network'
               ? 'Network Cache & TCP/IP Stack Optimizer'
               : activeTab === 'perf'
@@ -5031,6 +5081,86 @@ export function App() {
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {scanningEnv ? 'Reading registry hives (HKCU/HKLM Environment) and validating paths...' : 'All PATH directories and environment variables are valid.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'cache' ? (
+          /* Icon, Thumbnail & Font Cache Rebuilder Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Icon, Thumbnail & Font Cache Rebuilder</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {iconFontFeedback || `Scanned cache hives: ${iconFontCacheSummary?.total_files || 0} database files (${formatBytes(iconFontCacheSummary?.total_size_bytes || 0)} total).`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanIconFontCaches}
+                  disabled={scanningIconFont}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanningIconFont ? 'animate-spin' : ''}`} />
+                  {scanningIconFont ? 'Scanning...' : 'Scan Caches'}
+                </button>
+                <button
+                  onClick={handleRebuildAndPurgeCaches}
+                  disabled={rebuildingIconFont || (iconFontCacheSummary?.total_files === 0)}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Purge & Rebuild Caches
+                </button>
+              </div>
+            </div>
+
+            {/* Restart Explorer Switch */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-[#2a2a36] flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-xs font-semibold text-white">Restart Windows Explorer during purge</span>
+                <p className="text-[11px] text-zinc-400">
+                  Required to release file locks on active iconcache_*.db and thumbcache_*.db files.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={restartExplorerCheck}
+                onChange={(e) => setRestartExplorerCheck(e.target.checked)}
+                className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
+              />
+            </div>
+
+            {/* Cache Items List */}
+            {iconFontCacheSummary && iconFontCacheSummary.items.length > 0 ? (
+              <div className="space-y-2">
+                {iconFontCacheSummary.items.map((c) => (
+                  <div
+                    key={c.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="space-y-0.5 truncate max-w-xl">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{c.name}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-amber-400">
+                          {c.category}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 font-mono truncate">{c.file_path}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        {formatBytes(c.size_bytes)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {scanningIconFont ? 'Scanning Explorer and FontCache directories...' : 'Click "Scan Caches" to detect active cache databases.'}
                 </p>
               </div>
             )}
