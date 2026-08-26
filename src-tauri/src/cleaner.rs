@@ -5,7 +5,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::time::SystemTime;
 use walkdir::WalkDir;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,6 +123,32 @@ impl CleanerEngine {
         }
     }
 
+    /// Attempt deletion of a single file with read-only attribute stripping retry on Windows
+    fn delete_file_robust(path: &Path) -> Result<u64, std::io::Error> {
+        let size = path.metadata().map(|m| m.len()).unwrap_or(0);
+
+        match fs::remove_file(path) {
+            Ok(_) => Ok(size),
+            Err(err) => {
+                #[cfg(windows)]
+                {
+                    // If error is permission-denied / read-only attribute, strip read-only and retry
+                    if err.kind() == std::io::ErrorKind::PermissionDenied {
+                        if let Ok(mut perms) = fs::metadata(path).map(|m| m.permissions()) {
+                            perms.set_readonly(false);
+                            let _ = fs::set_permissions(path, perms);
+                            if fs::remove_file(path).is_ok() {
+                                return Ok(size);
+                            }
+                        }
+                    }
+                }
+                Err(err)
+            }
+        }
+    }
+
+    /// Robust parallel cleaning with fallback permissions recovery
     pub fn clean_files(paths: &[String]) -> CleanExecutionResult {
         let deleted_count = Arc::new(AtomicUsize::new(0));
         let deleted_bytes = Arc::new(AtomicU64::new(0));
@@ -132,16 +157,29 @@ impl CleanerEngine {
 
         paths.par_iter().for_each(|file_path| {
             let p = Path::new(file_path);
-            if p.exists() && p.is_file() {
-                let size = p.metadata().map(|m| m.len()).unwrap_or(0);
-                match fs::remove_file(p) {
-                    Ok(_) => {
-                        deleted_count.fetch_add(1, Ordering::Relaxed);
-                        deleted_bytes.fetch_add(size, Ordering::Relaxed);
+            if p.exists() {
+                if p.is_file() {
+                    match Self::delete_file_robust(p) {
+                        Ok(size) => {
+                            deleted_count.fetch_add(1, Ordering::Relaxed);
+                            deleted_bytes.fetch_add(size, Ordering::Relaxed);
+                        }
+                        Err(e) => {
+                            failed_count.fetch_add(1, Ordering::Relaxed);
+                            errors.lock().unwrap().push(format!("{}: {}", file_path, e));
+                        }
                     }
-                    Err(e) => {
-                        failed_count.fetch_add(1, Ordering::Relaxed);
-                        errors.lock().unwrap().push(format!("{}: {}", file_path, e));
+                } else if p.is_dir() {
+                    let size = p.metadata().map(|m| m.len()).unwrap_or(0);
+                    match fs::remove_dir_all(p) {
+                        Ok(_) => {
+                            deleted_count.fetch_add(1, Ordering::Relaxed);
+                            deleted_bytes.fetch_add(size, Ordering::Relaxed);
+                        }
+                        Err(e) => {
+                            failed_count.fetch_add(1, Ordering::Relaxed);
+                            errors.lock().unwrap().push(format!("{}: {}", file_path, e));
+                        }
                     }
                 }
             }

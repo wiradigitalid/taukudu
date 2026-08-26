@@ -55,10 +55,16 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-44** | **Client-Side CVE False-Positive Filter** | Debian epoch/revision version parser & runtime misattribution filter | `CveScannerEngine`, CVE Scanner Page | ✅ COMPLETED | 2026-08-26 |
 | **AREA-45** | **Recycle Bin $I Metadata Binary Parser & File Inspection** | Pure Rust parser for Windows $I binary headers & detailed deleted item viewer | `RecycleBinEngine`, Recycle Bin Inspector UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-46** | **GPU Hardware Acceleration & Graphics Fallback Controller** | Win32 GPU controller & software rasterizer fallback switch | `GpuControllerEngine`, Settings & Preferences UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-47** | **Robust Parallel File Deletion & Permission Recovery** | Read-only attribute stripping retry, granular error classification & directory recovery | `CleanerEngine::clean_files` in `cleaner.rs` | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 47 — Robust Parallel File Deletion & Permission Recovery (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Robust File Deletion Engine (`src-tauri/src/cleaner.rs`):** Implementasi fungsi penghapusan file `delete_file_robust` dengan fallback recovery pada Windows: jika penghapusan terhalang atribut read-only (*PermissionDenied*), atribut read-only akan dicabut via manipulasi izin berkas std::fs::set_permissions dan dicoba ulang sebelum diklasifikasikan sebagai error. Mendukung penghapusan paralel direktori dan berkas secara aman.
+  2. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 46 — GPU Hardware Acceleration & Graphics Fallback Controller (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
