@@ -23,8 +23,9 @@ use taukudu_lib::{
     GpuControllerEngine, GpuDiagnosticInfo, HistoryRecord,
     IconFontCacheEngine, CacheRebuildExecutionResult, CacheRebuildScanSummary, CacheTargetDetail, InstalledProgramInfo,
     LargeFileScanResult, LeftoversCleanerEngine, LeftoversCleanResult, LeftoversScanResult,
-    MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MetricLine, MetricsEngine,
-    NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot,
+    MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MemoryOptimizerEngine,
+    MemoryOptimizerSnapshot, MemoryTrimResult, MetricLine, MetricsEngine,
+    NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot, ProcessMemoryItem,
     PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RecycleBinCleanResult,
     RecycleBinDriveStat, RecycleBinEngine, RecycleBinSummary, RegistryBackupEngine,
     RegistryBackupEntry, RegistryBackupSummary, RegistryCleanerEngine,
@@ -754,6 +755,16 @@ fn clean_windows_updates(paths: Vec<String>) -> WinUpdateCleanResult {
     WinUpdateCleanerEngine::clean_update_targets(&paths)
 }
 
+#[tauri::command]
+fn get_memory_optimizer_snapshot() -> MemoryOptimizerSnapshot {
+    MemoryOptimizerEngine::get_memory_snapshot()
+}
+
+#[tauri::command]
+fn trim_memory_working_sets() -> MemoryTrimResult {
+    MemoryOptimizerEngine::trim_working_sets()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -889,7 +900,9 @@ fn main() {
             scan_windows_event_logs,
             clean_windows_event_logs,
             scan_windows_updates,
-            clean_windows_updates
+            clean_windows_updates,
+            get_memory_optimizer_snapshot,
+            trim_memory_working_sets
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

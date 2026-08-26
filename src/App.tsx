@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -316,6 +316,12 @@ export function App() {
   const [scanningWinUpdate, setScanningWinUpdate] = useState(false)
   const [cleaningWinUpdate, setCleaningWinUpdate] = useState(false)
   const [winUpdateFeedback, setWinUpdateFeedback] = useState<string | null>(null)
+
+  // Memory RAM Optimizer state
+  const [memorySnapshot, setMemorySnapshot] = useState<import('@/lib/tauri-bridge').MemoryOptimizerSnapshot | null>(null)
+  const [loadingMemorySnapshot, setLoadingMemorySnapshot] = useState(false)
+  const [trimmingMemory, setTrimmingMemory] = useState(false)
+  const [memoryFeedback, setMemoryFeedback] = useState<string | null>(null)
 
   // Startup state
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
@@ -1315,6 +1321,33 @@ export function App() {
     }
   }
 
+  const fetchMemorySnapshot = async () => {
+    setLoadingMemorySnapshot(true)
+    setMemoryFeedback(null)
+    try {
+      const snap = await tauriApi.getMemoryOptimizerSnapshot()
+      setMemorySnapshot(snap)
+      setMemoryFeedback(`RAM Usage: ${snap.usage_percentage.toFixed(1)}% (${formatBytes(snap.used_ram_bytes)} / ${formatBytes(snap.total_ram_bytes)}) across ${snap.total_processes} processes`)
+    } catch (err) {
+      setMemoryFeedback(`Memory snapshot error: ${String(err)}`)
+    } finally {
+      setLoadingMemorySnapshot(false)
+    }
+  }
+
+  const handleTrimMemory = async () => {
+    setTrimmingMemory(true)
+    try {
+      const res = await tauriApi.trimMemoryWorkingSets()
+      setMemoryFeedback(`Successfully trimmed working sets of ${res.trimmed_processes_count} processes (${formatBytes(res.memory_freed_bytes)} RAM freed).`)
+      await fetchMemorySnapshot()
+    } catch (err) {
+      setMemoryFeedback(`Trim error: ${String(err)}`)
+    } finally {
+      setTrimmingMemory(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2221,6 +2254,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('ram')
+                if (!memorySnapshot && !loadingMemorySnapshot) fetchMemorySnapshot()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'ram'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Gauge className="w-4 h-4" />
+              Memory RAM Trimmer
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('network')
                 if (networkItems.length === 0) fetchNetwork()
               }}
@@ -2487,6 +2534,8 @@ export function App() {
               ? 'Windows Environment Variables & Dead PATH Cleaner'
               : activeTab === 'cache'
               ? 'Windows Explorer Icon, Thumbnail & Font Cache Rebuilder'
+              : activeTab === 'ram'
+              ? 'Real-Time Memory RAM Optimizer & Working Set Trimmer'
               : activeTab === 'network'
               ? 'Network Cache & TCP/IP Stack Optimizer'
               : activeTab === 'perf'
@@ -5568,6 +5617,102 @@ export function App() {
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {scanningWinUpdate ? 'Scanning SoftwareDistribution and DeliveryOptimization directories...' : 'No leftover Windows Update downloads found.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'ram' ? (
+          /* Memory RAM Optimizer & Working Set Trimmer Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Real-Time Memory RAM Optimizer</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {memoryFeedback || `RAM Load: ${memorySnapshot?.usage_percentage.toFixed(1) || 0}% (${formatBytes(memorySnapshot?.used_ram_bytes || 0)} used / ${formatBytes(memorySnapshot?.total_ram_bytes || 0)} total).`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchMemorySnapshot}
+                  disabled={loadingMemorySnapshot}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingMemorySnapshot ? 'animate-spin' : ''}`} />
+                  {loadingMemorySnapshot ? 'Analyzing...' : 'Refresh RAM'}
+                </button>
+                <button
+                  onClick={handleTrimMemory}
+                  disabled={trimmingMemory}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Gauge className="w-3.5 h-3.5" />
+                  Trim Working Sets
+                </button>
+              </div>
+            </div>
+
+            {/* RAM Progress Bar */}
+            {memorySnapshot && (
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-2">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-white">Physical Memory Pressure</span>
+                  <span className="text-amber-400 font-mono">{memorySnapshot.usage_percentage.toFixed(1)}%</span>
+                </div>
+                <div className="w-full h-3 rounded-full bg-zinc-800 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 ${
+                      memorySnapshot.usage_percentage > 85 ? 'bg-red-500' : memorySnapshot.usage_percentage > 65 ? 'bg-amber-500' : 'bg-emerald-500'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(0, memorySnapshot.usage_percentage))}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] text-zinc-500 font-mono">
+                  <span>Free: {formatBytes(memorySnapshot.free_ram_bytes)}</span>
+                  <span>Used: {formatBytes(memorySnapshot.used_ram_bytes)}</span>
+                  <span>Total: {formatBytes(memorySnapshot.total_ram_bytes)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Top Processes Memory Table */}
+            {memorySnapshot && memorySnapshot.top_processes.length > 0 ? (
+              <div className="space-y-2">
+                <div className="px-3 py-1.5 text-xs font-semibold text-zinc-400 flex justify-between">
+                  <span>Process Name & PID</span>
+                  <span>Working Set (RAM)</span>
+                </div>
+                <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+                  {memorySnapshot.top_processes.map((proc) => (
+                    <div
+                      key={proc.pid}
+                      className="p-3 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center text-xs"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-semibold text-white">{proc.name}</span>
+                        <span className="font-mono text-[10px] text-zinc-500">PID: {proc.pid}</span>
+                        {proc.is_optimizable ? (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Optimizable
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-zinc-800 text-zinc-400">
+                            Protected System
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right font-mono">
+                        <span className="font-bold text-amber-400">{formatBytes(proc.memory_bytes)}</span>
+                        <p className="text-[10px] text-zinc-600">Virtual: {formatBytes(proc.virtual_memory_bytes)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <Gauge className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {loadingMemorySnapshot ? 'Analyzing running system processes memory...' : 'Click "Refresh RAM" to load working set details.'}
                 </p>
               </div>
             )}

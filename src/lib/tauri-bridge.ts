@@ -487,6 +487,33 @@ export interface WinUpdateCleanResult {
   errors: string[]
 }
 
+export interface ProcessMemoryItem {
+  pid: number
+  name: string
+  memory_bytes: number
+  virtual_memory_bytes: number
+  is_optimizable: boolean
+}
+
+export interface MemoryOptimizerSnapshot {
+  total_ram_bytes: number
+  used_ram_bytes: number
+  free_ram_bytes: number
+  usage_percentage: number
+  total_processes: number
+  top_processes: ProcessMemoryItem[]
+  snapshot_duration_ms: number
+}
+
+export interface MemoryTrimResult {
+  trimmed_processes_count: number
+  memory_before_bytes: number
+  memory_after_bytes: number
+  memory_freed_bytes: number
+  failed_count: number
+  errors: string[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1324,5 +1351,11 @@ export const tauriApi = {
   },
   cleanWindowsUpdates: async (paths: string[]): Promise<WinUpdateCleanResult> => {
     return await invoke('clean_windows_updates', { paths })
+  },
+  getMemoryOptimizerSnapshot: async (): Promise<MemoryOptimizerSnapshot> => {
+    return await invoke('get_memory_optimizer_snapshot')
+  },
+  trimMemoryWorkingSets: async (): Promise<MemoryTrimResult> => {
+    return await invoke('trim_memory_working_sets')
   },
 }

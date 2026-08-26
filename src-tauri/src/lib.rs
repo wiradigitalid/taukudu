@@ -23,6 +23,7 @@ pub mod history_store;
 pub mod icon_font_cache;
 pub mod leftovers_cleaner;
 pub mod malware_scanner;
+pub mod memory_optimizer;
 pub mod metrics;
 pub mod network_tools;
 pub mod perf_monitor;
@@ -98,6 +99,9 @@ pub use leftovers_cleaner::{
 };
 pub use malware_scanner::{
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MalwareThreat, QuarantinedItem,
+};
+pub use memory_optimizer::{
+    MemoryOptimizerEngine, MemoryOptimizerSnapshot, MemoryTrimResult, ProcessMemoryItem,
 };
 pub use metrics::{MetricLine, MetricsEngine, PrometheusMetricsSummary};
 pub use network_tools::{ActiveConnectionInfo, NetworkItemInfo, NetworkToolsEngine};
