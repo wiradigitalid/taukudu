@@ -10,7 +10,8 @@ use taukudu_lib::{
     BloatwareApp, BreachMonitorSummary,
     BrowserCacheScanSummary, BrowserProfileCacheTarget, ChromiumCacheEngine,
     CleanExecutionResult, CleanerBlockersEngine, CleanerEngine, CliArgs, ContextMenuEngine, ContextMenuEntryInfo,
-    ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DeduplicationEngine,
+    ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DatabaseOptimizeSummary,
+    DatabaseOptimizerEngine, DatabaseScanSummary, DatabaseTargetInfo, DatabaseVacuumResult, DeduplicationEngine,
     DeleteFailureProbeEngine, DeletePathProbeResult, DeleteProbeSummary, DeletionLogQueryOptions,
     DeletionLogStats, DeletionLoggerEngine, GranularDeletedFileEntry,
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
@@ -688,6 +689,16 @@ fn delete_broken_shortcuts(paths: Vec<String>) -> BrokenShortcutCleanResult {
     ShortcutCleanerEngine::delete_shortcuts(&paths)
 }
 
+#[tauri::command]
+fn scan_sqlite_databases() -> DatabaseScanSummary {
+    DatabaseOptimizerEngine::scan_databases()
+}
+
+#[tauri::command]
+fn vacuum_sqlite_databases(paths: Vec<String>) -> DatabaseOptimizeSummary {
+    DatabaseOptimizerEngine::optimize_databases(&paths)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -811,7 +822,9 @@ fn main() {
             restore_registry_backup,
             delete_registry_backup,
             scan_broken_shortcuts,
-            delete_broken_shortcuts
+            delete_broken_shortcuts,
+            scan_sqlite_databases,
+            vacuum_sqlite_databases
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

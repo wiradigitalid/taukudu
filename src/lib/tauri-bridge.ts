@@ -334,6 +334,40 @@ export interface BrokenShortcutCleanResult {
   errors: string[]
 }
 
+export interface DatabaseTargetInfo {
+  id: string
+  app_name: string
+  db_name: string
+  file_path: string
+  size_bytes: number
+  wal_size_bytes: number
+  estimated_reclaimable_bytes: number
+  is_locked: boolean
+}
+
+export interface DatabaseScanSummary {
+  databases: DatabaseTargetInfo[]
+  total_databases_found: number
+  total_estimated_reclaimable_bytes: number
+  scan_duration_ms: number
+}
+
+export interface DatabaseVacuumResult {
+  file_path: string
+  size_before_bytes: number
+  size_after_bytes: number
+  bytes_reclaimed: number
+  is_successful: boolean
+  error_message?: string | null
+}
+
+export interface DatabaseOptimizeSummary {
+  optimized_count: number
+  failed_count: number
+  total_bytes_reclaimed: number
+  results: DatabaseVacuumResult[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1135,5 +1169,11 @@ export const tauriApi = {
   },
   deleteBrokenShortcuts: async (paths: string[]): Promise<BrokenShortcutCleanResult> => {
     return await invoke('delete_broken_shortcuts', { paths })
+  },
+  scanSqliteDatabases: async (): Promise<DatabaseScanSummary> => {
+    return await invoke('scan_sqlite_databases')
+  },
+  vacuumSqliteDatabases: async (paths: string[]): Promise<DatabaseOptimizeSummary> => {
+    return await invoke('vacuum_sqlite_databases', { paths })
   },
 }

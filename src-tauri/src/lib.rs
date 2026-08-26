@@ -7,6 +7,7 @@ pub mod cleaner_blockers;
 pub mod cli;
 pub mod context_menu;
 pub mod cve_scanner;
+pub mod database_optimizer;
 pub mod deduplication;
 pub mod delete_failure_probe;
 pub mod deletion_logger;
@@ -50,6 +51,10 @@ pub use cleaner_blockers::{BlockerSummary, CleanerBlockersEngine, ProcessBlocker
 pub use cli::{handle_cli_mode, CliArgs, Commands};
 pub use context_menu::{ContextMenuEngine, ContextMenuEntryInfo, ContextMenuScanResult};
 pub use cve_scanner::{CveItem, CveScanSummary, CveScannerEngine};
+pub use database_optimizer::{
+    DatabaseOptimizeSummary, DatabaseOptimizerEngine, DatabaseScanSummary, DatabaseTargetInfo,
+    DatabaseVacuumResult,
+};
 pub use deduplication::{
     DeduplicationEngine, DuplicateFile, DuplicateGroup, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, LargeFileScanResult,

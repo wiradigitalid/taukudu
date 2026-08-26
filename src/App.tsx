@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'shortcuts' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -274,6 +274,13 @@ export function App() {
   const [scanningShortcuts, setScanningShortcuts] = useState(false)
   const [cleaningShortcuts, setCleaningShortcuts] = useState(false)
   const [shortcutsFeedback, setShortcutsFeedback] = useState<string | null>(null)
+
+  // Database Optimizer state
+  const [databaseScanResult, setDatabaseScanResult] = useState<import('@/lib/tauri-bridge').DatabaseScanSummary | null>(null)
+  const [selectedDatabaseIds, setSelectedDatabaseIds] = useState<Set<string>>(new Set())
+  const [scanningDatabases, setScanningDatabases] = useState(false)
+  const [optimizingDatabases, setOptimizingDatabases] = useState(false)
+  const [databaseFeedback, setDatabaseFeedback] = useState<string | null>(null)
 
   // Startup state
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
@@ -1074,6 +1081,41 @@ export function App() {
       setShortcutsFeedback(`Delete error: ${String(err)}`)
     } finally {
       setCleaningShortcuts(false)
+    }
+  }
+
+  const handleScanDatabases = async () => {
+    setScanningDatabases(true)
+    setDatabaseFeedback(null)
+    setSelectedDatabaseIds(new Set())
+    try {
+      const res = await tauriApi.scanSqliteDatabases()
+      setDatabaseScanResult(res)
+      const allIds = new Set(res.databases.map((d) => d.id))
+      setSelectedDatabaseIds(allIds)
+      setDatabaseFeedback(`Found ${res.total_databases_found} SQLite databases (${formatBytes(res.total_estimated_reclaimable_bytes)} estimated reclaimable space) in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      setDatabaseFeedback(`Database scan error: ${String(err)}`)
+    } finally {
+      setScanningDatabases(false)
+    }
+  }
+
+  const handleVacuumSelectedDatabases = async () => {
+    if (!databaseScanResult || selectedDatabaseIds.size === 0) return
+    setOptimizingDatabases(true)
+    try {
+      const targets = databaseScanResult.databases
+        .filter((d) => selectedDatabaseIds.has(d.id))
+        .map((d) => d.file_path)
+
+      const res = await tauriApi.vacuumSqliteDatabases(targets)
+      setDatabaseFeedback(`Successfully vacuumed and defragmented ${res.optimized_count} databases (${formatBytes(res.total_bytes_reclaimed)} reclaimed).`)
+      await handleScanDatabases()
+    } catch (err) {
+      setDatabaseFeedback(`Vacuum error: ${String(err)}`)
+    } finally {
+      setOptimizingDatabases(false)
     }
   }
 
@@ -1899,6 +1941,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('databases')
+                if (!databaseScanResult && !scanningDatabases) handleScanDatabases()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'databases'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Database className="w-4 h-4" />
+              Database VACUUM
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('network')
                 if (networkItems.length === 0) fetchNetwork()
               }}
@@ -2153,6 +2209,8 @@ export function App() {
               ? 'Windows Registry Orphan Cleaner'
               : activeTab === 'shortcuts'
               ? 'Broken & Invalid Desktop / Start Menu Shortcuts'
+              : activeTab === 'databases'
+              ? 'Browser & App SQLite Database VACUUM & Optimizer'
               : activeTab === 'network'
               ? 'Network Cache & TCP/IP Stack Optimizer'
               : activeTab === 'perf'
@@ -4754,6 +4812,92 @@ export function App() {
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {scanningShortcuts ? 'Scanning shortcut paths across user & system hives...' : 'All shortcuts point to valid destinations. No broken links.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'databases' ? (
+          /* Database Optimizer (VACUUM) Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Browser & Application Database Optimizer (VACUUM)</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {databaseFeedback || `Found ${databaseScanResult?.total_databases_found || 0} SQLite databases (${formatBytes(databaseScanResult?.total_estimated_reclaimable_bytes || 0)} reclaimable).`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanDatabases}
+                  disabled={scanningDatabases}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanningDatabases ? 'animate-spin' : ''}`} />
+                  {scanningDatabases ? 'Scanning...' : 'Scan Databases'}
+                </button>
+                <button
+                  onClick={handleVacuumSelectedDatabases}
+                  disabled={optimizingDatabases || selectedDatabaseIds.size === 0}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  Defragment & VACUUM ({selectedDatabaseIds.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Databases List */}
+            {databaseScanResult && databaseScanResult.databases.length > 0 ? (
+              <div className="space-y-2">
+                {databaseScanResult.databases.map((db) => (
+                  <div
+                    key={db.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3 truncate max-w-2xl">
+                      <input
+                        type="checkbox"
+                        checked={selectedDatabaseIds.has(db.id)}
+                        disabled={db.is_locked}
+                        onChange={(e) => {
+                          const next = new Set(selectedDatabaseIds)
+                          if (e.target.checked) next.add(db.id)
+                          else next.delete(db.id)
+                          setSelectedDatabaseIds(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer shrink-0 disabled:opacity-30"
+                      />
+                      <div className="space-y-0.5 truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white truncate">{db.db_name}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-amber-400 shrink-0">
+                            {db.app_name}
+                          </span>
+                          {db.is_locked && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/20 text-red-400 border border-red-500/30 shrink-0">
+                              App Running (Locked)
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-zinc-500 font-mono truncate">{db.file_path}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        ~{formatBytes(db.estimated_reclaimable_bytes)}
+                      </span>
+                      <p className="text-[10px] text-zinc-500 font-mono">
+                        Size: {formatBytes(db.size_bytes)} {db.wal_size_bytes > 0 ? `(+${formatBytes(db.wal_size_bytes)} WAL)` : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {scanningDatabases ? 'Inspecting SQLite database headers across profile directories...' : 'No fragmented SQLite databases found.'}
                 </p>
               </div>
             )}

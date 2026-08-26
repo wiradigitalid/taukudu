@@ -59,10 +59,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-48** | **YARA Threat Rules Store & In-App Signature Editor** | Persistent .yar rules repository, bundle Blake3 hash integrity & signature manager | `YaraRulesStoreEngine`, Malware Rules tab UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-49** | **Registry Snapshot Backup & Rollback Manager** | Native .reg snapshot export before orphan cleanup & rollback restore | `RegistryBackupEngine`, Registry Cleaner Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-50** | **Broken & Invalid Shortcuts Cleaner** | Binary LNK parser & shell shortcut validator across Desktop, Start Menu & Recent | `ShortcutCleanerEngine`, Broken Shortcuts Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-51** | **Browser & App SQLite Database VACUUM Optimizer** | Native SQLite defragmenter, index rebuilder & WAL space reclaim across browsers/apps | `DatabaseOptimizerEngine`, Database VACUUM Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 51 — Browser & App SQLite Database VACUUM Optimizer (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Database Optimizer Engine (`src-tauri/src/database_optimizer.rs`):** Verifikasi header biner SQLite (`SQLite format 3\0`), penemuan target database aplikasi/browser (Google Chrome, Edge, Brave, Vivaldi, Opera, Opera GX, Mozilla Firefox, Thunderbird, Spotify, Discord), kalkulasi estimasi kapasitas tersia-sia (*WAL files + 10% freelist internal fragmentation*), pengecekan status file lock (readonly probe), serta eksekusi batch `VACUUM; PRAGMA optimize;` dengan pemulihan mode jurnal WAL otomatis.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_sqlite_databases` dan `vacuum_sqlite_databases`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `DatabaseTargetInfo`, `DatabaseScanSummary`, `DatabaseVacuumResult`, `DatabaseOptimizeSummary`, serta method `tauriApi.scanSqliteDatabases` dan `tauriApi.vacuumSqliteDatabases`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan tab navigasi *Database VACUUM* lengkap dengan list database yang terdeteksi, badge status proses terkunci (*App Running / Locked*), estimasi ukuran penghematan, checkbox seleksi, dan tombol aksi *Defragment & VACUUM*.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 50 — Broken & Invalid Shortcuts Cleaner (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
