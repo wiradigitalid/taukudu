@@ -28,7 +28,8 @@ use taukudu_lib::{
     LargeFileScanResult, LeftoversCleanerEngine, LeftoversCleanResult, LeftoversScanResult,
     MalwareActionResult, MalwareScanResult, MalwareScannerEngine, MemoryOptimizerEngine,
     MemoryOptimizerSnapshot, MemoryTrimResult, MetricLine, MetricsEngine,
-    NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot, ProcessMemoryItem,
+    NetworkItemInfo, NetworkToolsEngine, PerfMonitorEngine, PerformanceSnapshot, PowerDiagnosticsEngine,
+    PowerPlanScheme, PowerSummary, BatteryDiagnosticInfo, ProcessMemoryItem,
     PrivacyApplyResult, PrivacyShieldEngine, PrivacyShieldState, RecycleBinCleanResult,
     RecycleBinDriveStat, RecycleBinEngine, RecycleBinSummary, RegistryBackupEngine,
     RegistryBackupEntry, RegistryBackupSummary, RegistryCleanerEngine,
@@ -815,6 +816,16 @@ fn get_known_bugcheck_codes() -> Vec<BugcheckStopCode> {
     BsodAnalyzerEngine::get_known_bugcheck_database()
 }
 
+#[tauri::command]
+fn get_power_diagnostics_summary() -> PowerSummary {
+    PowerDiagnosticsEngine::get_power_diagnostics()
+}
+
+#[tauri::command]
+fn set_active_power_scheme(guid: String) -> Result<String, String> {
+    PowerDiagnosticsEngine::set_active_power_scheme(&guid)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -961,7 +972,9 @@ fn main() {
             clean_developer_caches,
             inspect_physical_drives_health,
             analyze_bsod_crash_dumps,
-            get_known_bugcheck_codes
+            get_known_bugcheck_codes,
+            get_power_diagnostics_summary,
+            set_active_power_scheme
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

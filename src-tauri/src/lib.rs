@@ -30,6 +30,7 @@ pub mod memory_optimizer;
 pub mod metrics;
 pub mod network_tools;
 pub mod perf_monitor;
+pub mod power_diagnostics;
 pub mod privacy;
 pub mod recycle_bin;
 pub mod registry_backup;
@@ -120,6 +121,9 @@ pub use memory_optimizer::{
 pub use metrics::{MetricLine, MetricsEngine, PrometheusMetricsSummary};
 pub use network_tools::{ActiveConnectionInfo, NetworkItemInfo, NetworkToolsEngine};
 pub use perf_monitor::{PerfMonitorEngine, PerformanceSnapshot, ProcessItem};
+pub use power_diagnostics::{
+    BatteryDiagnosticInfo, PowerDiagnosticsEngine, PowerPlanScheme, PowerSummary,
+};
 pub use privacy::{PrivacyApplyResult, PrivacySetting, PrivacyShieldEngine, PrivacyShieldState};
 pub use recycle_bin::{
     RecycleBinCleanResult, RecycleBinDriveStat, RecycleBinEngine, RecycleBinItemDetail,

@@ -71,10 +71,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-60** | **Developer Ecosystem & Package Cache Sweeper** | npm, yarn, pnpm, bun, pip, cargo, go, nuget, gradle, maven, composer, & IDE caches purge | `DevCacheCleanerEngine`, Developer Caches Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-61** | **Physical Storage S.M.A.R.T. Health & Wear Monitor** | MSFT_PhysicalDisk & Win32_DiskDrive SSD/NVMe wear, temperature, status, & capacity | `SmartHealthEngine`, S.M.A.R.T. Drive Health Page UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-62** | **BSOD Crash Dump & Bugcheck Stop Code Analyzer** | Binary Minidump parser, 50+ Windows bugcheck stop code dictionary & driver detector | `BsodAnalyzerEngine`, BSOD Crash Analyzer Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-63** | **Battery Health, Capacity & Power Scheme Manager** | Win32_Battery diagnostics, battery wear/capacity ratio, and powercfg scheme switcher | `PowerDiagnosticsEngine`, Battery & Power Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 63 — Battery Health, Capacity & Power Scheme Manager (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Power Diagnostics Engine (`src-tauri/src/power_diagnostics.rs`):** Deteksi telemetri baterai fisik laptop/perangkat Windows melalui WMI/CIM `Win32_Battery` (kapasitas desain `DesignCapacity`, kapasitas pengisian penuh `FullChargeCapacity`, persentase sisa daya, estimasi sisa waktu pemakaian dalam menit, dan status pengisian daya). Menghitung rasio degradasi kesehatan baterai (*Battery Health Percentage*), enumerasi seluruh skema daya sistem Windows (`powercfg /list`), serta menyediakan fungsi pengalihan skema performa daya aktif (`powercfg /setactive <GUID>`).
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `get_power_diagnostics_summary` dan `set_active_power_scheme`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `BatteryDiagnosticInfo`, `PowerPlanScheme`, `PowerSummary`, serta method `tauriApi.getPowerDiagnosticsSummary` dan `tauriApi.setActivePowerScheme`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan halaman tab *Battery & Power* lengkap dengan kartu status baterai (Health %, Level %, Design Capacity, Full Charge Capacity, Status), deteksi AC desktop line, dan grid pemilihan skema daya Windows (Balanced, High Performance, Power Saver, Ultimate Performance).
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 62 — BSOD Crash Dump & Bugcheck Stop Code Analyzer (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

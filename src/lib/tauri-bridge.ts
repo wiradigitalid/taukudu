@@ -626,6 +626,34 @@ export interface BsodDumpAnalysisSummary {
   scan_duration_ms: number
 }
 
+export interface BatteryDiagnosticInfo {
+  has_battery: boolean
+  device_name: string
+  manufacturer: string
+  chemistry: string
+  design_capacity_mwh: number
+  full_charge_capacity_mwh: number
+  current_capacity_mwh: number
+  health_percentage: number
+  charge_level_percentage: number
+  estimated_runtime_minutes?: number | null
+  status: string
+  is_ac_connected: boolean
+}
+
+export interface PowerPlanScheme {
+  guid: string
+  name: string
+  is_active: boolean
+}
+
+export interface PowerSummary {
+  battery: BatteryDiagnosticInfo
+  power_plans: PowerPlanScheme[]
+  active_plan_name: string
+  scan_duration_ms: number
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1496,5 +1524,11 @@ export const tauriApi = {
   },
   getKnownBugcheckCodes: async (): Promise<BugcheckStopCode[]> => {
     return await invoke('get_known_bugcheck_codes')
+  },
+  getPowerDiagnosticsSummary: async (): Promise<PowerSummary> => {
+    return await invoke('get_power_diagnostics_summary')
+  },
+  setActivePowerScheme: async (guid: string): Promise<string> => {
+    return await invoke('set_active_power_scheme', { guid })
   },
 }

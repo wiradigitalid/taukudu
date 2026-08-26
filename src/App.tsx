@@ -123,13 +123,14 @@ import {
   Search,
   FolderX,
   FileUp,
+  Battery,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'drivehealth' | 'bsod' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'drivehealth' | 'bsod' | 'power' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -357,6 +358,11 @@ export function App() {
   const [bugcheckDb, setBugcheckDb] = useState<import('@/lib/tauri-bridge').BugcheckStopCode[]>([])
   const [loadingBsod, setLoadingBsod] = useState(false)
   const [bsodFeedback, setBsodFeedback] = useState<string | null>(null)
+
+  // Battery & Power Diagnostics state
+  const [powerSummary, setPowerSummary] = useState<import('@/lib/tauri-bridge').PowerSummary | null>(null)
+  const [loadingPower, setLoadingPower] = useState(false)
+  const [powerFeedback, setPowerFeedback] = useState<string | null>(null)
 
   // Debloater state
   const [bloatList, setBloatList] = useState<BloatwareApp[]>([])
@@ -1484,6 +1490,30 @@ export function App() {
     }
   }
 
+  const fetchPowerDiagnostics = async () => {
+    setLoadingPower(true)
+    setPowerFeedback(null)
+    try {
+      const sum = await tauriApi.getPowerDiagnosticsSummary()
+      setPowerSummary(sum)
+      setPowerFeedback(`Active power plan: ${sum.active_plan_name}. ${sum.battery.has_battery ? `Battery health: ${sum.battery.health_percentage.toFixed(1)}%` : 'Running on AC Desktop Line.'}`)
+    } catch (err) {
+      setPowerFeedback(`Power error: ${String(err)}`)
+    } finally {
+      setLoadingPower(false)
+    }
+  }
+
+  const handleSetActivePowerPlan = async (guid: string, planName: string) => {
+    try {
+      const msg = await tauriApi.setActivePowerScheme(guid)
+      setPowerFeedback(`Switched power plan to ${planName}`)
+      await fetchPowerDiagnostics()
+    } catch (err) {
+      setPowerFeedback(`Power scheme error: ${String(err)}`)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2208,6 +2238,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('power')
+                if (!powerSummary && !loadingPower) fetchPowerDiagnostics()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'power'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Battery className="w-4 h-4" />
+              Battery & Power
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('firewall')
                 if (!firewallSummary && !loadingFirewall) fetchFirewall()
               }}
@@ -2714,6 +2758,8 @@ export function App() {
               ? 'Physical Storage S.M.A.R.T. Health & Wear Monitor'
               : activeTab === 'bsod'
               ? 'BSOD Crash Dump & Bugcheck Stop Code Analyzer'
+              : activeTab === 'power'
+              ? 'Battery Health, Capacity & Power Scheme Manager'
               : activeTab === 'firewall'
               ? 'Windows Firewall & Open Port Security Audit'
               : activeTab === 'cve'
@@ -5080,6 +5126,113 @@ export function App() {
                 <p className="text-xs text-zinc-400">
                   {loadingBsod ? 'Scanning Minidump and MEMORY.DMP headers...' : 'System is running stable. No BSOD kernel crash dumps detected.'}
                 </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'power' ? (
+          /* Battery Health & Power Scheme Diagnostics Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-white">Battery Health & Power Schemes</h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Active Plan: {powerSummary?.active_plan_name || 'Balanced'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {powerFeedback || `Battery wear and powercfg diagnostics.`}
+                </p>
+              </div>
+              <button
+                onClick={fetchPowerDiagnostics}
+                disabled={loadingPower}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingPower ? 'animate-spin' : ''}`} />
+                {loadingPower ? 'Querying...' : 'Refresh Power Info'}
+              </button>
+            </div>
+
+            {/* Battery Status Card */}
+            {powerSummary && (
+              <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b border-white/[0.05]">
+                  <div className="flex items-center gap-2.5">
+                    <Battery className="w-5 h-5 text-amber-400" />
+                    <span className="text-sm font-bold text-white">{powerSummary.battery.device_name}</span>
+                    <span className="text-[10px] text-zinc-500 font-mono">({powerSummary.battery.manufacturer})</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                    {powerSummary.battery.status}
+                  </span>
+                </div>
+
+                {powerSummary.battery.has_battery ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
+                    <div className="p-3 rounded-lg bg-black/30 border border-white/[0.03]">
+                      <span className="text-zinc-500 text-[10px]">Battery Health / Max Capacity</span>
+                      <p className="text-emerald-400 font-semibold text-sm mt-0.5">
+                        {powerSummary.battery.health_percentage.toFixed(1)}% Good
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-black/30 border border-white/[0.03]">
+                      <span className="text-zinc-500 text-[10px]">Current Charge</span>
+                      <p className="text-amber-400 font-semibold text-sm mt-0.5">
+                        {powerSummary.battery.charge_level_percentage}%
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-black/30 border border-white/[0.03]">
+                      <span className="text-zinc-500 text-[10px]">Design Capacity</span>
+                      <p className="text-white font-semibold text-sm mt-0.5">
+                        {powerSummary.battery.design_capacity_mwh} mWh
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-black/30 border border-white/[0.03]">
+                      <span className="text-zinc-500 text-[10px]">Full Charge Capacity</span>
+                      <p className="text-white font-semibold text-sm mt-0.5">
+                        {powerSummary.battery.full_charge_capacity_mwh} mWh
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-400">
+                    Desktop computer detected: Connected to continuous AC power supply. Battery degradation monitoring is not required.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Available Power Schemes */}
+            {powerSummary && powerSummary.power_plans.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Configured Windows Power Plans</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {powerSummary.power_plans.map((p) => (
+                    <div
+                      key={p.guid}
+                      className={`p-4 rounded-xl border flex justify-between items-center ${
+                        p.is_active ? 'bg-amber-500/5 border-amber-500/30' : 'bg-[#16161a] border-[#2a2a36]'
+                      }`}
+                    >
+                      <div className="space-y-0.5">
+                        <span className="text-sm font-bold text-white">{p.name}</span>
+                        <p className="text-[10px] text-zinc-500 font-mono truncate max-w-[180px]">{p.guid}</p>
+                      </div>
+                      <button
+                        onClick={() => handleSetActivePowerPlan(p.guid, p.name)}
+                        disabled={p.is_active}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                          p.is_active
+                            ? 'bg-amber-500 text-black font-bold'
+                            : 'bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300'
+                        }`}
+                      >
+                        {p.is_active ? 'Active' : 'Activate'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
