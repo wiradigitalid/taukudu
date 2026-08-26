@@ -117,6 +117,7 @@ import {
   Compass,
   BarChart3,
   Info,
+  Link2Off,
   ExternalLink,
   Terminal,
   Search,
@@ -128,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'contextmenu' | 'registry' | 'shortcuts' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -266,6 +267,13 @@ export function App() {
   const [registryFeedback, setRegistryFeedback] = useState<string | null>(null)
   const [registryBackups, setRegistryBackups] = useState<import('@/lib/tauri-bridge').RegistryBackupEntry[]>([])
   const [loadingBackups, setLoadingBackups] = useState(false)
+
+  // Broken Shortcuts state
+  const [brokenShortcuts, setBrokenShortcuts] = useState<import('@/lib/tauri-bridge').BrokenShortcutItem[]>([])
+  const [selectedShortcutIds, setSelectedShortcutIds] = useState<Set<string>>(new Set())
+  const [scanningShortcuts, setScanningShortcuts] = useState(false)
+  const [cleaningShortcuts, setCleaningShortcuts] = useState(false)
+  const [shortcutsFeedback, setShortcutsFeedback] = useState<string | null>(null)
 
   // Startup state
   const [startupItems, setStartupItems] = useState<StartupItem[]>([])
@@ -1031,6 +1039,41 @@ export function App() {
       await fetchRegistryBackups()
     } catch (err) {
       setRegistryFeedback(`Delete backup error: ${String(err)}`)
+    }
+  }
+
+  const handleScanShortcuts = async () => {
+    setScanningShortcuts(true)
+    setShortcutsFeedback(null)
+    setSelectedShortcutIds(new Set())
+    try {
+      const res = await tauriApi.scanBrokenShortcuts()
+      setBrokenShortcuts(res.items)
+      const allIds = new Set(res.items.map((i) => i.id))
+      setSelectedShortcutIds(allIds)
+      setShortcutsFeedback(`Scanned ${res.total_scanned} shortcuts: found ${res.total_broken} broken/invalid links in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      setShortcutsFeedback(`Shortcut scan error: ${String(err)}`)
+    } finally {
+      setScanningShortcuts(false)
+    }
+  }
+
+  const handleDeleteSelectedShortcuts = async () => {
+    if (selectedShortcutIds.size === 0) return
+    setCleaningShortcuts(true)
+    try {
+      const pathsToDelete = brokenShortcuts
+        .filter((i) => selectedShortcutIds.has(i.id))
+        .map((i) => i.shortcut_path)
+
+      const res = await tauriApi.deleteBrokenShortcuts(pathsToDelete)
+      setShortcutsFeedback(`Successfully deleted ${res.deleted_count} broken shortcuts (${res.failed_count} failed).`)
+      await handleScanShortcuts()
+    } catch (err) {
+      setShortcutsFeedback(`Delete error: ${String(err)}`)
+    } finally {
+      setCleaningShortcuts(false)
     }
   }
 
@@ -1842,6 +1885,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('shortcuts')
+                if (brokenShortcuts.length === 0 && !scanningShortcuts) handleScanShortcuts()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'shortcuts'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Link2Off className="w-4 h-4" />
+              Broken Shortcuts
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('network')
                 if (networkItems.length === 0) fetchNetwork()
               }}
@@ -2094,6 +2151,8 @@ export function App() {
               ? 'Game Mode Latency & Power Optimization'
               : activeTab === 'registry'
               ? 'Windows Registry Orphan Cleaner'
+              : activeTab === 'shortcuts'
+              ? 'Broken & Invalid Desktop / Start Menu Shortcuts'
               : activeTab === 'network'
               ? 'Network Cache & TCP/IP Stack Optimizer'
               : activeTab === 'perf'
@@ -4620,6 +4679,81 @@ export function App() {
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {scanningRegistry ? 'Scanning registry hives...' : 'Windows Registry is clean. No orphan entries detected.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'shortcuts' ? (
+          /* Broken Shortcuts Cleaner Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Broken & Invalid Shortcuts Cleaner</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {shortcutsFeedback || `Scanned desktop and start menu: ${brokenShortcuts.length} broken shortcuts detected.`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanShortcuts}
+                  disabled={scanningShortcuts}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanningShortcuts ? 'animate-spin' : ''}`} />
+                  {scanningShortcuts ? 'Scanning...' : 'Scan Shortcuts'}
+                </button>
+                <button
+                  onClick={handleDeleteSelectedShortcuts}
+                  disabled={cleaningShortcuts || selectedShortcutIds.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Selected ({selectedShortcutIds.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Shortcuts List */}
+            {brokenShortcuts.length > 0 ? (
+              <div className="space-y-2">
+                {brokenShortcuts.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3 truncate max-w-2xl">
+                      <input
+                        type="checkbox"
+                        checked={selectedShortcutIds.has(item.id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedShortcutIds)
+                          if (e.target.checked) next.add(item.id)
+                          else next.delete(item.id)
+                          setSelectedShortcutIds(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer shrink-0"
+                      />
+                      <div className="space-y-0.5 truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white truncate">{item.filename}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-amber-400 shrink-0">
+                            {item.location_type}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-red-400 font-mono truncate">{item.broken_reason}</p>
+                        <p className="text-[10px] text-zinc-500 font-mono truncate">
+                          Target: {item.target_path || 'N/A (Corrupt/Missing)'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {scanningShortcuts ? 'Scanning shortcut paths across user & system hives...' : 'All shortcuts point to valid destinations. No broken links.'}
                 </p>
               </div>
             )}

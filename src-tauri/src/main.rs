@@ -25,7 +25,8 @@ use taukudu_lib::{
     RegistryBackupEntry, RegistryBackupSummary, RegistryCleanerEngine,
     RegistryFixResult, RegistryIssue, RegistryScanResult, RestorePointEngine,
     RestorePointItem, RestorePointResult, RestorePointSummary, ScanResult, ScheduleItem,
-    ScheduleSummary, SecurityPostureEngine, SecurityPostureSummary, ServiceDriverEngine, ServiceItemInfo, ShredderResult, SoftwareUpdateSummary,
+    ScheduleSummary, SecurityPostureEngine, SecurityPostureSummary, ServiceDriverEngine, ServiceItemInfo, ShortcutCleanerEngine,
+    BrokenShortcutCleanResult, BrokenShortcutItem, BrokenShortcutScanResult, ShredderResult, SoftwareUpdateSummary,
     AppSettings, CleanerConfig, SettingsStoreEngine,
     SoftwareUpdaterEngine, StartupDebloatEngine, StartupItem, ThreatBlacklistData,
     ThreatBlacklistStore, ThreatBlacklistSummary, ThreatMonitorEngine,
@@ -677,6 +678,16 @@ fn delete_registry_backup(file_path: String) -> Result<(), String> {
     RegistryBackupEngine::delete_backup(&file_path)
 }
 
+#[tauri::command]
+fn scan_broken_shortcuts() -> BrokenShortcutScanResult {
+    ShortcutCleanerEngine::scan_broken_shortcuts()
+}
+
+#[tauri::command]
+fn delete_broken_shortcuts(paths: Vec<String>) -> BrokenShortcutCleanResult {
+    ShortcutCleanerEngine::delete_shortcuts(&paths)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -798,7 +809,9 @@ fn main() {
             list_registry_backups,
             export_registry_key_backup,
             restore_registry_backup,
-            delete_registry_backup
+            delete_registry_backup,
+            scan_broken_shortcuts,
+            delete_broken_shortcuts
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

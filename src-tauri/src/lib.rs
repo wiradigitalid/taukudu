@@ -31,6 +31,7 @@ pub mod scheduler;
 pub mod security_posture;
 pub mod service_driver;
 pub mod settings_store;
+pub mod shortcut_cleaner;
 pub mod software_updater;
 pub mod startup_debloat;
 pub mod threat_blacklist;
@@ -99,6 +100,9 @@ pub use security_posture::{
 pub use service_driver::{DriverPackageInfo, ServiceDriverEngine, ServiceItemInfo};
 pub use settings_store::{
     AppSettings, CleanerConfig, SettingsStoreEngine, GLOBAL_SETTINGS,
+};
+pub use shortcut_cleaner::{
+    BrokenShortcutCleanResult, BrokenShortcutItem, BrokenShortcutScanResult, ShortcutCleanerEngine,
 };
 pub use software_updater::{SoftwareUpdateSummary, SoftwareUpdaterEngine, UpdatablePackage, UpdateExecutionResult};
 pub use startup_debloat::{BloatwareApp, StartupDebloatEngine, StartupItem};

@@ -58,10 +58,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-47** | **Robust Parallel File Deletion & Permission Recovery** | Read-only attribute stripping retry, granular error classification & directory recovery | `CleanerEngine::clean_files` in `cleaner.rs` | ✅ COMPLETED | 2026-08-26 |
 | **AREA-48** | **YARA Threat Rules Store & In-App Signature Editor** | Persistent .yar rules repository, bundle Blake3 hash integrity & signature manager | `YaraRulesStoreEngine`, Malware Rules tab UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-49** | **Registry Snapshot Backup & Rollback Manager** | Native .reg snapshot export before orphan cleanup & rollback restore | `RegistryBackupEngine`, Registry Cleaner Page UI | ✅ COMPLETED | 2026-08-26 |
+| **AREA-50** | **Broken & Invalid Shortcuts Cleaner** | Binary LNK parser & shell shortcut validator across Desktop, Start Menu & Recent | `ShortcutCleanerEngine`, Broken Shortcuts Page UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 50 — Broken & Invalid Shortcuts Cleaner (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **Shortcut Cleaner Engine (`src-tauri/src/shortcut_cleaner.rs`):** Deteksi dan pemindaian rekursif berkas `.lnk` dan `.url` di direktori Desktop (User & Public), Start Menu (User, Public, All Users), Startup folder, dan Recent Items. Mengimplementasikan binary Shell Link `.LNK` parser mandiri (ekstraksi header `LinkInfo`, `LocalBasePathOffset`, unicode base path, relative path string) tanpa COM overhead, ekspansi variabel lingkungan Windows (`%USERPROFILE%`, `%APPDATA%`, `%PROGRAMFILES%`), serta validasi eksistensi target berkas/folder dan deteksi berkas 0-byte/korup.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `scan_broken_shortcuts` dan `delete_broken_shortcuts`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `BrokenShortcutItem`, `BrokenShortcutScanResult`, `BrokenShortcutCleanResult`, serta method `tauriApi.scanBrokenShortcuts` dan `tauriApi.deleteBrokenShortcuts`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan tab *Broken Shortcuts* lengkap dengan pemindaian otomatis, filter checklist seleksi item rusak, detail path asal dan target yang hilang, serta tombol aksi pembersihan massal (*Delete Selected*).
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 49 — Registry Snapshot Backup & Rollback Manager (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**

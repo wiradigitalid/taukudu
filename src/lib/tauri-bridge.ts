@@ -312,6 +312,28 @@ export interface RegistryBackupSummary {
   total_backups: number
 }
 
+export interface BrokenShortcutItem {
+  id: string
+  shortcut_path: string
+  filename: string
+  target_path?: string | null
+  broken_reason: string
+  location_type: string
+}
+
+export interface BrokenShortcutScanResult {
+  items: BrokenShortcutItem[]
+  total_scanned: number
+  total_broken: number
+  scan_duration_ms: number
+}
+
+export interface BrokenShortcutCleanResult {
+  deleted_count: number
+  failed_count: number
+  errors: string[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1107,5 +1129,11 @@ export const tauriApi = {
   },
   deleteRegistryBackup: async (filePath: string): Promise<void> => {
     return await invoke('delete_registry_backup', { filePath })
+  },
+  scanBrokenShortcuts: async (): Promise<BrokenShortcutScanResult> => {
+    return await invoke('scan_broken_shortcuts')
+  },
+  deleteBrokenShortcuts: async (paths: string[]): Promise<BrokenShortcutCleanResult> => {
+    return await invoke('delete_broken_shortcuts', { paths })
   },
 }
