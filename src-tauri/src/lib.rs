@@ -37,6 +37,7 @@ pub mod threat_monitor;
 pub mod trim_history;
 pub mod uninstaller_shredder;
 pub mod window_state;
+pub mod yara_rules_store;
 
 pub use app_logger::{AppLoggerEngine, LogEntry, LogStats, GLOBAL_APP_LOGGER};
 pub use app_updater::{AppReleaseInfo, AppUpdaterEngine};
@@ -112,4 +113,8 @@ pub use uninstaller_shredder::{
 pub use window_state::{
     WindowGeometryState, WindowStateEngine, GLOBAL_WINDOW_STATE, MIN_WINDOW_HEIGHT,
     MIN_WINDOW_WIDTH,
+};
+pub use yara_rules_store::{
+    YaraBundleValidationResult, YaraRuleFileEntry, YaraRulesMetadata, YaraRulesStoreEngine,
+    GLOBAL_YARA_RULES_STORE,
 };

@@ -30,9 +30,10 @@ use taukudu_lib::{
     ThreatBlacklistStore, ThreatBlacklistSummary, ThreatMonitorEngine,
     ThreatMonitorSummary, TrimDriveStatus, TrimHistoryStore, TrimHistorySummary, TrimRecord,
     UninstallerShredderEngine, UpdateExecutionResult, WindowGeometryState, WindowStateEngine,
+    YaraBundleValidationResult, YaraRuleFileEntry, YaraRulesMetadata, YaraRulesStoreEngine,
     GLOBAL_APP_LOGGER, GLOBAL_BREACH_MONITOR, GLOBAL_DELETION_LOGGER, GLOBAL_GAME_MODE, GLOBAL_HISTORY,
     GLOBAL_SCHEDULER, GLOBAL_SETTINGS, GLOBAL_THREAT_BLACKLIST, GLOBAL_THREAT_MONITOR,
-    GLOBAL_TRIM_HISTORY, GLOBAL_WINDOW_STATE,
+    GLOBAL_TRIM_HISTORY, GLOBAL_WINDOW_STATE, GLOBAL_YARA_RULES_STORE,
 };
 
 #[tauri::command]
@@ -635,6 +636,26 @@ fn set_gpu_hardware_acceleration(disable: bool) -> Result<GpuDiagnosticInfo, Str
     GpuControllerEngine::set_gpu_disabled(disable)
 }
 
+#[tauri::command]
+fn list_yara_rule_files() -> Vec<YaraRuleFileEntry> {
+    GLOBAL_YARA_RULES_STORE.list_rule_files()
+}
+
+#[tauri::command]
+fn get_yara_rules_metadata() -> YaraRulesMetadata {
+    GLOBAL_YARA_RULES_STORE.get_metadata()
+}
+
+#[tauri::command]
+fn save_yara_rule_file(filename: String, content: String) -> Result<YaraRulesMetadata, String> {
+    GLOBAL_YARA_RULES_STORE.save_rule_file(filename, content)
+}
+
+#[tauri::command]
+fn delete_yara_rule_file(filename: String) -> Result<YaraRulesMetadata, String> {
+    GLOBAL_YARA_RULES_STORE.delete_rule_file(&filename)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -748,7 +769,11 @@ fn main() {
             get_app_version,
             check_app_updates,
             get_gpu_diagnostics,
-            set_gpu_hardware_acceleration
+            set_gpu_hardware_acceleration,
+            list_yara_rule_files,
+            get_yara_rules_metadata,
+            save_yara_rule_file,
+            delete_yara_rule_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

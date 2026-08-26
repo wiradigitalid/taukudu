@@ -745,6 +745,21 @@ export interface GpuDiagnosticInfo {
   rendering_mode: string
 }
 
+export interface YaraRuleFileEntry {
+  filename: string
+  content: string
+  size_bytes: number
+  description?: string | null
+}
+
+export interface YaraRulesMetadata {
+  version: string
+  updated_at: string
+  rules_count: number
+  sha256_hash: string
+  rules_directory: string
+}
+
 export const tauriApi = {
   greet: async (name: string): Promise<string> => {
     return await invoke('greet', { name })
@@ -1053,5 +1068,17 @@ export const tauriApi = {
   },
   setGpuHardwareAcceleration: async (disable: boolean): Promise<GpuDiagnosticInfo> => {
     return await invoke('set_gpu_hardware_acceleration', { disable })
+  },
+  listYaraRuleFiles: async (): Promise<YaraRuleFileEntry[]> => {
+    return await invoke('list_yara_rule_files')
+  },
+  getYaraRulesMetadata: async (): Promise<YaraRulesMetadata> => {
+    return await invoke('get_yara_rules_metadata')
+  },
+  saveYaraRuleFile: async (filename: string, content: string): Promise<YaraRulesMetadata> => {
+    return await invoke('save_yara_rule_file', { filename, content })
+  },
+  deleteYaraRuleFile: async (filename: string): Promise<YaraRulesMetadata> => {
+    return await invoke('delete_yara_rule_file', { filename })
   },
 }

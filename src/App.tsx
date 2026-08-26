@@ -60,6 +60,8 @@ import {
   LargeFileScanResult,
   AppReleaseInfo,
   GpuDiagnosticInfo,
+  YaraRuleFileEntry,
+  YaraRulesMetadata,
 } from '@/lib/tauri-bridge'
 import {
   Sparkles,
@@ -330,6 +332,11 @@ export function App() {
   const [malwareResult, setMalwareResult] = useState<MalwareScanResult | null>(null)
   const [selectedThreatPaths, setSelectedThreatPaths] = useState<Set<string>>(new Set())
   const [malwareStatus, setMalwareStatus] = useState<string | null>(null)
+  const [yaraRules, setYaraRules] = useState<YaraRuleFileEntry[]>([])
+  const [yaraMetadata, setYaraMetadata] = useState<YaraRulesMetadata | null>(null)
+  const [activeMalwareSubTab, setActiveMalwareSubTab] = useState<'scanner' | 'rules'>('scanner')
+  const [newRuleName, setNewRuleName] = useState('')
+  const [newRuleContent, setNewRuleContent] = useState('')
 
   // Privacy Shield & Security Posture state
   const [privacyState, setPrivacyState] = useState<PrivacyShieldState | null>(null)
@@ -1283,6 +1290,43 @@ export function App() {
       await handleRunMalwareScan('quick')
     } catch (err) {
       setMalwareStatus('Delete threats failed: ' + String(err))
+    }
+  }
+
+  const fetchYaraRules = async () => {
+    try {
+      const rules = await tauriApi.listYaraRuleFiles()
+      setYaraRules(rules)
+      const meta = await tauriApi.getYaraRulesMetadata()
+      setYaraMetadata(meta)
+    } catch (err) {
+      console.error('Fetch YARA rules error:', err)
+    }
+  }
+
+  const handleSaveYaraRule = async () => {
+    if (!newRuleName || !newRuleContent) return
+    const filename = newRuleName.endsWith('.yar') ? newRuleName : `${newRuleName}.yar`
+    try {
+      const meta = await tauriApi.saveYaraRuleFile(filename, newRuleContent)
+      setYaraMetadata(meta)
+      setNewRuleName('')
+      setNewRuleContent('')
+      setMalwareStatus(`Saved custom YARA rule: ${filename}`)
+      await fetchYaraRules()
+    } catch (err) {
+      setMalwareStatus(`Save YARA rule error: ${String(err)}`)
+    }
+  }
+
+  const handleDeleteYaraRule = async (filename: string) => {
+    try {
+      const meta = await tauriApi.deleteYaraRuleFile(filename)
+      setYaraMetadata(meta)
+      setMalwareStatus(`Deleted YARA rule: ${filename}`)
+      await fetchYaraRules()
+    } catch (err) {
+      setMalwareStatus(`Delete YARA rule error: ${String(err)}`)
     }
   }
 
@@ -3910,47 +3954,127 @@ export function App() {
               </div>
             </div>
 
-            {/* Threats List */}
-            {malwareResult && malwareResult.threats.length > 0 ? (
-              <div className="space-y-3">
-                {malwareResult.threats.map((threat) => (
-                  <div
-                    key={threat.id}
-                    className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex justify-between items-center"
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedThreatPaths.has(threat.path)}
-                        onChange={(e) => {
-                          const next = new Set(selectedThreatPaths)
-                          if (e.target.checked) next.add(threat.path)
-                          else next.delete(threat.path)
-                          setSelectedThreatPaths(next)
-                        }}
-                        className="rounded border-zinc-700 text-red-500 focus:ring-red-500 cursor-pointer"
-                      />
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-sm font-bold text-red-400">{threat.detection_name}</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-red-500/20 text-red-300">
-                            {threat.severity}
-                          </span>
-                          <span className="text-xs font-mono text-zinc-400">({formatBytes(threat.size)})</span>
+            {/* Sub-view Switcher (Threat Scanner vs YARA Rules Manager) */}
+            <div className="flex border-b border-[#2a2a36] gap-6 text-sm font-semibold">
+              <button
+                onClick={() => setActiveMalwareSubTab('scanner')}
+                className={`pb-3 transition cursor-pointer flex items-center gap-2 ${
+                  activeMalwareSubTab === 'scanner'
+                    ? 'text-amber-400 border-b-2 border-amber-400'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                <Bug className="w-4 h-4" />
+                Threat Scanner ({malwareResult?.threats.length || 0})
+              </button>
+              <button
+                onClick={() => {
+                  setActiveMalwareSubTab('rules')
+                  if (yaraRules.length === 0) fetchYaraRules()
+                }}
+                className={`pb-3 transition cursor-pointer flex items-center gap-2 ${
+                  activeMalwareSubTab === 'rules'
+                    ? 'text-amber-400 border-b-2 border-amber-400'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                <FileCode className="w-4 h-4" />
+                YARA Rules Store ({yaraMetadata?.rules_count || yaraRules.length})
+              </button>
+            </div>
+
+            {activeMalwareSubTab === 'scanner' ? (
+              /* Threats List */
+              malwareResult && malwareResult.threats.length > 0 ? (
+                <div className="space-y-3">
+                  {malwareResult.threats.map((threat) => (
+                    <div
+                      key={threat.id}
+                      className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex justify-between items-center"
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedThreatPaths.has(threat.path)}
+                          onChange={(e) => {
+                            const next = new Set(selectedThreatPaths)
+                            if (e.target.checked) next.add(threat.path)
+                            else next.delete(threat.path)
+                            setSelectedThreatPaths(next)
+                          }}
+                          className="rounded border-zinc-700 text-red-500 focus:ring-red-500 cursor-pointer"
+                        />
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-sm font-bold text-red-400">{threat.detection_name}</span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-red-500/20 text-red-300">
+                              {threat.severity}
+                            </span>
+                            <span className="text-xs font-mono text-zinc-400">({formatBytes(threat.size)})</span>
+                          </div>
+                          <p className="text-xs text-zinc-300 font-mono">{threat.path}</p>
+                          <p className="text-[11px] text-zinc-400">{threat.details}</p>
                         </div>
-                        <p className="text-xs text-zinc-300 font-mono">{threat.path}</p>
-                        <p className="text-[11px] text-zinc-400">{threat.details}</p>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                  <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto" />
+                  <p className="text-xs text-zinc-400">
+                    {malwareScanning ? 'Inspecting memory locations and critical system executables...' : 'No masquerading system binaries or deceptive executables detected.'}
+                  </p>
+                </div>
+              )
             ) : (
-              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
-                <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto" />
-                <p className="text-xs text-zinc-400">
-                  {malwareScanning ? 'Inspecting memory locations and critical system executables...' : 'No masquerading system binaries or deceptive executables detected.'}
-                </p>
+              /* YARA Rules Manager View */
+              <div className="space-y-4">
+                <div className="p-5 rounded-xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                  <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Add Custom YARA Threat Signature</h3>
+                  <input
+                    type="text"
+                    value={newRuleName}
+                    onChange={(e) => setNewRuleName(e.target.value)}
+                    placeholder="Rule filename (e.g. custom_trojan.yar)..."
+                    className="w-full px-3 py-2 rounded-lg bg-black/40 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <textarea
+                    value={newRuleContent}
+                    onChange={(e) => setNewRuleContent(e.target.value)}
+                    placeholder="Enter YARA rule syntax (rule Name { strings: ... condition: ... })..."
+                    rows={4}
+                    className="w-full px-3 py-2 rounded-lg bg-black/40 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <button
+                    onClick={handleSaveYaraRule}
+                    className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Save Rule Signature
+                  </button>
+                </div>
+
+                {/* Rules List */}
+                <div className="space-y-2">
+                  {yaraRules.map((rule) => (
+                    <div
+                      key={rule.filename}
+                      className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                    >
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-mono font-bold text-amber-400">{rule.filename}</span>
+                        <p className="text-[11px] text-zinc-400">Size: {rule.size_bytes} bytes</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteYaraRule(rule.filename)}
+                        className="text-xs text-zinc-500 hover:text-red-400 transition cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

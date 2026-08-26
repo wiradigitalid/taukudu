@@ -56,10 +56,19 @@ Dokumen ini adalah **kertas kerja eksekusi (work breakdown & tracking)** untuk m
 | **AREA-45** | **Recycle Bin $I Metadata Binary Parser & File Inspection** | Pure Rust parser for Windows $I binary headers & detailed deleted item viewer | `RecycleBinEngine`, Recycle Bin Inspector UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-46** | **GPU Hardware Acceleration & Graphics Fallback Controller** | Win32 GPU controller & software rasterizer fallback switch | `GpuControllerEngine`, Settings & Preferences UI | ✅ COMPLETED | 2026-08-26 |
 | **AREA-47** | **Robust Parallel File Deletion & Permission Recovery** | Read-only attribute stripping retry, granular error classification & directory recovery | `CleanerEngine::clean_files` in `cleaner.rs` | ✅ COMPLETED | 2026-08-26 |
+| **AREA-48** | **YARA Threat Rules Store & In-App Signature Editor** | Persistent .yar rules repository, bundle Blake3 hash integrity & signature manager | `YaraRulesStoreEngine`, Malware Rules tab UI | ✅ COMPLETED | 2026-08-26 |
 
 ---
 
 ## 2. Log Eksekusi Area
+
+### Area 48 — YARA Threat Rules Store & Signature Editor (Selesai: 2026-08-26)
+- **Yang telah dikerjakan:**
+  1. **YARA Rules Store Engine (`src-tauri/src/yara_rules_store.rs`):** Manajemen direktori aturan signature YARA persisten (`%LOCALAPPDATA%/TauKudu/yara-rules/`), kalkulasi hash integritas bundle aturan berbasis Blake3/SHA256, validasi format berkas `.yar` (maksimum ukuran 1MB per rule), serta fungsi simpan, daftar, dan hapus berkas signature.
+  2. **Tauri IPC Handlers (`src-tauri/src/main.rs`):** Menambahkan commands `list_yara_rule_files`, `get_yara_rules_metadata`, `save_yara_rule_file`, dan `delete_yara_rule_file`.
+  3. **TypeScript Bridge (`src/lib/tauri-bridge.ts`):** Interface types `YaraRuleFileEntry`, `YaraRulesMetadata`, serta method `tauriApi.listYaraRuleFiles`, `tauriApi.getYaraRulesMetadata`, `tauriApi.saveYaraRuleFile`, dan `tauriApi.deleteYaraRuleFile`.
+  4. **Frontend UI (`src/App.tsx`):** Menambahkan sub-tab *YARA Rules Store* pada tab *Malware Scanner* lengkap dengan form input penambahan rule kustom dan daftar berkas signature tersimpan.
+  5. **Verifikasi:** `cargo check` PASS, `npm run build` PASS.
 
 ### Area 47 — Robust Parallel File Deletion & Permission Recovery (Selesai: 2026-08-26)
 - **Yang telah dikerjakan:**
