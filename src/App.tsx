@@ -129,7 +129,7 @@ import { LANGUAGES } from '@/lib/languages'
 
 export function App() {
   const { t, i18n } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cleaner' | 'browsers' | 'recyclebin' | 'threats' | 'duplicates' | 'emptyfolders' | 'largefiles' | 'leftovers' | 'restore' | 'disk' | 'repair' | 'firewall' | 'cve' | 'breach' | 'updater' | 'schedules' | 'game' | 'gamingcleaner' | 'eventlogs' | 'winupdate' | 'contextmenu' | 'registry' | 'shortcuts' | 'databases' | 'env' | 'cache' | 'ram' | 'safety' | 'hosts' | 'devcache' | 'startup' | 'debloat' | 'services' | 'drivers' | 'network' | 'uninstaller' | 'shredder' | 'perf' | 'metrics' | 'history' | 'logs' | 'settings' | 'about' | 'malware' | 'privacy'>('dashboard')
   const [overview, setOverview] = useState<SystemOverview | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
 
@@ -339,6 +339,13 @@ export function App() {
   const [loadingHosts, setLoadingHosts] = useState(false)
   const [applyingHosts, setApplyingHosts] = useState(false)
   const [hostsFeedback, setHostsFeedback] = useState<string | null>(null)
+
+  // Developer Package Caches state
+  const [devCacheSummary, setDevCacheSummary] = useState<import('@/lib/tauri-bridge').DevCacheScanSummary | null>(null)
+  const [selectedDevCacheIds, setSelectedDevCacheIds] = useState<Set<string>>(new Set())
+  const [scanningDevCache, setScanningDevCache] = useState(false)
+  const [cleaningDevCache, setCleaningDevCache] = useState(false)
+  const [devCacheFeedback, setDevCacheFeedback] = useState<string | null>(null)
 
   // Debloater state
   const [bloatList, setBloatList] = useState<BloatwareApp[]>([])
@@ -1401,6 +1408,41 @@ export function App() {
     }
   }
 
+  const handleScanDevCaches = async () => {
+    setScanningDevCache(true)
+    setDevCacheFeedback(null)
+    setSelectedDevCacheIds(new Set())
+    try {
+      const res = await tauriApi.scanDeveloperCaches()
+      setDevCacheSummary(res)
+      const allIds = new Set(res.targets.map((t) => t.id))
+      setSelectedDevCacheIds(allIds)
+      setDevCacheFeedback(`Found ${res.total_targets_count} developer cache repositories (${formatBytes(res.total_size_bytes)} total) in ${res.scan_duration_ms}ms`)
+    } catch (err) {
+      setDevCacheFeedback(`Dev cache scan error: ${String(err)}`)
+    } finally {
+      setScanningDevCache(false)
+    }
+  }
+
+  const handleCleanSelectedDevCaches = async () => {
+    if (!devCacheSummary || selectedDevCacheIds.size === 0) return
+    setCleaningDevCache(true)
+    try {
+      const paths = devCacheSummary.targets
+        .filter((t) => selectedDevCacheIds.has(t.id))
+        .map((t) => t.file_path)
+
+      const res = await tauriApi.cleanDeveloperCaches(paths)
+      setDevCacheFeedback(`Successfully cleaned ${formatBytes(res.bytes_freed)} across ${res.cleaned_targets_count} developer cache directories (${res.failed_count} failed).`)
+      await handleScanDevCaches()
+    } catch (err) {
+      setDevCacheFeedback(`Clean error: ${String(err)}`)
+    } finally {
+      setCleaningDevCache(false)
+    }
+  }
+
   const fetchStartupItems = async () => {
     setLoadingStartup(true)
     try {
@@ -2349,6 +2391,20 @@ export function App() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('devcache')
+                if (!devCacheSummary && !scanningDevCache) handleScanDevCaches()
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition cursor-pointer ${
+                activeTab === 'devcache'
+                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              <FileCode className="w-4 h-4" />
+              Developer Caches
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('network')
                 if (networkItems.length === 0) fetchNetwork()
               }}
@@ -2621,6 +2677,8 @@ export function App() {
               ? 'Offline Program & Startup Safety Intelligence Advisor'
               : activeTab === 'hosts'
               ? 'Windows Hosts File Security & Telemetry Blocker'
+              : activeTab === 'devcache'
+              ? 'Developer Ecosystem & Package Cache Sweeper'
               : activeTab === 'network'
               ? 'Network Cache & TCP/IP Stack Optimizer'
               : activeTab === 'perf'
@@ -5971,6 +6029,85 @@ export function App() {
                 <ShieldAlert className="w-8 h-8 text-zinc-600 mx-auto" />
                 <p className="text-xs text-zinc-400">
                   {loadingHosts ? 'Reading System32/drivers/etc/hosts...' : 'Click "Refresh Hosts" to view active DNS mappings.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'devcache' ? (
+          /* Developer Ecosystem & Package Cache Sweeper Page */
+          <div className="p-8 max-w-6xl space-y-6">
+            <div className="p-6 rounded-2xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Developer Ecosystem & Package Cache Sweeper</h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {devCacheFeedback || `Found ${devCacheSummary?.total_targets_count || 0} package caches (${formatBytes(devCacheSummary?.total_size_bytes || 0)} total).`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleScanDevCaches}
+                  disabled={scanningDevCache}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-zinc-300 font-semibold text-xs transition flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${scanningDevCache ? 'animate-spin' : ''}`} />
+                  {scanningDevCache ? 'Scanning...' : 'Scan Dev Caches'}
+                </button>
+                <button
+                  onClick={handleCleanSelectedDevCaches}
+                  disabled={cleaningDevCache || selectedDevCacheIds.size === 0}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Sweep Selected ({selectedDevCacheIds.size})
+                </button>
+              </div>
+            </div>
+
+            {/* Dev Targets List */}
+            {devCacheSummary && devCacheSummary.targets.length > 0 ? (
+              <div className="space-y-2">
+                {devCacheSummary.targets.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-xl bg-[#16161a] border border-[#2a2a36] flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-3 truncate max-w-2xl">
+                      <input
+                        type="checkbox"
+                        checked={selectedDevCacheIds.has(item.id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedDevCacheIds)
+                          if (e.target.checked) next.add(item.id)
+                          else next.delete(item.id)
+                          setSelectedDevCacheIds(next)
+                        }}
+                        className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500 cursor-pointer shrink-0"
+                      />
+                      <div className="space-y-0.5 truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white truncate">{item.name}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-amber-400 shrink-0">
+                            {item.ecosystem}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 font-mono truncate">{item.description}</p>
+                        <p className="text-[10px] text-zinc-500 font-mono truncate">{item.file_path}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        {formatBytes(item.size_bytes)}
+                      </span>
+                      <p className="text-[10px] text-zinc-500 font-mono">{item.file_count} files</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-2xl bg-[#16161a] border border-[#2a2a36] space-y-3">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs text-zinc-400">
+                  {scanningDevCache ? 'Scanning npm, yarn, pnpm, cargo, pip, gradle, and IDE caches...' : 'No bloated developer package caches found.'}
                 </p>
               </div>
             )}

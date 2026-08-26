@@ -13,7 +13,8 @@ use taukudu_lib::{
     ContextMenuScanResult, CveItem, CveScanSummary, CveScannerEngine, DatabaseOptimizeSummary,
     DatabaseOptimizerEngine, DatabaseScanSummary, DatabaseTargetInfo, DatabaseVacuumResult, DeduplicationEngine,
     DeleteFailureProbeEngine, DeletePathProbeResult, DeleteProbeSummary, DeletionLogQueryOptions,
-    DeletionLogStats, DeletionLoggerEngine, GranularDeletedFileEntry,
+    DeletionLogStats, DeletionLoggerEngine, DevCacheCleanResult, DevCacheCleanerEngine,
+    DevCacheScanSummary, DevCacheTarget, GranularDeletedFileEntry,
     DiskAnalysisResult, DiskAnalyzerEngine, DiskDriveInfo, DiskMaintenanceEngine,
     DiskRepairOutput, DriverPackageInfo, DuplicateScanOptions, DuplicateScanResult,
     EmptyFolderScanResult, EnvCleanerCleanResult, EnvCleanerScanResult, EnvironmentCleanerEngine,
@@ -787,6 +788,16 @@ fn apply_hosts_telemetry_block(enable_block: bool) -> Result<HostsApplyResult, S
     HostsSecurityEngine::apply_telemetry_block(enable_block)
 }
 
+#[tauri::command]
+fn scan_developer_caches() -> DevCacheScanSummary {
+    DevCacheCleanerEngine::scan_dev_caches()
+}
+
+#[tauri::command]
+fn clean_developer_caches(paths: Vec<String>) -> DevCacheCleanResult {
+    DevCacheCleanerEngine::clean_dev_cache_targets(&paths)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -928,7 +939,9 @@ fn main() {
             get_safety_intelligence_summary,
             lookup_safety_rating,
             scan_hosts_file_security,
-            apply_hosts_telemetry_block
+            apply_hosts_telemetry_block,
+            scan_developer_caches,
+            clean_developer_caches
         ])
         .run(tauri::generate_context!())
         .expect("error while running taukudu application");

@@ -553,6 +553,30 @@ export interface HostsApplyResult {
   message: string
 }
 
+export interface DevCacheTarget {
+  id: string
+  ecosystem: string
+  name: string
+  description: string
+  file_path: string
+  size_bytes: number
+  file_count: number
+}
+
+export interface DevCacheScanSummary {
+  targets: DevCacheTarget[]
+  total_size_bytes: number
+  total_targets_count: number
+  scan_duration_ms: number
+}
+
+export interface DevCacheCleanResult {
+  cleaned_targets_count: number
+  bytes_freed: number
+  failed_count: number
+  errors: string[]
+}
+
 export interface GameModeStatus {
   is_active: boolean
   active_power_plan: string
@@ -1408,5 +1432,11 @@ export const tauriApi = {
   },
   applyHostsTelemetryBlock: async (enableBlock: boolean): Promise<HostsApplyResult> => {
     return await invoke('apply_hosts_telemetry_block', { enableBlock })
+  },
+  scanDeveloperCaches: async (): Promise<DevCacheScanSummary> => {
+    return await invoke('scan_developer_caches')
+  },
+  cleanDeveloperCaches: async (paths: string[]): Promise<DevCacheCleanResult> => {
+    return await invoke('clean_developer_caches', { paths })
   },
 }
